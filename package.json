@@ -1,0 +1,37 @@
+{
+  "name": "large-image-ingest",
+  "version": "0.0.0",
+  "description": "TypeScript-first ingestion toolkit for very large inspection images.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "large-image",
+    "image-upload",
+    "resumable-upload",
+    "chunk-upload",
+    "inspection",
+    "typescript"
+  ],
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.9"
+  }
+}
