@@ -226,6 +226,20 @@ const session = createIngestSession(file, {
 const manifest = await session.start();
 ```
 
+## JavaScript Usage
+
+The npm package ships runnable JavaScript and TypeScript declarations. ESM consumers can import the package directly:
+
+```js
+import { createIngestSession } from "large-image-ingest";
+```
+
+CommonJS consumers can use `require`:
+
+```js
+const { createIngestSession } = require("large-image-ingest");
+```
+
 ## Manifest Example
 
 ```json
