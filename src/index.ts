@@ -1,8 +1,8 @@
-export { planChunks } from "./chunks";
-export { createFastFingerprint } from "./fingerprint";
-export { createManifest } from "./manifest";
-export { createIngestSession, LargeImageIngestSession } from "./session";
-export { validateFile } from "./validation";
+export { planChunks } from "./chunks.js";
+export { createFastFingerprint } from "./fingerprint.js";
+export { createManifest } from "./manifest.js";
+export { createIngestSession, LargeImageIngestSession } from "./session.js";
+export { validateFile } from "./validation.js";
 export type {
   ChunkDescriptor,
   ChunkPlan,
@@ -20,4 +20,4 @@ export type {
   UploadTransport,
   ValidationResult,
   ValidationRules
-} from "./types";
+} from "./types.js";

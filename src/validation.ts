@@ -1,4 +1,4 @@
-import type { IngestFileLike, IngestIssue, ValidationResult, ValidationRules } from "./types";
+import type { IngestFileLike, IngestIssue, ValidationResult, ValidationRules } from "./types.js";
 
 const DEFAULT_RULES: Required<Pick<ValidationRules, "maxBytes" | "minBytes" | "requireNonEmpty">> = {
   maxBytes: 10 * 1024 * 1024 * 1024,

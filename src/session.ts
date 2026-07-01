@@ -1,11 +1,11 @@
-import { planChunks } from "./chunks";
-import { createManifest } from "./manifest";
+import { planChunks } from "./chunks.js";
+import { createManifest } from "./manifest.js";
 import type {
   CreateIngestSessionOptions,
   IngestEvent,
   IngestFileLike,
   IngestManifest
-} from "./types";
+} from "./types.js";
 
 export class LargeImageIngestSession {
   private readonly abortController = new AbortController();

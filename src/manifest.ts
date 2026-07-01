@@ -1,11 +1,11 @@
-import { planChunks } from "./chunks";
-import { createFastFingerprint } from "./fingerprint";
-import { validateFile } from "./validation";
+import { planChunks } from "./chunks.js";
+import { createFastFingerprint } from "./fingerprint.js";
+import { validateFile } from "./validation.js";
 import type {
   CreateIngestSessionOptions,
   IngestFileLike,
   IngestManifest
-} from "./types";
+} from "./types.js";
 
 export async function createManifest(
   file: IngestFileLike,

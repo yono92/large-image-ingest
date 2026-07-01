@@ -1,4 +1,4 @@
-import type { ChunkDescriptor, ChunkPlan, ChunkPlanOptions } from "./types";
+import type { ChunkDescriptor, ChunkPlan, ChunkPlanOptions } from "./types.js";
 
 const DEFAULT_CHUNK_SIZE = 8 * 1024 * 1024;
 const MIN_CHUNK_SIZE = 256 * 1024;
