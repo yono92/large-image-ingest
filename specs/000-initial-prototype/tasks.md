@@ -7,6 +7,7 @@
 - [x] Implement validation helper.
 - [x] Implement chunk planner.
 - [x] Implement manifest generation.
+- [x] Define manifest v0.1 schema contract.
 - [x] Implement upload session orchestration.
 - [x] Add seed unit tests.
 - [x] Add manual SDD seed docs.

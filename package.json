@@ -4,6 +4,18 @@
   "description": "TypeScript-first ingestion toolkit for very large inspection images.",
   "type": "module",
   "license": "MIT",
+  "packageManager": "npm@10.8.2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yono92/large-image-ingest.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yono92/large-image-ingest/issues"
+  },
+  "homepage": "https://github.com/yono92/large-image-ingest#readme",
+  "engines": {
+    "node": ">=20"
+  },
   "sideEffects": false,
   "files": [
     "dist",
@@ -19,6 +31,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm audit --audit-level=moderate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
@@ -30,6 +44,9 @@
     "inspection",
     "typescript"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "typescript": "^5.0.0",
     "vitest": "^4.1.9"

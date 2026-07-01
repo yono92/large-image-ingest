@@ -26,7 +26,7 @@ export class LargeImageIngestSession {
       manifest = await createManifest(this.file, this.options);
       this.emit({ type: "validated", manifest });
 
-      if (manifest.issues.some((issue) => issue.severity === "error")) {
+      if (!manifest.validation.ok) {
         throw new Error("Cannot start upload because validation failed.");
       }
 

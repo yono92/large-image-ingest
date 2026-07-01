@@ -23,6 +23,8 @@ Provide a minimal TypeScript core that can validate a large image-like file, cre
 - The core must expose file validation as a standalone function.
 - The core must expose chunk planning as a standalone function.
 - The core must generate a versioned manifest before upload starts.
+- The manifest must include `schemaVersion`, original file identity, preservation policy, chunking summary, upload defaults, metadata, derivative placeholders, and validation result.
+- The manifest must represent NAS and other storage targets as optional hints, not as core transport logic.
 - The core must upload chunks sequentially through an adapter interface.
 - The core must support aborting an active session.
 - The core must retry failed chunk uploads a configurable number of times.
@@ -43,6 +45,8 @@ Provide a minimal TypeScript core that can validate a large image-like file, cre
 - Chunk ranges are deterministic.
 - Transport implementations receive the manifest, upload ID, chunk descriptor, and sliced blob body.
 - Public types are exported from the package entrypoint.
+- Manifest creation produces `large-image-ingest.manifest.v0.1`.
+- Validation failures are embedded in `manifest.validation` and prevent session upload from starting.
 
 ## Future NAS Compatibility
 

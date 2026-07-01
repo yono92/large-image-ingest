@@ -53,25 +53,85 @@ export interface ChunkPlanOptions {
   chunkSize?: number;
 }
 
+export type IngestManifestSchemaVersion = "large-image-ingest.manifest.v0.1";
+
+export type FingerprintAlgorithm = "metadata-sha256" | "metadata-fallback";
+
+export interface FileFingerprint {
+  algorithm: FingerprintAlgorithm;
+  scope: "file-metadata";
+  value: string;
+}
+
 export interface OriginalImageManifest {
+  kind: "original";
   name: string;
-  size: number;
-  type: string;
-  lastModified?: number;
-  fingerprint: string;
+  extension?: string;
+  sizeBytes: number;
+  mediaType: string;
+  lastModifiedAt?: string;
+  fingerprint: FileFingerprint;
+  preservation: {
+    required: true;
+    allowedMutations: [];
+  };
+}
+
+export interface ImageInspectionManifest {
+  status: "not_inspected";
+  format?: string;
+  width: null;
+  height: null;
+  colorDepth: null;
+}
+
+export interface UploadManifest {
+  status: "pending";
+  resumable: true;
+  retryLimit: number;
+  transport?: {
+    name: string;
+  };
+}
+
+export interface StorageTargetManifest {
+  kind: "s3" | "tus" | "nas" | "filesystem" | "custom";
+  label?: string;
+  locationHint?: string;
+}
+
+export interface DerivativeManifest {
+  id: string;
+  kind: "preview" | "thumbnail" | "tile" | "metadata" | "custom";
+  status: "planned" | "created" | "failed";
+  mediaType?: string;
+  width?: number;
+  height?: number;
+  source: "original";
 }
 
 export interface IngestManifest {
+  schemaVersion: IngestManifestSchemaVersion;
   id: string;
-  version: "0.1";
   createdAt: string;
-  original: OriginalImageManifest;
-  chunking: {
-    chunkSize: number;
-    totalChunks: number;
+  library: {
+    name: "large-image-ingest";
+    version: "0.0.0";
   };
+  original: OriginalImageManifest;
+  image: ImageInspectionManifest;
+  chunking: {
+    strategy: "fixed-size";
+    chunkSizeBytes: number;
+    totalBytes: number;
+    totalChunks: number;
+    chunkRangesIncluded: false;
+  };
+  upload: UploadManifest;
+  storage?: StorageTargetManifest;
   metadata: Record<string, unknown>;
-  issues: IngestIssue[];
+  derivatives: DerivativeManifest[];
+  validation: ValidationResult;
 }
 
 export type IngestEvent =
@@ -106,6 +166,7 @@ export interface CreateIngestSessionOptions {
   metadata?: Record<string, unknown>;
   onEvent?: (event: IngestEvent) => void;
   retries?: number;
+  storage?: StorageTargetManifest;
   transport: UploadTransport;
   validation?: ValidationRules;
 }

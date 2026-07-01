@@ -230,29 +230,52 @@ const manifest = await session.start();
 
 ```json
 {
-  "schemaVersion": "0.1.0",
+  "schemaVersion": "large-image-ingest.manifest.v0.1",
   "id": "ing_01J00000000000000000000000",
   "createdAt": "2026-06-30T00:00:00.000Z",
-  "file": {
+  "library": {
+    "name": "large-image-ingest",
+    "version": "0.0.0"
+  },
+  "original": {
+    "kind": "original",
     "name": "wafer-aoi-001.tif",
-    "size": 1843221900,
-    "type": "image/tiff",
-    "lastModified": 1782800000000,
-    "sha256": "..."
+    "extension": "tif",
+    "sizeBytes": 1843221900,
+    "mediaType": "image/tiff",
+    "lastModifiedAt": "2026-06-30T00:00:00.000Z",
+    "fingerprint": {
+      "algorithm": "metadata-sha256",
+      "scope": "file-metadata",
+      "value": "..."
+    },
+    "preservation": {
+      "required": true,
+      "allowedMutations": []
+    }
   },
   "image": {
-    "format": "tiff",
-    "width": 120000,
-    "height": 90000,
+    "status": "not_inspected",
+    "width": null,
+    "height": null,
     "colorDepth": null
   },
+  "chunking": {
+    "strategy": "fixed-size",
+    "chunkSizeBytes": 67108864,
+    "totalBytes": 1843221900,
+    "totalChunks": 28,
+    "chunkRangesIncluded": false
+  },
   "upload": {
-    "transport": "tus",
-    "endpoint": "/api/uploads",
-    "chunkSize": 67108864,
-    "chunks": 28,
+    "status": "pending",
     "resumable": true,
-    "status": "completed"
+    "retryLimit": 2
+  },
+  "storage": {
+    "kind": "nas",
+    "label": "fab-qc-nas",
+    "locationHint": "/inspection/inbox"
   },
   "metadata": {
     "lotId": "LOT-2026-001",
@@ -260,13 +283,10 @@ const manifest = await session.start();
     "tool": "VFVI",
     "inspectionType": "defect-review"
   },
-  "derivatives": {
-    "preview": {
-      "status": "created",
-      "width": 2048,
-      "height": 1536,
-      "contentType": "image/webp"
-    }
+  "derivatives": [],
+  "validation": {
+    "ok": true,
+    "issues": []
   }
 }
 ```

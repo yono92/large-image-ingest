@@ -1,0 +1,78 @@
+import { describe, expect, it } from "vitest";
+import { createManifest } from "../src/manifest";
+
+describe("createManifest", () => {
+  it("creates a versioned original-preserving manifest", async () => {
+    const file = new File(["inspection-data"], "wafer-aoi-001.tif", {
+      type: "image/tiff",
+      lastModified: Date.UTC(2026, 0, 1)
+    });
+
+    const manifest = await createManifest(file, {
+      chunking: { chunkSize: 256 * 1024 },
+      metadata: {
+        lotId: "LOT-001",
+        waferId: "W12"
+      },
+      retries: 3,
+      storage: {
+        kind: "nas",
+        label: "fab-qc-nas",
+        locationHint: "/inspection/inbox"
+      },
+      validation: {
+        acceptedExtensions: ["tif", "tiff"],
+        acceptedMimeTypes: ["image/tiff"]
+      }
+    });
+
+    expect(manifest.schemaVersion).toBe("large-image-ingest.manifest.v0.1");
+    expect(manifest.original).toMatchObject({
+      kind: "original",
+      name: "wafer-aoi-001.tif",
+      extension: "tif",
+      sizeBytes: file.size,
+      mediaType: "image/tiff",
+      preservation: {
+        required: true,
+        allowedMutations: []
+      }
+    });
+    expect(manifest.original.fingerprint.scope).toBe("file-metadata");
+    expect(manifest.chunking).toEqual({
+      strategy: "fixed-size",
+      chunkSizeBytes: 256 * 1024,
+      totalBytes: file.size,
+      totalChunks: 1,
+      chunkRangesIncluded: false
+    });
+    expect(manifest.upload).toEqual({
+      status: "pending",
+      resumable: true,
+      retryLimit: 3
+    });
+    expect(manifest.storage).toEqual({
+      kind: "nas",
+      label: "fab-qc-nas",
+      locationHint: "/inspection/inbox"
+    });
+    expect(manifest.validation.ok).toBe(true);
+  });
+
+  it("keeps validation failures inside the manifest", async () => {
+    const file = new File(["bad"], "wafer.jpg", { type: "image/jpeg" });
+
+    const manifest = await createManifest(file, {
+      validation: {
+        acceptedExtensions: ["tif"],
+        acceptedMimeTypes: ["image/tiff"]
+      }
+    });
+
+    expect(manifest.validation.ok).toBe(false);
+    expect(manifest.validation.issues.map((issue) => issue.code)).toEqual([
+      "file.mime_not_allowed",
+      "file.extension_not_allowed"
+    ]);
+  });
+});
