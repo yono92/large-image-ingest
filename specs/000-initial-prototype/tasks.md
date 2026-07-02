@@ -13,6 +13,6 @@
 - [x] Add manual SDD seed docs.
 - [x] Install dependencies and run verification.
 - [ ] Initialize official Spec Kit files with `specify init`.
-- [ ] Design future NAS-backed transport requirements.
+- [x] Design future NAS-backed transport requirements in `specs/001-official-transports/`.
 - [ ] Create public GitHub repository.
 - [ ] Push initial commit.

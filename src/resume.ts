@@ -29,6 +29,9 @@ export class ResumeConflictError extends Error {
 }
 
 export class UploadPausedError extends Error {
+  readonly code = "transport.paused" as const;
+  readonly retryable = false;
+
   constructor(readonly recordId?: string) {
     super("Upload paused.");
     this.name = "UploadPausedError";
@@ -36,6 +39,9 @@ export class UploadPausedError extends Error {
 }
 
 export class UploadCanceledError extends Error {
+  readonly code = "transport.canceled" as const;
+  readonly retryable = false;
+
   constructor(readonly recordId?: string) {
     super("Upload canceled.");
     this.name = "UploadCanceledError";

@@ -19,7 +19,9 @@ import {
 import type {
   ChunkDescriptor,
   ChunkPlan,
+  CompletedChunkRange,
   CreateIngestSessionOptions,
+  IngestError,
   IngestEvent,
   IngestFileLike,
   IngestIssueCode,
@@ -28,18 +30,30 @@ import type {
   ResumeRecordStatus,
   ResumeStore,
   ResumeTransportState,
+  TransportCapabilities,
+  TransportSession,
+  UploadChunkReceipt,
   UploadChunkResult,
-  UploadSessionResult
+  UploadSessionResult,
+  UploadSessionSnapshot,
+  UploadSessionStatus
 } from "./types.js";
 
 const SUPPORTED_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.1";
 
+interface NormalizedUploadChunkResult {
+  receipt: UploadChunkReceipt;
+  transportResult?: UploadChunkResult | undefined;
+}
+
 export class LargeImageIngestSession {
   private readonly abortController = new AbortController();
   private cancelEmitted = false;
-  private cancelRequested = false;
   private currentRecord: ResumeRecord | undefined;
-  private pauseRequested = false;
+  private currentSnapshot: UploadSessionSnapshot | undefined;
+  private currentTransportSession: TransportSession | undefined;
+  private lifecycleAction: "pause" | "cancel" | undefined;
+  private readonly completedReceipts = new Map<number, UploadChunkReceipt>();
 
   constructor(
     private readonly file: IngestFileLike,
@@ -50,53 +64,85 @@ export class LargeImageIngestSession {
     this.abortController.abort(reason);
   }
 
-  pause(_reason?: unknown): void {
-    this.pauseRequested = true;
-  }
-
-  async cancel(_reason?: unknown): Promise<void> {
-    this.cancelRequested = true;
+  pause(reason?: unknown): void {
+    this.lifecycleAction = "pause";
 
     if (!this.abortController.signal.aborted) {
-      this.abortController.abort(new UploadCanceledError(this.currentRecord?.id));
+      this.abortController.abort(reason ?? new UploadPausedError(this.currentRecord?.id));
+    }
+  }
+
+  async cancel(reason?: unknown): Promise<void> {
+    this.lifecycleAction = "cancel";
+
+    if (!this.abortController.signal.aborted) {
+      this.abortController.abort(reason ?? new UploadCanceledError(this.currentRecord?.id));
     }
 
     if (this.currentRecord) {
       this.currentRecord = await this.markRecordCanceled(this.currentRecord);
-    } else {
-      this.emitCancel(undefined);
     }
+  }
+
+  getSnapshot(): UploadSessionSnapshot | undefined {
+    return this.currentSnapshot ? cloneSnapshot(this.currentSnapshot) : undefined;
   }
 
   async start(): Promise<IngestManifest> {
     let manifest: IngestManifest | undefined;
+    let chunkPlan: ChunkPlan | undefined;
+    const snapshotCreatedAt = this.options.resumeFrom?.createdAt ?? nowIso();
 
     try {
-      manifest = await createManifest(this.file, this.options);
-      this.emit({ type: "validated", manifest });
       this.throwIfStopped();
+      manifest = this.options.manifest ?? await createManifest(this.file, this.options);
+      this.emit({ type: "validated", manifest });
 
       if (!manifest.validation.ok) {
-        throw new Error("Cannot start upload because validation failed.");
+        throw createIngestError(
+          "transport.failed",
+          "Cannot start upload because validation failed.",
+          false
+        );
       }
 
-      const session = await this.options.transport.createSession({
-        manifest,
-        file: this.file,
-        signal: this.abortController.signal
-      });
+      chunkPlan = planChunks(this.file.size, this.options.chunking);
+      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
+      this.hydrateResumeSnapshot(manifest, chunkPlan);
+
+      const session = await this.createOrResumeSnapshotSession(manifest, chunkPlan);
+      this.currentTransportSession = session;
+      manifest.upload.transport = { name: session.transportName };
 
       this.emit({ type: "started", manifest, uploadId: session.uploadId });
+      this.updateSnapshot({
+        manifest,
+        chunkPlan,
+        session,
+        status: this.options.resumeFrom ? "resuming" : "uploading",
+        createdAt: snapshotCreatedAt
+      });
 
-      const chunkPlan = planChunks(this.file.size, this.options.chunking);
-      const record = await this.createInitialResumeRecord(manifest, session);
+      let record = this.options.resumeFrom
+        ? undefined
+        : await this.createInitialResumeRecord(manifest, session);
 
-      await this.uploadRemainingChunks(manifest, session.uploadId, chunkPlan, record);
-      await this.completeUpload(manifest, session.uploadId, record);
+      if (this.options.resumeFrom) {
+        this.updateSnapshot({
+          manifest,
+          chunkPlan,
+          session,
+          status: "uploading",
+          createdAt: snapshotCreatedAt
+        });
+      }
+
+      record = await this.uploadRemainingChunks(manifest, session, chunkPlan, record, snapshotCreatedAt);
+      await this.completeUpload(manifest, session, record, chunkPlan, snapshotCreatedAt);
 
       return manifest;
     } catch (error) {
-      await this.handleSessionError(error, manifest);
+      await this.handleSessionError(error, manifest, chunkPlan, snapshotCreatedAt);
       throw this.normalizeStopError(error);
     }
   }
@@ -104,6 +150,8 @@ export class LargeImageIngestSession {
   async resume(recordId: string): Promise<IngestManifest> {
     const store = this.requireResumeStore();
     let manifest: IngestManifest | undefined;
+    let chunkPlan: ChunkPlan | undefined;
+    const snapshotCreatedAt = nowIso();
 
     try {
       const record = await this.getResumeRecord(store, recordId);
@@ -121,14 +169,18 @@ export class LargeImageIngestSession {
         );
       }
 
-      let session: UploadSessionResult;
+      let session: TransportSession;
       try {
-        session = await this.options.transport.resumeSession({
-          manifest,
-          file: this.file,
-          signal: this.abortController.signal,
-          record
-        });
+        session = normalizeTransportSession(
+          await this.options.transport.resumeSession({
+            manifest,
+            file: this.file,
+            signal: this.abortController.signal,
+            record
+          }),
+          this.transportName(record.transport.name),
+          record.transport
+        );
       } catch (error) {
         throw this.emitResumeConflict(
           "resume.transport_mismatch",
@@ -146,29 +198,91 @@ export class LargeImageIngestSession {
         );
       }
 
+      this.currentTransportSession = session;
+      manifest.upload.transport = { name: session.transportName };
       const activeRecord = await this.putResumeRecord(
         this.withTransport(
           this.withStatus(record, "active"),
-          mergeTransportState(record.transport, session)
+          mergeTransportState(record.transport, this.createTransportState(session))
         )
       );
 
       this.emit({ type: "resume:started", recordId: activeRecord.id, manifestId: manifest.id });
 
-      const chunkPlan = planChunks(this.file.size, this.options.chunking);
-      await this.uploadRemainingChunks(manifest, activeRecord.transport.uploadId, chunkPlan, activeRecord);
-      await this.completeUpload(manifest, activeRecord.transport.uploadId, this.currentRecord);
+      chunkPlan = planChunks(this.file.size, this.options.chunking);
+      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
+      this.hydrateResumeRecord(activeRecord, chunkPlan, session);
+      this.updateSnapshot({
+        manifest,
+        chunkPlan,
+        session,
+        status: "resuming",
+        createdAt: snapshotCreatedAt
+      });
+
+      const nextRecord = await this.uploadRemainingChunks(
+        manifest,
+        session,
+        chunkPlan,
+        activeRecord,
+        snapshotCreatedAt
+      );
+      await this.completeUpload(manifest, session, nextRecord, chunkPlan, snapshotCreatedAt);
 
       return manifest;
     } catch (error) {
-      await this.handleSessionError(error, manifest);
+      await this.handleSessionError(error, manifest, chunkPlan, snapshotCreatedAt);
       throw this.normalizeStopError(error);
     }
   }
 
+  private async createOrResumeSnapshotSession(
+    manifest: IngestManifest,
+    chunkPlan: ChunkPlan
+  ): Promise<TransportSession> {
+    const context = {
+      manifest,
+      file: this.file,
+      signal: this.abortController.signal
+    };
+    const fallbackTransportName = this.transportName();
+
+    if (this.options.resumeFrom) {
+      const snapshot = this.options.resumeFrom;
+
+      if (this.options.transport.resumeSession) {
+        const record = await this.createRecordFromSnapshot(manifest, chunkPlan, snapshot);
+        return normalizeTransportSession(
+          await this.options.transport.resumeSession({
+            ...context,
+            record,
+            snapshot
+          }),
+          snapshot.transportSession?.transportName ?? fallbackTransportName,
+          snapshot.transportSession
+        );
+      }
+
+      if (snapshot.transportSession) {
+        return snapshot.transportSession;
+      }
+
+      throw createIngestError(
+        "transport.resume_failed",
+        "Cannot resume upload because the snapshot has no transport session.",
+        false
+      );
+    }
+
+    return normalizeTransportSession(
+      await this.options.transport.createSession(context),
+      fallbackTransportName
+    );
+  }
+
   private async createInitialResumeRecord(
     manifest: IngestManifest,
-    session: UploadSessionResult
+    session: TransportSession
   ): Promise<ResumeRecord | undefined> {
     const store = this.options.resume?.store;
     if (!store) {
@@ -191,6 +305,39 @@ export class LargeImageIngestSession {
     });
 
     return persisted;
+  }
+
+  private async createRecordFromSnapshot(
+    manifest: IngestManifest,
+    chunkPlan: ChunkPlan,
+    snapshot: UploadSessionSnapshot
+  ): Promise<ResumeRecord> {
+    const completedChunkRanges = receiptsToRanges(snapshot.completedChunks);
+    const now = nowIso();
+
+    return {
+      schemaVersion: SUPPORTED_RESUME_SCHEMA_VERSION,
+      id: `snapshot_${snapshot.manifestId}`,
+      manifest,
+      file: await createResumeFileIdentity(this.file),
+      chunking: {
+        strategy: "fixed-size",
+        chunkSizeBytes: chunkPlan.chunkSize,
+        totalBytes: chunkPlan.totalBytes,
+        totalChunks: chunkPlan.totalChunks
+      },
+      transport: snapshot.transportSession
+        ? this.createTransportState(snapshot.transportSession)
+        : { uploadId: `snapshot_${snapshot.manifestId}` },
+      progress: {
+        status: "active",
+        uploadedBytes: snapshot.uploadedBytes,
+        completedChunkRanges,
+        nextChunkIndex: getNextIncompleteChunkIndex(completedChunkRanges, chunkPlan.totalChunks)
+      },
+      createdAt: snapshot.createdAt,
+      updatedAt: now
+    };
   }
 
   private async validateResumeRecord(record: ResumeRecord, store: ResumeStore): Promise<void> {
@@ -244,40 +391,29 @@ export class LargeImageIngestSession {
 
   private async uploadRemainingChunks(
     manifest: IngestManifest,
-    uploadId: string,
+    session: TransportSession,
     chunkPlan: ChunkPlan,
-    record: ResumeRecord | undefined
-  ): Promise<void> {
+    record: ResumeRecord | undefined,
+    snapshotCreatedAt: string
+  ): Promise<ResumeRecord | undefined> {
     let activeRecord = record;
-    let uploadedBytes = activeRecord?.progress.uploadedBytes ?? 0;
 
     for (const chunk of chunkPlan.chunks) {
-      if (activeRecord && isChunkCompleted(activeRecord.progress.completedChunkRanges, chunk.index)) {
-        uploadedBytes = activeRecord.progress.uploadedBytes;
+      if (this.completedReceipts.has(chunk.index)) {
         continue;
       }
 
       this.throwIfStopped();
       this.emit({ type: "chunk:started", manifestId: manifest.id, chunk });
 
-      const result = await this.uploadChunkWithRetry(manifest, uploadId, chunk);
-
-      if (this.cancelRequested) {
-        if (activeRecord) {
-          activeRecord = await this.markRecordCanceled(activeRecord);
-        } else {
-          this.emitCancel(undefined);
-        }
-        throw new UploadCanceledError(activeRecord?.id);
-      }
+      const result = await this.uploadChunkWithRetry(manifest, session, chunk);
+      this.storeReceipt(chunk, result.receipt);
 
       if (activeRecord) {
-        activeRecord = await this.checkpointChunk(activeRecord, chunk, chunkPlan, result);
-        uploadedBytes = activeRecord.progress.uploadedBytes;
-      } else {
-        uploadedBytes += chunk.size;
+        activeRecord = await this.checkpointChunk(activeRecord, chunk, chunkPlan, result.transportResult);
       }
 
+      const uploadedBytes = calculateUploadedBytes(this.sortedReceipts());
       this.emit({
         type: "chunk:completed",
         manifestId: manifest.id,
@@ -285,16 +421,18 @@ export class LargeImageIngestSession {
         uploadedBytes,
         totalBytes: this.file.size
       });
+      this.updateSnapshot({
+        manifest,
+        chunkPlan,
+        session,
+        status: "uploading",
+        createdAt: snapshotCreatedAt
+      });
 
-      if (this.pauseRequested) {
-        if (activeRecord) {
-          activeRecord = await this.markRecordPaused(activeRecord);
-        }
-
-        this.emitPause(activeRecord?.id);
-        throw new UploadPausedError(activeRecord?.id);
-      }
+      this.throwIfStopped();
     }
+
+    return activeRecord;
   }
 
   private async checkpointChunk(
@@ -323,7 +461,7 @@ export class LargeImageIngestSession {
       ...record,
       transport,
       progress,
-      updatedAt: new Date().toISOString()
+      updatedAt: nowIso()
     });
 
     this.emit({
@@ -337,9 +475,9 @@ export class LargeImageIngestSession {
 
   private async uploadChunkWithRetry(
     manifest: IngestManifest,
-    uploadId: string,
+    session: TransportSession,
     chunk: ChunkDescriptor
-  ): Promise<UploadChunkResult | undefined> {
+  ): Promise<NormalizedUploadChunkResult> {
     const retries = this.options.retries ?? 2;
 
     for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -349,14 +487,21 @@ export class LargeImageIngestSession {
           manifest,
           file: this.file,
           signal: this.abortController.signal,
-          uploadId,
+          uploadId: session.uploadId,
           chunk,
-          body: this.file.slice(chunk.start, chunk.end)
+          body: this.file.slice(chunk.start, chunk.end),
+          session,
+          previousReceipts: this.sortedReceipts()
         });
-        return result ?? undefined;
+
+        return normalizeChunkResult(chunk, session, result);
       } catch (error) {
-        if (this.cancelRequested) {
+        if (this.lifecycleAction === "cancel") {
           throw new UploadCanceledError(this.currentRecord?.id);
+        }
+
+        if (isNonRetryableIngestError(error)) {
+          throw error;
         }
 
         if (attempt >= retries) {
@@ -367,28 +512,46 @@ export class LargeImageIngestSession {
       }
     }
 
-    return undefined;
+    throw createIngestError("transport.failed", "Chunk upload failed.", true);
   }
 
   private async completeUpload(
     manifest: IngestManifest,
-    uploadId: string,
-    record: ResumeRecord | undefined
+    session: TransportSession,
+    record: ResumeRecord | undefined,
+    chunkPlan: ChunkPlan,
+    snapshotCreatedAt: string
   ): Promise<void> {
     this.throwIfStopped();
+    this.updateSnapshot({
+      manifest,
+      chunkPlan,
+      session,
+      status: "completing",
+      createdAt: snapshotCreatedAt
+    });
 
     await this.options.transport.completeSession({
       manifest,
       file: this.file,
       signal: this.abortController.signal,
-      uploadId
+      uploadId: session.uploadId,
+      session,
+      receipts: this.sortedReceipts()
     });
 
     if (record) {
       await this.completeResumeRecord(record);
     }
 
-    this.emit({ type: "completed", manifest, uploadId });
+    this.updateSnapshot({
+      manifest,
+      chunkPlan,
+      session,
+      status: "completed",
+      createdAt: snapshotCreatedAt
+    });
+    this.emit({ type: "completed", manifest, uploadId: session.uploadId });
   }
 
   private async completeResumeRecord(record: ResumeRecord): Promise<void> {
@@ -412,6 +575,199 @@ export class LargeImageIngestSession {
         error
       );
     }
+  }
+
+  private hydrateResumeSnapshot(manifest: IngestManifest, chunkPlan: ChunkPlan): void {
+    const snapshot = this.options.resumeFrom;
+
+    if (!snapshot) {
+      return;
+    }
+
+    if (snapshot.manifestId !== manifest.id) {
+      throw createIngestError(
+        "transport.resume_failed",
+        "Cannot resume upload because the snapshot manifest does not match the active manifest.",
+        false,
+        {
+          expectedManifestId: manifest.id,
+          snapshotManifestId: snapshot.manifestId
+        }
+      );
+    }
+
+    validateResumeChunkPlan(snapshot.chunkPlan, chunkPlan);
+
+    for (const receipt of snapshot.completedChunks) {
+      const chunk = chunkPlan.chunks[receipt.chunkIndex];
+      if (!chunk) {
+        throw createIngestError(
+          "transport.receipt_invalid",
+          "Cannot resume upload because a stored receipt references an unknown chunk.",
+          false,
+          { chunkIndex: receipt.chunkIndex }
+        );
+      }
+
+      this.storeReceipt(chunk, receipt);
+    }
+  }
+
+  private hydrateResumeRecord(
+    record: ResumeRecord,
+    chunkPlan: ChunkPlan,
+    session: TransportSession
+  ): void {
+    for (const range of record.progress.completedChunkRanges) {
+      for (let index = range.startIndex; index <= range.endIndexInclusive; index += 1) {
+        const chunk = chunkPlan.chunks[index];
+
+        if (!chunk) {
+          continue;
+        }
+
+        this.completedReceipts.set(index, {
+          chunkIndex: index,
+          sizeBytes: chunk.size,
+          completedAt: record.updatedAt,
+          transport: {
+            name: session.transportName
+          }
+        });
+      }
+    }
+  }
+
+  private async abortTransportSession(manifest: IngestManifest): Promise<void> {
+    const session = this.currentTransportSession;
+
+    if (!session || !this.options.transport.abortSession) {
+      return;
+    }
+
+    try {
+      await this.options.transport.abortSession({
+        manifest,
+        file: this.file,
+        signal: new AbortController().signal,
+        uploadId: session.uploadId,
+        session,
+        receipts: this.sortedReceipts()
+      });
+    } catch (error) {
+      throw createIngestError(
+        "transport.abort_failed",
+        toErrorMessage(error, "Transport abort failed."),
+        false
+      );
+    }
+  }
+
+  private async handleSessionError(
+    error: unknown,
+    manifest: IngestManifest | undefined,
+    chunkPlan: ChunkPlan | undefined,
+    snapshotCreatedAt: string
+  ): Promise<void> {
+    const lifecycleStatus = this.lifecycleStatus();
+    let snapshot: UploadSessionSnapshot | undefined;
+
+    if (lifecycleStatus === "canceled" && manifest) {
+      try {
+        await this.abortTransportSession(manifest);
+      } catch (abortError) {
+        error = abortError;
+      }
+    }
+
+    if (this.currentRecord && lifecycleStatus === "paused") {
+      this.currentRecord = await this.markRecordPaused(this.currentRecord);
+    } else if (this.currentRecord && lifecycleStatus === "canceled") {
+      this.currentRecord = await this.markRecordCanceled(this.currentRecord);
+    } else if (!lifecycleStatus && !(error instanceof ResumeConflictError)) {
+      await this.markCurrentRecordFailed(error);
+    }
+
+    if (manifest && chunkPlan) {
+      snapshot = this.updateSnapshot({
+        manifest,
+        chunkPlan,
+        session: this.currentTransportSession,
+        status: lifecycleStatus ?? "failed",
+        createdAt: snapshotCreatedAt,
+        error
+      });
+    }
+
+    if (snapshot && lifecycleStatus === "paused") {
+      this.emit({ type: "paused", snapshot: redactSnapshot(snapshot) });
+      this.emitPause(this.currentRecord?.id);
+    } else if (snapshot && lifecycleStatus === "canceled") {
+      this.emit({ type: "canceled", snapshot: redactSnapshot(snapshot) });
+      this.emitCancel(this.currentRecord?.id);
+    }
+
+    if (!lifecycleStatus && !(error instanceof ResumeConflictError)) {
+      this.emit(
+        manifest
+          ? { type: "failed", manifestId: manifest.id, error }
+          : { type: "failed", error }
+      );
+    }
+  }
+
+  private normalizeStopError(error: unknown): unknown {
+    if (this.lifecycleAction === "cancel" && !(error instanceof UploadCanceledError)) {
+      return new UploadCanceledError(this.currentRecord?.id);
+    }
+
+    if (this.lifecycleAction === "pause" && !(error instanceof UploadPausedError)) {
+      return new UploadPausedError(this.currentRecord?.id);
+    }
+
+    return error;
+  }
+
+  private storeReceipt(chunk: ChunkDescriptor, receipt: UploadChunkReceipt): void {
+    this.completedReceipts.set(chunk.index, validateReceipt(chunk, receipt));
+  }
+
+  private sortedReceipts(): UploadChunkReceipt[] {
+    return Array.from(this.completedReceipts.values()).sort(
+      (left, right) => left.chunkIndex - right.chunkIndex
+    );
+  }
+
+  private updateSnapshot(options: {
+    manifest: IngestManifest;
+    chunkPlan: ChunkPlan;
+    session?: TransportSession | undefined;
+    status: UploadSessionStatus;
+    createdAt: string;
+    error?: unknown;
+    failedChunk?: ChunkDescriptor | undefined;
+  }): UploadSessionSnapshot {
+    const snapshot: UploadSessionSnapshot = {
+      manifestId: options.manifest.id,
+      status: options.status,
+      transportSession: options.session,
+      chunkPlan: options.chunkPlan,
+      completedChunks: this.sortedReceipts(),
+      failedChunk: options.failedChunk,
+      uploadedBytes: calculateUploadedBytes(this.sortedReceipts()),
+      totalBytes: this.file.size,
+      createdAt: options.createdAt,
+      updatedAt: nowIso()
+    };
+
+    if (options.error !== undefined) {
+      snapshot.error = toSnapshotError(options.error);
+    }
+
+    this.currentSnapshot = cloneSnapshot(snapshot);
+    this.options.onSnapshot?.(cloneSnapshot(snapshot));
+    this.emit({ type: "snapshot", snapshot: redactSnapshot(snapshot) });
+    return cloneSnapshot(snapshot);
   }
 
   private async getResumeRecord(store: ResumeStore, recordId: string): Promise<ResumeRecord> {
@@ -498,7 +854,7 @@ export class LargeImageIngestSession {
     return {
       ...record,
       progress,
-      updatedAt: new Date().toISOString()
+      updatedAt: nowIso()
     };
   }
 
@@ -506,14 +862,19 @@ export class LargeImageIngestSession {
     return {
       ...record,
       transport,
-      updatedAt: new Date().toISOString()
+      updatedAt: nowIso()
     };
   }
 
-  private createTransportState(session: UploadSessionResult): ResumeTransportState {
+  private createTransportState(session: TransportSession | UploadSessionResult): ResumeTransportState {
     const state: ResumeTransportState = {
       uploadId: session.uploadId
     };
+
+    const transportName = "transportName" in session ? session.transportName : session.transportName;
+    if (transportName !== undefined) {
+      state.name = transportName;
+    }
 
     if (session.resumeToken !== undefined) {
       state.resumeToken = session.resumeToken;
@@ -523,8 +884,9 @@ export class LargeImageIngestSession {
       state.expiresAt = session.expiresAt;
     }
 
-    if (session.data !== undefined) {
-      state.data = session.data;
+    const data = "data" in session ? session.data : session.remote;
+    if (data !== undefined) {
+      state.data = data;
     }
 
     return state;
@@ -543,46 +905,6 @@ export class LargeImageIngestSession {
     }
 
     return total;
-  }
-
-  private async handleSessionError(error: unknown, manifest: IngestManifest | undefined): Promise<void> {
-    if (this.cancelRequested) {
-      if (this.currentRecord) {
-        this.currentRecord = await this.markRecordCanceled(this.currentRecord);
-      } else {
-        this.emitCancel(undefined);
-      }
-      return;
-    }
-
-    if (error instanceof UploadPausedError || error instanceof ResumeConflictError) {
-      return;
-    }
-
-    await this.markCurrentRecordFailed(error);
-    this.emit(
-      manifest
-        ? { type: "failed", manifestId: manifest.id, error }
-        : { type: "failed", error }
-    );
-  }
-
-  private normalizeStopError(error: unknown): unknown {
-    if (this.cancelRequested && !(error instanceof UploadCanceledError)) {
-      return new UploadCanceledError(this.currentRecord?.id);
-    }
-
-    return error;
-  }
-
-  private throwIfStopped(): void {
-    if (this.cancelRequested) {
-      throw new UploadCanceledError(this.currentRecord?.id);
-    }
-
-    if (this.abortController.signal.aborted) {
-      throw this.abortController.signal.reason ?? new Error("Upload aborted.");
-    }
   }
 
   private requireResumeStore(): ResumeStore {
@@ -635,6 +957,36 @@ export class LargeImageIngestSession {
     this.emit({ type: "upload:canceled", recordId });
   }
 
+  private lifecycleStatus(): "paused" | "canceled" | undefined {
+    if (this.lifecycleAction === "pause") {
+      return "paused";
+    }
+
+    if (this.lifecycleAction === "cancel") {
+      return "canceled";
+    }
+
+    return undefined;
+  }
+
+  private throwIfStopped(): void {
+    if (this.lifecycleAction === "pause") {
+      throw new UploadPausedError(this.currentRecord?.id);
+    }
+
+    if (this.lifecycleAction === "cancel") {
+      throw new UploadCanceledError(this.currentRecord?.id);
+    }
+
+    if (this.abortController.signal.aborted) {
+      throw this.abortController.signal.reason ?? createIngestError(
+        "transport.aborted",
+        "Upload aborted.",
+        false
+      );
+    }
+  }
+
   private isTerminalOrControlledStatus(status: ResumeRecordStatus): boolean {
     return status === "completed" || status === "canceled" || status === "expired" || status === "paused";
   }
@@ -644,11 +996,27 @@ export class LargeImageIngestSession {
       return error.code;
     }
 
+    if (isIngestError(error)) {
+      return error.code;
+    }
+
+    if (this.lifecycleAction === "pause") {
+      return "transport.paused";
+    }
+
+    if (this.lifecycleAction === "cancel") {
+      return "transport.canceled";
+    }
+
     if (this.abortController.signal.aborted) {
       return "transport.aborted";
     }
 
     return "transport.failed";
+  }
+
+  private transportName(fallback?: string): string {
+    return fallback ?? this.options.transport.capabilities?.name ?? "custom";
   }
 
   private emit(event: IngestEvent): void {
@@ -661,4 +1029,371 @@ export function createIngestSession(
   options: CreateIngestSessionOptions
 ): LargeImageIngestSession {
   return new LargeImageIngestSession(file, options);
+}
+
+function normalizeTransportSession(
+  session: TransportSession | UploadSessionResult,
+  transportName: string,
+  fallback?: Partial<TransportSession | ResumeTransportState>
+): TransportSession {
+  const normalized: TransportSession = {
+    uploadId: session.uploadId,
+    transportName: session.transportName ?? transportName,
+    createdAt: session.createdAt ?? nowIso()
+  };
+
+  const expiresAt = session.expiresAt ?? fallback?.expiresAt;
+  if (expiresAt !== undefined) {
+    normalized.expiresAt = expiresAt;
+  }
+
+  const resumeToken = session.resumeToken ?? fallback?.resumeToken;
+  if (resumeToken !== undefined) {
+    normalized.resumeToken = resumeToken;
+  }
+
+  const secretsRef = "secretsRef" in session ? session.secretsRef : undefined;
+  if (secretsRef !== undefined) {
+    normalized.secretsRef = secretsRef;
+  }
+
+  const remote = session.remote ?? ("data" in session ? session.data : undefined);
+  if (remote !== undefined) {
+    normalized.remote = remote;
+  }
+
+  return normalized;
+}
+
+function normalizeChunkResult(
+  chunk: ChunkDescriptor,
+  session: TransportSession,
+  result: void | UploadChunkResult | UploadChunkReceipt
+): NormalizedUploadChunkResult {
+  if (isUploadChunkReceipt(result)) {
+    return {
+      receipt: validateReceipt(chunk, result)
+    };
+  }
+
+  return {
+    receipt: {
+      chunkIndex: chunk.index,
+      sizeBytes: chunk.size,
+      completedAt: nowIso(),
+      transport: {
+        name: session.transportName
+      }
+    },
+    transportResult: result ?? undefined
+  };
+}
+
+function isUploadChunkReceipt(value: unknown): value is UploadChunkReceipt {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "chunkIndex" in value &&
+      "sizeBytes" in value &&
+      "transport" in value
+  );
+}
+
+function validateResumeChunkPlan(snapshotPlan: ChunkPlan, activePlan: ChunkPlan): void {
+  if (
+    snapshotPlan.chunkSize !== activePlan.chunkSize ||
+    snapshotPlan.totalBytes !== activePlan.totalBytes ||
+    snapshotPlan.totalChunks !== activePlan.totalChunks
+  ) {
+    throw createIngestError(
+      "transport.resume_failed",
+      "Cannot resume upload because the snapshot chunk plan does not match the active file.",
+      false,
+      {
+        snapshotChunkSize: snapshotPlan.chunkSize,
+        activeChunkSize: activePlan.chunkSize,
+        snapshotTotalBytes: snapshotPlan.totalBytes,
+        activeTotalBytes: activePlan.totalBytes
+      }
+    );
+  }
+
+  for (const activeChunk of activePlan.chunks) {
+    const snapshotChunk = snapshotPlan.chunks[activeChunk.index];
+
+    if (
+      !snapshotChunk ||
+      snapshotChunk.start !== activeChunk.start ||
+      snapshotChunk.end !== activeChunk.end ||
+      snapshotChunk.size !== activeChunk.size
+    ) {
+      throw createIngestError(
+        "transport.resume_failed",
+        "Cannot resume upload because the snapshot chunk ranges do not match the active file.",
+        false,
+        { chunkIndex: activeChunk.index }
+      );
+    }
+  }
+}
+
+function validateChunkPlanForTransport(
+  chunkPlan: ChunkPlan,
+  capabilities: TransportCapabilities | undefined
+): void {
+  if (!capabilities) {
+    return;
+  }
+
+  if (capabilities.maxChunkCount !== undefined && chunkPlan.totalChunks > capabilities.maxChunkCount) {
+    throw createIngestError(
+      "chunk.invalid_size",
+      `Chunk plan exceeds transport max chunk count of ${capabilities.maxChunkCount}.`,
+      false
+    );
+  }
+
+  for (const chunk of chunkPlan.chunks) {
+    const isFinalChunk = chunk.index === chunkPlan.totalChunks - 1;
+    const minChunkSize = isFinalChunk
+      ? capabilities.minFinalChunkSizeBytes ?? capabilities.minChunkSizeBytes
+      : capabilities.minChunkSizeBytes;
+
+    if (minChunkSize !== undefined && chunk.size < minChunkSize) {
+      throw createIngestError(
+        "chunk.invalid_size",
+        `Chunk ${chunk.index} is smaller than the transport minimum chunk size.`,
+        false,
+        { chunkIndex: chunk.index, chunkSize: chunk.size, minChunkSize }
+      );
+    }
+
+    if (capabilities.maxChunkSizeBytes !== undefined && chunk.size > capabilities.maxChunkSizeBytes) {
+      throw createIngestError(
+        "chunk.invalid_size",
+        `Chunk ${chunk.index} is larger than the transport maximum chunk size.`,
+        false,
+        {
+          chunkIndex: chunk.index,
+          chunkSize: chunk.size,
+          maxChunkSize: capabilities.maxChunkSizeBytes
+        }
+      );
+    }
+  }
+}
+
+function validateReceipt(
+  chunk: ChunkDescriptor,
+  receipt: UploadChunkReceipt | undefined
+): UploadChunkReceipt {
+  if (!receipt) {
+    throw createIngestError(
+      "transport.receipt_missing",
+      `Transport did not return a receipt for chunk ${chunk.index}.`,
+      false,
+      { chunkIndex: chunk.index }
+    );
+  }
+
+  if (receipt.chunkIndex !== chunk.index) {
+    throw createIngestError(
+      "transport.receipt_invalid",
+      `Transport returned a receipt for chunk ${receipt.chunkIndex} while uploading chunk ${chunk.index}.`,
+      false,
+      { chunkIndex: chunk.index, receiptChunkIndex: receipt.chunkIndex }
+    );
+  }
+
+  if (receipt.sizeBytes !== chunk.size) {
+    throw createIngestError(
+      "transport.receipt_invalid",
+      `Transport returned a receipt with size ${receipt.sizeBytes} for chunk ${chunk.index}, expected ${chunk.size}.`,
+      false,
+      { chunkIndex: chunk.index, chunkSize: chunk.size, receiptSize: receipt.sizeBytes }
+    );
+  }
+
+  return receipt;
+}
+
+function receiptsToRanges(receipts: readonly UploadChunkReceipt[]): CompletedChunkRange[] {
+  return receipts
+    .slice()
+    .sort((left, right) => left.chunkIndex - right.chunkIndex)
+    .reduce<CompletedChunkRange[]>((ranges, receipt) => {
+      const previous = ranges[ranges.length - 1];
+
+      if (!previous || receipt.chunkIndex > previous.endIndexInclusive + 1) {
+        ranges.push({
+          startIndex: receipt.chunkIndex,
+          endIndexInclusive: receipt.chunkIndex
+        });
+        return ranges;
+      }
+
+      previous.endIndexInclusive = Math.max(previous.endIndexInclusive, receipt.chunkIndex);
+      return ranges;
+    }, []);
+}
+
+function calculateUploadedBytes(receipts: readonly UploadChunkReceipt[]): number {
+  return receipts.reduce((total, receipt) => total + receipt.sizeBytes, 0);
+}
+
+function cloneSnapshot(snapshot: UploadSessionSnapshot): UploadSessionSnapshot {
+  return {
+    ...snapshot,
+    transportSession: snapshot.transportSession
+      ? { ...snapshot.transportSession, remote: cloneRecord(snapshot.transportSession.remote) }
+      : undefined,
+    chunkPlan: {
+      ...snapshot.chunkPlan,
+      chunks: snapshot.chunkPlan.chunks.map((chunk) => ({ ...chunk }))
+    },
+    completedChunks: snapshot.completedChunks.map(cloneReceipt),
+    failedChunk: snapshot.failedChunk ? { ...snapshot.failedChunk } : undefined,
+    error: snapshot.error ? { ...snapshot.error } : undefined,
+    redactions: snapshot.redactions
+      ? {
+          transportSession: snapshot.redactions.transportSession
+            ? [...snapshot.redactions.transportSession]
+            : undefined,
+          receipts: snapshot.redactions.receipts ? [...snapshot.redactions.receipts] : undefined
+        }
+      : undefined
+  };
+}
+
+function redactSnapshot(snapshot: UploadSessionSnapshot): UploadSessionSnapshot {
+  const redacted = cloneSnapshot(snapshot);
+  const transportRedactions: string[] = [];
+  const receiptRedactions: string[] = [];
+
+  if (redacted.transportSession) {
+    if (redacted.transportSession.resumeToken !== undefined) {
+      delete redacted.transportSession.resumeToken;
+      transportRedactions.push("resumeToken");
+    }
+
+    if (redacted.transportSession.secretsRef !== undefined) {
+      delete redacted.transportSession.secretsRef;
+      transportRedactions.push("secretsRef");
+    }
+
+    if (redacted.transportSession.remote !== undefined) {
+      delete redacted.transportSession.remote;
+      transportRedactions.push("remote");
+    }
+  }
+
+  redacted.completedChunks = redacted.completedChunks.map((receipt) => {
+    const transport = { ...receipt.transport };
+
+    if (transport.location !== undefined) {
+      delete transport.location;
+      receiptRedactions.push("transport.location");
+    }
+
+    if (transport.opaque !== undefined) {
+      delete transport.opaque;
+      receiptRedactions.push("transport.opaque");
+    }
+
+    return {
+      ...receipt,
+      transport
+    };
+  });
+
+  if (transportRedactions.length > 0 || receiptRedactions.length > 0) {
+    redacted.redactions = {
+      transportSession: unique(transportRedactions),
+      receipts: unique(receiptRedactions)
+    };
+  }
+
+  return redacted;
+}
+
+function cloneReceipt(receipt: UploadChunkReceipt): UploadChunkReceipt {
+  return {
+    ...receipt,
+    checksum: receipt.checksum ? { ...receipt.checksum } : undefined,
+    transport: {
+      ...receipt.transport,
+      opaque: cloneRecord(receipt.transport.opaque)
+    }
+  };
+}
+
+function cloneRecord<T extends Record<string, unknown> | undefined>(record: T): T {
+  return record ? ({ ...record } as T) : record;
+}
+
+function unique(values: readonly string[]): string[] | undefined {
+  const result = Array.from(new Set(values));
+  return result.length > 0 ? result : undefined;
+}
+
+function createIngestError(
+  code: IngestIssueCode,
+  message: string,
+  retryable: boolean,
+  details?: Record<string, unknown>
+): IngestError {
+  const error = new Error(message) as IngestError;
+  error.code = code;
+  error.retryable = retryable;
+
+  if (details) {
+    error.details = details;
+  }
+
+  return error;
+}
+
+function isIngestError(error: unknown): error is IngestError {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      "retryable" in error
+  );
+}
+
+function isNonRetryableIngestError(error: unknown): error is IngestError {
+  return isIngestError(error) && error.retryable === false;
+}
+
+function toSnapshotError(error: unknown): UploadSessionSnapshot["error"] {
+  if (isIngestError(error)) {
+    return {
+      code: error.code,
+      message: error.message,
+      retryable: error.retryable
+    };
+  }
+
+  return {
+    code: "transport.failed",
+    message: toErrorMessage(error, "Upload failed."),
+    retryable: false
+  };
+}
+
+function toErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return fallback;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
 }
