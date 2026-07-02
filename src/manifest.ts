@@ -10,15 +10,20 @@ import type {
   IngestFileLike,
   IngestIssue,
   IngestManifest,
+  ManifestIdentityOverride,
   ValidationResult
 } from "./types.js";
 
+type CreateManifestOptions = Pick<
+  CreateIngestSessionOptions,
+  "checksum" | "chunking" | "image" | "metadata" | "retries" | "storage" | "validation"
+> & {
+  manifestIdentity?: ManifestIdentityOverride;
+};
+
 export async function createManifest(
   file: IngestFileLike,
-  options: Pick<
-    CreateIngestSessionOptions,
-    "checksum" | "chunking" | "image" | "metadata" | "retries" | "storage" | "validation"
-  > = {}
+  options: CreateManifestOptions = {}
 ): Promise<IngestManifest> {
   const metadata = options.metadata ?? {};
   const validation = validateFile(file, options.validation, metadata, options.image);
@@ -57,8 +62,8 @@ export async function createManifest(
 
   const manifest: IngestManifest = {
     schemaVersion: "large-image-ingest.manifest.v1",
-    id: createId(),
-    createdAt: new Date().toISOString(),
+    id: options.manifestIdentity?.id ?? createId(),
+    createdAt: options.manifestIdentity?.createdAt ?? new Date().toISOString(),
     library: {
       name: "large-image-ingest",
       version: "1.0.0"
