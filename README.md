@@ -320,6 +320,20 @@ By default completed records are deleted. Use `resume: { store, cleanup: "mark-c
 
 Resume records can contain sensitive transport handles, remote upload IDs, filenames, and user metadata. Do not print full resume records, presigned URLs, credentials, or customer metadata in default logs. Store records only in an application-approved persistence layer, and prefer short-lived or revocable transport resume tokens. Canceling a session marks the record `canceled`, so default recovery helpers will not offer it again.
 
+## JavaScript Usage
+
+The npm package ships runnable JavaScript and TypeScript declarations. ESM consumers can import the package directly:
+
+```js
+import { createIngestSession } from "large-image-ingest";
+```
+
+CommonJS consumers can use `require`:
+
+```js
+const { createIngestSession } = require("large-image-ingest");
+```
+
 ## Manifest Example
 
 ```json

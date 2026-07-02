@@ -1,6 +1,6 @@
-export { planChunks } from "./chunks";
-export { createFastFingerprint } from "./fingerprint";
-export { createManifest } from "./manifest";
+export { planChunks } from "./chunks.js";
+export { createFastFingerprint } from "./fingerprint.js";
+export { createManifest } from "./manifest.js";
 export {
   ResumeConflictError,
   UploadCanceledError,
@@ -21,10 +21,10 @@ export {
   mergeCompletedChunkRange,
   mergeTransportState,
   normalizeCompletedChunkRanges
-} from "./resume";
-export { createIngestSession, LargeImageIngestSession } from "./session";
-export { validateFile } from "./validation";
-export { WebStorageResumeStore } from "./web-storage-resume-store";
+} from "./resume.js";
+export { createIngestSession, LargeImageIngestSession } from "./session.js";
+export { validateFile } from "./validation.js";
+export { WebStorageResumeStore } from "./web-storage-resume-store.js";
 export type {
   ChunkDescriptor,
   ChunkPlan,
@@ -58,5 +58,5 @@ export type {
   UploadTransport,
   ValidationResult,
   ValidationRules
-} from "./types";
-export type { ResumeStorageLike } from "./web-storage-resume-store";
+} from "./types.js";
+export type { ResumeStorageLike } from "./web-storage-resume-store.js";

@@ -1,5 +1,5 @@
-import { planChunks } from "./chunks";
-import { createManifest } from "./manifest";
+import { planChunks } from "./chunks.js";
+import { createManifest } from "./manifest.js";
 import {
   ResumeConflictError,
   UploadCanceledError,
@@ -15,7 +15,7 @@ import {
   isResumeRecordExpired,
   mergeCompletedChunkRange,
   mergeTransportState
-} from "./resume";
+} from "./resume.js";
 import type {
   ChunkDescriptor,
   ChunkPlan,
@@ -30,7 +30,7 @@ import type {
   ResumeTransportState,
   UploadChunkResult,
   UploadSessionResult
-} from "./types";
+} from "./types.js";
 
 const SUPPORTED_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.1";
 

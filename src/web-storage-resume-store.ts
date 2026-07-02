@@ -1,4 +1,4 @@
-import type { ResumeRecord, ResumeStore } from "./types";
+import type { ResumeRecord, ResumeStore } from "./types.js";
 
 export interface ResumeStorageLike {
   readonly length: number;
