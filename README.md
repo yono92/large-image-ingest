@@ -1,185 +1,60 @@
-# large-image-ingest
+﻿# large-image-ingest
 
-## Project Brief
+`large-image-ingest` is a TypeScript-first core SDK for safely ingesting very large inspection images.
 
-`large-image-ingest` is a TypeScript-first SDK for safely ingesting very large inspection images.
+The primary use cases are semiconductor inspection, microscopy, industrial vision, wafer inspection, medical imaging, satellite imaging, and other workflows where the uploaded original is a source-of-truth artifact.
 
-The target use cases are semiconductor inspection, microscopy, industrial vision, wafer inspection, medical imaging, satellite imaging, and other workflows where the uploaded image is not just user content, but a source-of-truth artifact.
+This is not a generic drag-and-drop uploader. The core package focuses on original preservation, validation, checksums, manifest generation, chunk planning, resumable session state, and adapter-based upload orchestration.
 
-This project is not a generic drag-and-drop uploader. It focuses on original preservation, resumable upload, manifest generation, checksum verification, and preview derivative handling for large image files.
+## Installation
 
-## Problem
-
-Large inspection images are often difficult to upload reliably from web applications.
-
-Common upload libraries solve file selection and progress UI, but they usually do not provide domain-aware safety features for inspection data:
-
-- Original files must not be resized, recompressed, or mutated.
-- Files may be hundreds of MB or multiple GB.
-- Browser memory can crash if the full image is decoded at once.
-- Uploads must survive network failure, refreshes, and retries.
-- The system needs a verifiable manifest for traceability.
-- Metadata such as lot ID, wafer ID, tool name, inspection type, and defect region matters.
-- Preview images and tiles should be generated separately from the original file.
-
-## Product Positioning
-
-`large-image-ingest` provides the ingestion layer for large inspection images.
-
-It should sit between UI components, storage backends, and image processing pipelines.
-
-```txt
-File input / dropzone
-        |
-        v
-large-image-ingest
-        |
-        +-- validation
-        +-- fingerprinting
-        +-- manifest generation
-        +-- resumable upload
-        +-- progress events
-        +-- preview derivative hooks
-        |
-        v
-Storage / processing pipeline
+```bash
+npm install large-image-ingest
 ```
+
+## Core 1.0 Scope
+
+The 1.0 package provides a framework-agnostic core:
+
+- File validation for size, MIME type, extension, required metadata, and caller-provided dimensions.
+- Whole-file SHA-256 checksum generation with bounded `Blob.slice` reads.
+- Deterministic chunk planning for large files.
+- Manifest schema `large-image-ingest.manifest.v1`.
+- Upload sessions with progress, retry, pause, cancel, failure, completion, and resume events.
+- Redacted session snapshots and persistent resume records for app-owned persistence.
+- Provider-neutral transport adapter interface.
+- Browser-safe tus and S3 multipart transport helpers.
+- Server-side NAS gateway helpers under the Node subpath.
+- ESM, CommonJS, and TypeScript declaration entrypoints.
+
+The 1.0 package does not include React, thumbnail, preview, tile, or image decoding implementations. Those remain optional adapters or companion packages.
 
 ## Design Principles
 
 1. Preserve the original file by default.
-2. Treat resize, compression, and EXIF stripping as derivative-only operations.
-3. Use chunked and resumable uploads for large files.
-4. Generate a manifest before or during upload.
+2. Treat resize, compression, EXIF stripping, previews, thumbnails, and tiles as derivatives.
+3. Use chunked upload flows for large files.
+4. Generate a manifest before upload starts.
 5. Make upload state observable and recoverable.
 6. Keep the core framework-agnostic.
-7. Provide React integration as a thin wrapper.
-8. Use adapters for upload transports and storage targets.
+7. Use adapters for upload transports and storage targets.
+8. Keep runtime dependencies small.
 
-## Initial Target Users
+## JavaScript And TypeScript
 
-- Frontend engineers building inspection dashboards.
-- Platform engineers building image ingestion pipelines.
-- Teams handling semiconductor, microscopy, AOI, defect review, or high-resolution industrial images.
-- Internal tool builders who need reliable browser-to-storage upload for large files.
+ESM:
 
-## MVP Scope
-
-The MVP should avoid becoming a full image viewer, labeling tool, or data platform.
-
-The first version should focus on a reliable ingestion path:
-
-- Validate a file before upload.
-- Generate file and image metadata.
-- Generate a versioned manifest.
-- Upload via resumable transport.
-- Emit progress, retry, pause, resume, and complete events.
-- Preserve the original file.
-- Optionally generate lightweight preview metadata.
-
-## Non-Goals
-
-The first version will not include:
-
-- Full image annotation UI.
-- Wafer map visualization.
-- Defect classification.
-- Built-in cloud account management.
-- Full DICOM, OME-TIFF, or proprietary semiconductor format parsing.
-- Deep image tiling viewer.
-- OCR.
-- Automatic lossy optimization of original images.
-
-These can be added later as integrations or companion packages.
-
-## Core Concepts
-
-### Original
-
-The original uploaded file. This is immutable and should be stored exactly as provided.
-
-### Derivative
-
-Any generated output, such as:
-
-- Thumbnail
-- Preview image
-- Tile pyramid
-- Normalized JPEG/WebP preview
-- Metadata JSON
-
-Derivatives can be compressed, resized, cached, or regenerated. The original cannot.
-
-### Manifest
-
-A JSON document describing the file, image, upload session, metadata, and generated derivatives.
-
-The manifest is the traceability layer.
-
-### Transport
-
-The mechanism used to upload bytes.
-
-Initial transports:
-
-- tus resumable upload
-- S3 multipart upload
-- Future NAS-backed server adapter or gateway
-
-### Ingest Session
-
-A single upload lifecycle for one file and its metadata.
-
-## Proposed Package Structure
-
-```txt
-packages/
-  core/
-    src/
-      create-ingestor.ts
-      manifest.ts
-      validation.ts
-      fingerprint.ts
-      upload-session.ts
-      events.ts
-      types.ts
-
-  transport-tus/
-    src/
-      tus-transport.ts
-
-  transport-s3/
-    src/
-      s3-transport.ts
-
-  preview-browser/
-    src/
-      preview.ts
-      dimensions.ts
-
-  node/
-    src/
-      verify-manifest.ts
-      sharp-derivatives.ts
-
-  react/
-    src/
-      use-ingest.ts
-      IngestDropzone.tsx
+```js
+import { createIngestSession } from "large-image-ingest";
 ```
 
-Possible npm package names:
+CommonJS:
 
-```txt
-large-image-ingest
-@large-image-ingest/core
-@large-image-ingest/tus
-@large-image-ingest/s3
-@large-image-ingest/react
-@large-image-ingest/node
+```js
+const { createIngestSession } = require("large-image-ingest");
 ```
 
-For the first implementation, a single package is acceptable. Split packages only when the API stabilizes.
+TypeScript declarations are published with the package.
 
 ## Current Package Map
 
@@ -217,18 +92,25 @@ import { createIngestSession } from "large-image-ingest/core";
 
 const session = createIngestSession(file, {
   chunking: {
-    chunkSize: 64 * 1024 * 1024,
+    chunkSize: 64 * 1024 * 1024
   },
   validation: {
     maxBytes: 10 * 1024 * 1024 * 1024,
     acceptedMimeTypes: ["image/tiff", "image/png", "image/jpeg"],
     acceptedExtensions: ["tif", "tiff", "png", "jpg", "jpeg"],
+    requiredMetadata: ["lotId", "waferId"]
+  },
+  image: {
+    format: "tiff",
+    width: 4096,
+    height: 4096,
+    colorDepth: 16
   },
   metadata: {
     lotId: "LOT-2026-001",
     waferId: "W12",
     tool: "VFVI",
-    inspectionType: "defect-review",
+    inspectionType: "defect-review"
   },
   transport: {
     capabilities: {
@@ -249,7 +131,7 @@ const session = createIngestSession(file, {
     async uploadChunk({ chunk, body }) {
       const response = await fetch(`/api/uploads/chunks/${chunk.index}`, {
         method: "PUT",
-        body,
+        body
       });
 
       return {
@@ -267,7 +149,7 @@ const session = createIngestSession(file, {
         method: "POST",
         body: JSON.stringify({ manifest, receipts }),
       });
-    },
+    }
   },
   onEvent(event) {
     console.log(event.type, event);
@@ -375,30 +257,96 @@ By default completed records are deleted. Use `resume: { store, cleanup: "mark-c
 
 Resume records can contain sensitive transport handles, remote upload IDs, filenames, and user metadata. Do not print full resume records, presigned URLs, credentials, or customer metadata in default logs. Store records only in an application-approved persistence layer, and prefer short-lived or revocable transport resume tokens. Canceling a session marks the record `canceled`, so default recovery helpers will not offer it again.
 
-## JavaScript Usage
+## Checksum
 
-The npm package ships runnable JavaScript and TypeScript declarations. ESM consumers can import the package directly:
+By default, `createManifest` and `createIngestSession` calculate a whole-file SHA-256 checksum. The implementation reads the file in bounded chunks with `Blob.slice`, so the core does not need to load the entire image into memory at once.
 
-```js
-import { createIngestSession } from "large-image-ingest";
+```ts
+import { calculateChecksum } from "large-image-ingest";
+
+const checksum = await calculateChecksum(file, {
+  chunkSize: 4 * 1024 * 1024,
+  onProgress(progress) {
+    console.log(progress.loadedBytes, progress.totalBytes);
+  }
+});
 ```
 
-CommonJS consumers can use `require`:
+You can require an expected checksum:
 
-```js
-const { createIngestSession } = require("large-image-ingest");
+```ts
+const manifest = await createManifest(file, {
+  checksum: {
+    expected: "known-sha256-hex-value"
+  }
+});
+
+if (!manifest.validation.ok) {
+  console.log(manifest.validation.issues);
+}
 ```
 
-## Manifest Example
+For specialized workflows where checksum calculation is handled elsewhere, pass `checksum: false`.
+
+## Validation
+
+```ts
+import { validateFile } from "large-image-ingest";
+
+const result = validateFile(
+  file,
+  {
+    acceptedExtensions: ["tif", "tiff"],
+    acceptedMimeTypes: ["image/tiff"],
+    maxBytes: 10 * 1024 * 1024 * 1024,
+    minWidth: 1024,
+    minHeight: 1024,
+    requiredMetadata: ["lotId", "waferId"]
+  },
+  {
+    lotId: "LOT-2026-001",
+    waferId: "W12"
+  },
+  {
+    width: 4096,
+    height: 4096
+  }
+);
+```
+
+Dimension validation uses caller-provided image metadata. The core does not decode TIFF, microscopy, satellite, DICOM, OME-TIFF, or proprietary inspection formats in 1.0.
+
+## Manifest
+
+Manifest creation preserves the original and records validation, checksum, chunking, storage hints, metadata, and derivative placeholders.
+
+```ts
+import { createManifest } from "large-image-ingest";
+
+const manifest = await createManifest(file, {
+  chunking: { chunkSize: 64 * 1024 * 1024 },
+  metadata: {
+    lotId: "LOT-2026-001",
+    waferId: "W12"
+  },
+  storage: {
+    kind: "nas",
+    label: "fab-qc-nas",
+    locationHint: "/inspection/inbox"
+  }
+});
+```
+
+Example shape:
 
 ```json
 {
-  "schemaVersion": "large-image-ingest.manifest.v0.1",
-  "id": "ing_01J00000000000000000000000",
-  "createdAt": "2026-06-30T00:00:00.000Z",
+  "schemaVersion": "large-image-ingest.manifest.v1",
+  "id": "manifest_...",
+  "createdAt": "2026-07-01T00:00:00.000Z",
   "library": {
     "name": "large-image-ingest",
-    "version": "0.0.0"
+    "version": "1.0.0"
   },
   "original": {
     "kind": "original",
@@ -406,11 +354,18 @@ const { createIngestSession } = require("large-image-ingest");
     "extension": "tif",
     "sizeBytes": 1843221900,
     "mediaType": "image/tiff",
-    "lastModifiedAt": "2026-06-30T00:00:00.000Z",
+    "lastModifiedAt": "2026-07-01T00:00:00.000Z",
     "fingerprint": {
       "algorithm": "metadata-sha256",
       "scope": "file-metadata",
       "value": "..."
+    },
+    "checksum": {
+      "algorithm": "sha256",
+      "scope": "whole-file",
+      "value": "...",
+      "chunkSizeBytes": 4194304,
+      "calculatedAt": "2026-07-01T00:00:00.000Z"
     },
     "preservation": {
       "required": true,
@@ -418,10 +373,11 @@ const { createIngestSession } = require("large-image-ingest");
     }
   },
   "image": {
-    "status": "not_inspected",
-    "width": null,
-    "height": null,
-    "colorDepth": null
+    "status": "provided",
+    "format": "tiff",
+    "width": 4096,
+    "height": 4096,
+    "colorDepth": 16
   },
   "chunking": {
     "strategy": "fixed-size",
@@ -435,16 +391,9 @@ const { createIngestSession } = require("large-image-ingest");
     "resumable": true,
     "retryLimit": 2
   },
-  "storage": {
-    "kind": "nas",
-    "label": "fab-qc-nas",
-    "locationHint": "/inspection/inbox"
-  },
   "metadata": {
     "lotId": "LOT-2026-001",
-    "waferId": "W12",
-    "tool": "VFVI",
-    "inspectionType": "defect-review"
+    "waferId": "W12"
   },
   "derivatives": [],
   "validation": {
@@ -454,7 +403,7 @@ const { createIngestSession } = require("large-image-ingest");
 }
 ```
 
-## Transport Strategy
+## Session State
 
 ### tus
 
@@ -665,76 +614,102 @@ Initial validation should support:
 - Duplicate file detection by fingerprint
 - Optional checksum requirement
 
-Validation should return structured errors:
+Validation returns structured issues:
 
 ```ts
-type IngestError = {
-  code: string;
-  message: string;
-  path?: string;
-  severity: "error" | "warning";
-};
+if (!result.ok) {
+  for (const issue of result.issues) {
+    console.log(issue.code, issue.path, issue.message);
+  }
+}
 ```
 
-## Event Model
+## Session Snapshots And Events
 
-The upload session should emit typed events:
+Sessions emit typed events and can publish redacted snapshots through `onSnapshot`. Snapshot status values include:
 
-```ts
-type IngestEvent =
-  | "session:created"
-  | "validation:started"
-  | "validation:completed"
-  | "hash:started"
-  | "hash:progress"
-  | "hash:completed"
-  | "upload:started"
-  | "upload:progress"
-  | "chunk:started"
-  | "chunk:completed"
-  | "chunk:retry"
-  | "upload:paused"
-  | "upload:resumed"
-  | "upload:completed"
-  | "upload:failed"
-  | "manifest:created";
+```txt
+idle
+validating
+creating
+uploading
+paused
+resuming
+completing
+completed
+failed
+canceled
 ```
 
-## React Integration
+Important event names include:
 
-React should be optional.
+```txt
+validated
+started
+snapshot
+chunk:started
+chunk:completed
+retry
+resume:available
+resume:started
+resume:checkpoint
+resume:conflict
+resume:expired
+upload:paused
+upload:canceled
+paused
+canceled
+completed
+failed
+```
 
-Example:
+Pause and cancel are lifecycle actions. A paused session records a recoverable snapshot or resume record when possible. A canceled session asks the transport to abort the remote upload when the adapter supports it.
 
 ```ts
-const {
-  sessions,
-  addFiles,
-  pause,
-  resume,
-  cancel,
-} = useLargeImageIngest({
-  ingestor,
+const session = createIngestSession(file, {
+  transport,
+  onSnapshot(snapshot) {
+    void saveSnapshot(snapshot);
+  },
 });
+
+const upload = session.start();
+session.pause();
+await upload.catch(() => undefined);
 ```
 
-The React package should not own the core upload logic. It should only map state and events into React.
+## Errors
 
-## Server Integration
+Session, validation, transport, and resume failures use stable `code` values so applications can show useful recovery UI.
+
+```ts
+try {
+  await session.start();
+} catch (error) {
+  if (error && typeof error === "object" && "code" in error) {
+    console.log(error.code);
+  }
+}
+```
+
+## Storage And Transport Notes
+
+The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a filesystem. Use a server-side gateway for those targets.
 
 The current Node subpath provides the NAS gateway APIs documented above.
 
-Future Node helpers can provide:
-
-- Manifest verification
-- Checksum verification
-- Sharp-based thumbnail generation
-- Sharp-based preview generation
-- Hooks for tile generation
-
 ## Architecture Notes
 
-The core should avoid loading entire files into memory.
+## Development
+
+```bash
+npm ci
+npm run typecheck
+npm run typecheck:examples
+npm test
+npm run build
+npm pack --dry-run
+```
 
 Browser code should use:
 

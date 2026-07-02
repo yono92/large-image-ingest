@@ -1,11 +1,28 @@
 export type IngestIssueSeverity = "error" | "warning";
 
+export type ResumeConflictCode =
+  | "resume.record_not_found"
+  | "resume.schema_unsupported"
+  | "resume.file_mismatch"
+  | "resume.chunking_mismatch"
+  | "resume.transport_unsupported"
+  | "resume.transport_mismatch"
+  | "resume.expired"
+  | "resume.store_failed";
+
 export type IngestIssueCode =
   | "file.empty"
   | "file.too_large"
   | "file.too_small"
   | "file.mime_not_allowed"
   | "file.extension_not_allowed"
+  | "metadata.required_missing"
+  | "checksum.mismatch"
+  | "image.dimensions_unavailable"
+  | "image.width_too_small"
+  | "image.width_too_large"
+  | "image.height_too_small"
+  | "image.height_too_large"
   | "chunk.invalid_size"
   | "transport.failed"
   | "transport.aborted"
@@ -23,10 +40,20 @@ export type IngestIssueCode =
   | "transport.unrecoverable"
   | ResumeConflictCode;
 
+export type IngestErrorCode =
+  | IngestIssueCode
+  | "manifest.failed"
+  | "session.failed"
+  | "validation.failed"
+  | "session.aborted"
+  | "session.invalid_state"
+  | "session.snapshot_file_mismatch";
+
 export interface IngestIssue {
   code: IngestIssueCode;
   message: string;
   severity: IngestIssueSeverity;
+  path?: string;
   details?: Record<string, unknown>;
 }
 
@@ -36,12 +63,21 @@ export interface IngestError extends Error {
   details?: Record<string, unknown>;
 }
 
+export interface IngestErrorDetails {
+  [key: string]: unknown;
+}
+
 export interface ValidationRules {
   acceptedExtensions?: readonly string[];
   acceptedMimeTypes?: readonly string[];
   maxBytes?: number;
+  maxHeight?: number;
+  maxWidth?: number;
+  minHeight?: number;
   minBytes?: number;
+  minWidth?: number;
   requireNonEmpty?: boolean;
+  requiredMetadata?: readonly string[];
 }
 
 export interface ValidationResult {
@@ -72,7 +108,47 @@ export interface ChunkPlanOptions {
   chunkSize?: number;
 }
 
-export type IngestManifestSchemaVersion = "large-image-ingest.manifest.v0.1";
+export type FileChecksumAlgorithm = "sha256";
+
+export type ChecksumAlgorithm =
+  | FileChecksumAlgorithm
+  | "crc64nvme"
+  | "crc32c"
+  | "crc32"
+  | "md5"
+  | "custom";
+
+export interface ChecksumProgress {
+  loadedBytes: number;
+  totalBytes: number;
+  chunkIndex: number;
+  totalChunks: number;
+}
+
+export interface ChecksumOptions {
+  algorithm?: FileChecksumAlgorithm;
+  chunkSize?: number;
+  expected?: string;
+  onProgress?: (progress: ChecksumProgress) => void;
+  required?: boolean;
+}
+
+export interface FileChecksum {
+  algorithm: FileChecksumAlgorithm;
+  calculatedAt: string;
+  chunkSizeBytes: number;
+  scope: "whole-file";
+  value: string;
+}
+
+export interface ImageMetadataInput {
+  colorDepth?: number;
+  format?: string;
+  height?: number;
+  width?: number;
+}
+
+export type IngestManifestSchemaVersion = "large-image-ingest.manifest.v1";
 
 export type FingerprintAlgorithm = "metadata-sha256" | "metadata-fallback";
 
@@ -85,6 +161,7 @@ export interface FileFingerprint {
 export interface OriginalImageManifest {
   kind: "original";
   name: string;
+  checksum?: FileChecksum;
   extension?: string;
   sizeBytes: number;
   mediaType: string;
@@ -97,11 +174,11 @@ export interface OriginalImageManifest {
 }
 
 export interface ImageInspectionManifest {
-  status: "not_inspected";
+  status: "not_inspected" | "provided";
   format?: string;
-  width: null;
-  height: null;
-  colorDepth: null;
+  width: number | null;
+  height: number | null;
+  colorDepth: number | null;
 }
 
 export interface UploadManifest {
@@ -135,7 +212,7 @@ export interface IngestManifest {
   createdAt: string;
   library: {
     name: "large-image-ingest";
-    version: "0.0.0";
+    version: "1.0.0";
   };
   original: OriginalImageManifest;
   image: ImageInspectionManifest;
@@ -176,14 +253,6 @@ export interface TransportSession {
   secretsRef?: string | undefined;
   remote?: Record<string, unknown> | undefined;
 }
-
-export type ChecksumAlgorithm =
-  | "sha256"
-  | "crc64nvme"
-  | "crc32c"
-  | "crc32"
-  | "md5"
-  | "custom";
 
 export interface ChecksumReceipt {
   algorithm: ChecksumAlgorithm;
@@ -251,16 +320,6 @@ export type ResumeRecordStatus =
 
 export type ResumeCleanupPolicy = "delete-on-complete" | "mark-complete";
 
-export type ResumeConflictCode =
-  | "resume.record_not_found"
-  | "resume.schema_unsupported"
-  | "resume.file_mismatch"
-  | "resume.chunking_mismatch"
-  | "resume.transport_unsupported"
-  | "resume.transport_mismatch"
-  | "resume.expired"
-  | "resume.store_failed";
-
 export interface CompletedChunkRange {
   startIndex: number;
   endIndexInclusive: number;
@@ -294,7 +353,7 @@ export interface ResumeProgress {
   uploadedBytes: number;
   completedChunkRanges: CompletedChunkRange[];
   nextChunkIndex: number;
-  lastErrorCode?: IngestIssueCode | ResumeConflictCode;
+  lastErrorCode?: IngestIssueCode;
 }
 
 export interface ResumeRecord {
@@ -403,7 +462,9 @@ export interface UploadTransport {
 }
 
 export interface CreateIngestSessionOptions {
+  checksum?: ChecksumOptions | false;
   chunking?: ChunkPlanOptions;
+  image?: ImageMetadataInput;
   manifest?: IngestManifest;
   manifestIdentity?: ManifestIdentityOverride;
   metadata?: Record<string, unknown>;

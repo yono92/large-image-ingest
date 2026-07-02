@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft. This file is a manual SDD seed until the Spec Kit CLI is initialized.
+Superseded by `specs/001-core-1-0-release/`. This file remains as the initial prototype seed.
 
 ## Goal
 

@@ -1,4 +1,4 @@
-# Implementation Plan: [FEATURE]
+﻿# Implementation Plan: [FEATURE]
 
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 
@@ -60,12 +60,12 @@
 
 ```text
 specs/[###-feature]/
-├── plan.md              # This file (/speckit-plan command output)
-├── research.md          # Phase 0 output (/speckit-plan command)
-├── data-model.md        # Phase 1 output (/speckit-plan command)
-├── quickstart.md        # Phase 1 output (/speckit-plan command)
-├── contracts/           # Phase 1 output (/speckit-plan command)
-└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
+?쒋?? plan.md              # This file (/speckit-plan command output)
+?쒋?? research.md          # Phase 0 output (/speckit-plan command)
+?쒋?? data-model.md        # Phase 1 output (/speckit-plan command)
+?쒋?? quickstart.md        # Phase 1 output (/speckit-plan command)
+?쒋?? contracts/           # Phase 1 output (/speckit-plan command)
+?붴?? tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
 ```
 
 ### Source Code (repository root)
@@ -79,37 +79,37 @@ specs/[###-feature]/
 ```text
 # [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+?쒋?? models/
+?쒋?? services/
+?쒋?? cli/
+?붴?? lib/
 
 tests/
-├── contract/
-├── integration/
-└── unit/
+?쒋?? contract/
+?쒋?? integration/
+?붴?? unit/
 
 # [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+?쒋?? src/
+??  ?쒋?? models/
+??  ?쒋?? services/
+??  ?붴?? api/
+?붴?? tests/
 
 frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
+?쒋?? src/
+??  ?쒋?? components/
+??  ?쒋?? pages/
+??  ?붴?? services/
+?붴?? tests/
 
 # [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
 api/
-└── [same as backend above]
+?붴?? [same as backend above]
 
 ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+?붴?? [platform-specific structure: feature modules, UI flows, platform tests]
 ```
 
 **Structure Decision**: [Document the selected structure and reference the real

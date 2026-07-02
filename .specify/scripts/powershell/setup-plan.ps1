@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # Setup implementation plan for a feature
 
 [CmdletBinding()]
@@ -63,7 +63,7 @@ if (Test-Path $paths.IMPL_PLAN -PathType Leaf) {
 
 # Output results
 if ($Json) {
-    $result = [PSCustomObject]@{ 
+    $result = [PSCustomObject]@{
         FEATURE_SPEC = $paths.FEATURE_SPEC
         IMPL_PLAN = $paths.IMPL_PLAN
         SPECS_DIR = $paths.FEATURE_DIR
