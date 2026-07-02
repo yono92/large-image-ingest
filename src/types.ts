@@ -1,5 +1,15 @@
 export type IngestIssueSeverity = "error" | "warning";
 
+export type ResumeConflictCode =
+  | "resume.record_not_found"
+  | "resume.schema_unsupported"
+  | "resume.file_mismatch"
+  | "resume.chunking_mismatch"
+  | "resume.transport_unsupported"
+  | "resume.transport_mismatch"
+  | "resume.expired"
+  | "resume.store_failed";
+
 export type IngestIssueCode =
   | "file.empty"
   | "file.too_large"
@@ -15,7 +25,20 @@ export type IngestIssueCode =
   | "image.height_too_large"
   | "chunk.invalid_size"
   | "transport.failed"
-  | "transport.aborted";
+  | "transport.aborted"
+  | "transport.paused"
+  | "transport.canceled"
+  | "transport.session_expired"
+  | "transport.offset_mismatch"
+  | "transport.part_rejected"
+  | "transport.receipt_missing"
+  | "transport.receipt_invalid"
+  | "transport.complete_failed"
+  | "transport.abort_failed"
+  | "transport.resume_failed"
+  | "transport.unsafe_path"
+  | "transport.unrecoverable"
+  | ResumeConflictCode;
 
 export type IngestErrorCode =
   | IngestIssueCode
@@ -32,6 +55,16 @@ export interface IngestIssue {
   severity: IngestIssueSeverity;
   path?: string;
   details?: Record<string, unknown>;
+}
+
+export interface IngestError extends Error {
+  code: IngestIssueCode;
+  retryable: boolean;
+  details?: Record<string, unknown>;
+}
+
+export interface IngestErrorDetails {
+  [key: string]: unknown;
 }
 
 export interface ValidationRules {
@@ -75,7 +108,15 @@ export interface ChunkPlanOptions {
   chunkSize?: number;
 }
 
-export type ChecksumAlgorithm = "sha256";
+export type FileChecksumAlgorithm = "sha256";
+
+export type ChecksumAlgorithm =
+  | FileChecksumAlgorithm
+  | "crc64nvme"
+  | "crc32c"
+  | "crc32"
+  | "md5"
+  | "custom";
 
 export interface ChecksumProgress {
   loadedBytes: number;
@@ -85,7 +126,7 @@ export interface ChecksumProgress {
 }
 
 export interface ChecksumOptions {
-  algorithm?: ChecksumAlgorithm;
+  algorithm?: FileChecksumAlgorithm;
   chunkSize?: number;
   expected?: string;
   onProgress?: (progress: ChecksumProgress) => void;
@@ -93,7 +134,7 @@ export interface ChecksumOptions {
 }
 
 export interface FileChecksum {
-  algorithm: ChecksumAlgorithm;
+  algorithm: FileChecksumAlgorithm;
   calculatedAt: string;
   chunkSizeBytes: number;
   scope: "whole-file";
@@ -189,78 +230,179 @@ export interface IngestManifest {
   validation: ValidationResult;
 }
 
-export type IngestSessionState =
+export interface TransportCapabilities {
+  name: string;
+  resumable: boolean;
+  abortable: boolean;
+  expires: boolean;
+  supportsParallelChunks: boolean;
+  supportsChunkChecksum: boolean;
+  minChunkSizeBytes?: number;
+  minFinalChunkSizeBytes?: number;
+  maxChunkSizeBytes?: number;
+  maxChunkCount?: number;
+  partNumberBase?: 0 | 1;
+}
+
+export interface TransportSession {
+  uploadId: string;
+  transportName: string;
+  createdAt: string;
+  expiresAt?: string | undefined;
+  resumeToken?: string | undefined;
+  secretsRef?: string | undefined;
+  remote?: Record<string, unknown> | undefined;
+}
+
+export interface ChecksumReceipt {
+  algorithm: ChecksumAlgorithm;
+  value: string;
+}
+
+export interface UploadChunkReceipt {
+  chunkIndex: number;
+  sizeBytes: number;
+  completedAt: string;
+  checksum?: ChecksumReceipt | undefined;
+  transport: {
+    name: string;
+    partNumber?: number | undefined;
+    etag?: string | undefined;
+    offset?: number | undefined;
+    location?: string | undefined;
+    opaque?: Record<string, unknown> | undefined;
+  };
+}
+
+export type UploadSessionStatus =
   | "idle"
   | "validating"
-  | "ready"
+  | "creating"
   | "uploading"
   | "paused"
+  | "resuming"
+  | "completing"
   | "completed"
   | "failed"
-  | "aborted";
+  | "canceled";
 
-export type IngestSessionSnapshotSchemaVersion = "large-image-ingest.session.v1";
-
-export interface IngestSessionSnapshot {
-  schemaVersion: IngestSessionSnapshotSchemaVersion;
-  createdAt: string;
-  manifest: IngestManifest;
-  nextChunkIndex: number;
-  state: IngestSessionState;
-  updatedAt: string;
-  uploadId?: string;
+export interface UploadSessionSnapshot {
+  manifestId: string;
+  status: UploadSessionStatus;
+  transportSession?: TransportSession | undefined;
+  chunkPlan: ChunkPlan;
+  completedChunks: UploadChunkReceipt[];
+  failedChunk?: ChunkDescriptor | undefined;
   uploadedBytes: number;
-  uploadedChunks: number[];
+  totalBytes: number;
+  createdAt: string;
+  updatedAt: string;
+  error?: {
+    code: IngestIssueCode;
+    message: string;
+    retryable: boolean;
+  } | undefined;
+  redactions?: {
+    transportSession?: readonly string[] | undefined;
+    receipts?: readonly string[] | undefined;
+  } | undefined;
+}
+
+export type ResumeRecordSchemaVersion = "large-image-ingest.resume.v0.1";
+
+export type ResumeRecordStatus =
+  | "active"
+  | "paused"
+  | "failed"
+  | "completed"
+  | "canceled"
+  | "expired";
+
+export type ResumeCleanupPolicy = "delete-on-complete" | "mark-complete";
+
+export interface CompletedChunkRange {
+  startIndex: number;
+  endIndexInclusive: number;
+}
+
+export interface ResumeFileIdentity {
+  name: string;
+  sizeBytes: number;
+  mediaType: string;
+  lastModified?: number;
+  fingerprint: FileFingerprint;
+}
+
+export interface ResumeChunkingIdentity {
+  strategy: "fixed-size";
+  chunkSizeBytes: number;
+  totalBytes: number;
+  totalChunks: number;
+}
+
+export interface ResumeTransportState {
+  name?: string;
+  uploadId: string;
+  resumeToken?: string;
+  expiresAt?: string;
+  data?: Record<string, unknown>;
+}
+
+export interface ResumeProgress {
+  status: ResumeRecordStatus;
+  uploadedBytes: number;
+  completedChunkRanges: CompletedChunkRange[];
+  nextChunkIndex: number;
+  lastErrorCode?: IngestIssueCode;
+}
+
+export interface ResumeRecord {
+  schemaVersion: ResumeRecordSchemaVersion;
+  id: string;
+  manifest: IngestManifest;
+  file: ResumeFileIdentity;
+  chunking: ResumeChunkingIdentity;
+  transport: ResumeTransportState;
+  progress: ResumeProgress;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResumeStore {
+  get(recordId: string): Promise<ResumeRecord | undefined>;
+  put(record: ResumeRecord): Promise<void>;
+  list(): Promise<ResumeRecord[]>;
+  delete(recordId: string): Promise<void>;
+}
+
+export interface ResumeOptions {
+  store: ResumeStore;
+  cleanup?: ResumeCleanupPolicy;
+}
+
+export interface ManifestIdentityOverride {
+  id: string;
+  createdAt: string;
 }
 
 export type IngestEvent =
-  | { type: "session:created"; state: IngestSessionState }
-  | { type: "validation:started"; state: IngestSessionState }
-  | { type: "validation:completed"; manifest: IngestManifest; state: IngestSessionState }
-  | { type: "checksum:started"; state: IngestSessionState }
-  | { type: "checksum:progress"; progress: ChecksumProgress; state: IngestSessionState }
-  | { type: "checksum:completed"; checksum: FileChecksum; state: IngestSessionState }
-  | { type: "manifest:created"; manifest: IngestManifest; state: IngestSessionState }
-  | { type: "upload:started"; manifest: IngestManifest; state: IngestSessionState; uploadId: string }
-  | {
-      type: "upload:progress";
-      completedChunks: number;
-      manifestId: string;
-      state: IngestSessionState;
-      totalBytes: number;
-      totalChunks: number;
-      uploadId: string;
-      uploadedBytes: number;
-    }
-  | { type: "chunk:started"; chunk: ChunkDescriptor; manifestId: string; state: IngestSessionState; uploadId: string }
-  | {
-      type: "chunk:completed";
-      chunk: ChunkDescriptor;
-      manifestId: string;
-      state: IngestSessionState;
-      totalBytes: number;
-      uploadId: string;
-      uploadedBytes: number;
-    }
-  | { type: "chunk:skipped"; chunk: ChunkDescriptor; manifestId: string; state: IngestSessionState; uploadId: string }
-  | {
-      type: "chunk:retry";
-      attempt: number;
-      chunk: ChunkDescriptor;
-      error: unknown;
-      manifestId: string;
-      state: IngestSessionState;
-      uploadId: string;
-    }
-  | { type: "upload:paused"; snapshot: IngestSessionSnapshot; state: IngestSessionState }
-  | { type: "upload:resumed"; snapshot: IngestSessionSnapshot; state: IngestSessionState }
-  | { type: "upload:completed"; manifest: IngestManifest; state: IngestSessionState; uploadId: string }
-  | { type: "upload:failed"; error: unknown; manifestId?: string; state: IngestSessionState }
-  | { type: "upload:aborted"; error: unknown; manifestId?: string; state: IngestSessionState };
-
-export interface IngestErrorDetails {
-  [key: string]: unknown;
-}
+  | { type: "validated"; manifest: IngestManifest }
+  | { type: "started"; manifest: IngestManifest; uploadId: string }
+  | { type: "snapshot"; snapshot: UploadSessionSnapshot }
+  | { type: "chunk:started"; manifestId: string; chunk: ChunkDescriptor }
+  | { type: "chunk:completed"; manifestId: string; chunk: ChunkDescriptor; uploadedBytes: number; totalBytes: number }
+  | { type: "retry"; manifestId: string; chunk: ChunkDescriptor; attempt: number; error: unknown }
+  | { type: "resume:available"; recordId: string; manifestId: string; status: ResumeRecordStatus }
+  | { type: "resume:started"; recordId: string; manifestId: string }
+  | { type: "resume:checkpoint"; recordId: string; completedChunkRanges: CompletedChunkRange[] }
+  | { type: "resume:conflict"; recordId?: string; code: ResumeConflictCode; error: unknown }
+  | { type: "resume:expired"; recordId: string }
+  | { type: "upload:paused"; recordId?: string }
+  | { type: "upload:canceled"; recordId?: string }
+  | { type: "paused"; snapshot: UploadSessionSnapshot }
+  | { type: "canceled"; snapshot: UploadSessionSnapshot }
+  | { type: "completed"; manifest: IngestManifest; uploadId: string }
+  | { type: "failed"; manifestId?: string; error: unknown };
 
 export interface UploadSessionContext {
   manifest: IngestManifest;
@@ -272,34 +414,65 @@ export interface UploadChunkContext extends UploadSessionContext {
   uploadId: string;
   chunk: ChunkDescriptor;
   body: Blob;
+  session: TransportSession;
+  previousReceipts: readonly UploadChunkReceipt[];
 }
 
-export interface UploadChunkCheckContext extends UploadSessionContext {
-  chunk: ChunkDescriptor;
-  snapshot?: IngestSessionSnapshot;
+export interface ResumeSessionContext extends UploadSessionContext {
+  record: ResumeRecord;
+  snapshot?: UploadSessionSnapshot;
+}
+
+export interface UploadSessionResult {
   uploadId: string;
+  transportName?: string;
+  createdAt?: string;
+  resumeToken?: string;
+  expiresAt?: string;
+  data?: Record<string, unknown>;
+  remote?: Record<string, unknown>;
+  secretsRef?: string;
 }
 
-export interface UploadResumeContext extends UploadSessionContext {
-  snapshot: IngestSessionSnapshot;
+export interface UploadChunkResult {
+  resumeToken?: string;
+  expiresAt?: string;
+  data?: Record<string, unknown>;
 }
 
 export interface UploadTransport {
-  createSession(context: UploadSessionContext): Promise<{ uploadId: string }>;
-  resumeSession?(context: UploadResumeContext): Promise<{ uploadId: string }>;
-  shouldUploadChunk?(context: UploadChunkCheckContext): Promise<boolean> | boolean;
-  uploadChunk(context: UploadChunkContext): Promise<void>;
-  completeSession(context: UploadSessionContext & { uploadId: string }): Promise<void>;
+  readonly capabilities?: TransportCapabilities;
+  createSession(context: UploadSessionContext): Promise<TransportSession | UploadSessionResult>;
+  resumeSession?(context: ResumeSessionContext): Promise<TransportSession | UploadSessionResult>;
+  uploadChunk(context: UploadChunkContext): Promise<void | UploadChunkResult | UploadChunkReceipt>;
+  completeSession(
+    context: UploadSessionContext & {
+      uploadId: string;
+      session: TransportSession;
+      receipts: readonly UploadChunkReceipt[];
+    }
+  ): Promise<void>;
+  abortSession?(
+    context: UploadSessionContext & {
+      uploadId: string;
+      session: TransportSession;
+      receipts: readonly UploadChunkReceipt[];
+    }
+  ): Promise<void>;
 }
 
 export interface CreateIngestSessionOptions {
   checksum?: ChecksumOptions | false;
   chunking?: ChunkPlanOptions;
   image?: ImageMetadataInput;
+  manifest?: IngestManifest;
+  manifestIdentity?: ManifestIdentityOverride;
   metadata?: Record<string, unknown>;
   onEvent?: (event: IngestEvent) => void;
-  resumeFrom?: IngestSessionSnapshot;
+  onSnapshot?: (snapshot: UploadSessionSnapshot) => void;
   retries?: number;
+  resume?: ResumeOptions;
+  resumeFrom?: UploadSessionSnapshot;
   storage?: StorageTargetManifest;
   transport: UploadTransport;
   validation?: ValidationRules;

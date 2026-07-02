@@ -22,6 +22,8 @@
   "files": [
     "dist",
     "CHANGELOG.md",
+    "docs",
+    "examples",
     "README.md",
     "LICENSE"
   ],
@@ -31,6 +33,30 @@
       "import": "./dist/esm/index.js",
       "require": "./dist/cjs/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./core": {
+      "types": "./dist/esm/core.d.ts",
+      "import": "./dist/esm/core.js",
+      "require": "./dist/cjs/core.js",
+      "default": "./dist/esm/core.js"
+    },
+    "./transport-s3": {
+      "types": "./dist/esm/s3.d.ts",
+      "import": "./dist/esm/s3.js",
+      "require": "./dist/cjs/s3.js",
+      "default": "./dist/esm/s3.js"
+    },
+    "./transport-tus": {
+      "types": "./dist/esm/tus.d.ts",
+      "import": "./dist/esm/tus.js",
+      "require": "./dist/cjs/tus.js",
+      "default": "./dist/esm/tus.js"
+    },
+    "./node": {
+      "types": "./dist/esm/nas.d.ts",
+      "import": "./dist/esm/nas.js",
+      "require": "./dist/cjs/nas.js",
+      "default": "./dist/esm/nas.js"
     }
   },
   "types": "./dist/esm/index.d.ts",
@@ -38,8 +64,10 @@
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
     "clean": "node scripts/clean-dist.cjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build && npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm test && npm run build && npm audit --audit-level=moderate",
+    "smoke:exports": "node scripts/verify-package-consumption.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.cjs.json --noEmit",
+    "typecheck:examples": "tsc -p tsconfig.examples.json",
     "test": "vitest run"
   },
   "keywords": [
@@ -54,6 +82,7 @@
     "access": "public"
   },
   "devDependencies": {
+    "@types/node": "^20.19.43",
     "typescript": "^5.0.0",
     "vitest": "^4.1.9"
   }

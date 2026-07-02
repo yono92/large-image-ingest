@@ -1,268 +1,413 @@
-import { describe, expect, it } from "vitest";
-import { LargeImageIngestError } from "../src/errors";
+﻿import { describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
 import { createIngestSession } from "../src/session";
-import type { IngestEvent, IngestSessionSnapshot, UploadTransport } from "../src/types";
+import type {
+  IngestEvent,
+  TransportCapabilities,
+  TransportSession,
+  UploadChunkReceipt,
+  UploadSessionSnapshot,
+  UploadTransport
+} from "../src/types";
 
-describe("createIngestSession", () => {
-  it("uploads chunks through a transport and emits progress", async () => {
-    const file = new File(["a".repeat(600 * 1024)], "wafer.tif", { type: "image/tiff" });
-    const uploadedChunks: number[] = [];
-    const events: IngestEvent[] = [];
+const chunkSize = 256 * 1024;
+
+const fakeCapabilities: TransportCapabilities = {
+  name: "fake-receipt-transport",
+  resumable: true,
+  abortable: true,
+  expires: false,
+  supportsParallelChunks: false,
+  supportsChunkChecksum: false
+};
+
+describe("LargeImageIngestSession", () => {
+  it("tracks chunk receipts and passes ordered receipts to completeSession", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const completedReceipts: UploadChunkReceipt[][] = [];
+    const eventSnapshots: UploadSessionSnapshot[] = [];
+    const fullSnapshots: UploadSessionSnapshot[] = [];
+
     const transport: UploadTransport = {
-      async createSession() {
-        return { uploadId: "upload-1" };
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-1",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          resumeToken: "secret-resume-url",
+          remote: {
+            brokerSessionId: "broker-1"
+          }
+        };
       },
-      async uploadChunk({ chunk }) {
-        uploadedChunks.push(chunk.index);
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name,
+            partNumber: chunk.index + 1,
+            etag: `etag-${chunk.index}`,
+            location: `https://example.invalid/part-${chunk.index}`
+          }
+        };
       },
-      async completeSession() {}
+      async completeSession({ receipts }): Promise<void> {
+        completedReceipts.push([...receipts]);
+      }
     };
 
     const session = createIngestSession(file, {
-      checksum: false,
-      chunking: { chunkSize: 256 * 1024 },
-      onEvent(event) {
-        events.push(event);
-      },
-      transport,
-      validation: {
-        acceptedExtensions: ["tif"],
-        acceptedMimeTypes: ["image/tiff"]
-      }
-    });
-
-    const manifest = await session.start();
-
-    expect(manifest.schemaVersion).toBe("large-image-ingest.manifest.v1");
-    expect(uploadedChunks).toEqual([0, 1, 2]);
-    expect(session.getState()).toBe("completed");
-    expect(events.map((event) => event.type)).toContain("upload:completed");
-    expect(events.filter((event) => event.type === "upload:progress")).toHaveLength(3);
-  });
-
-  it("pauses between chunks and resumes from a snapshot", async () => {
-    const file = new File(["a".repeat(600 * 1024)], "wafer.tif", { type: "image/tiff" });
-    const uploadedChunks: number[] = [];
-    let session: ReturnType<typeof createIngestSession>;
-    let pausedSnapshot: IngestSessionSnapshot | undefined;
-    const transport: UploadTransport = {
-      async createSession() {
-        return { uploadId: "upload-1" };
-      },
-      async uploadChunk({ chunk }) {
-        uploadedChunks.push(chunk.index);
-      },
-      async completeSession() {}
-    };
-
-    session = createIngestSession(file, {
-      checksum: false,
-      chunking: { chunkSize: 256 * 1024 },
-      onEvent(event) {
-        if (event.type === "chunk:completed" && event.chunk.index === 0 && !pausedSnapshot) {
-          pausedSnapshot = session.pause();
-          setTimeout(() => session.resume(), 0);
+      chunking: { chunkSize },
+      onEvent(event: IngestEvent) {
+        if (event.type === "snapshot") {
+          eventSnapshots.push(event.snapshot);
         }
+      },
+      onSnapshot(snapshot) {
+        fullSnapshots.push(snapshot);
       },
       transport
     });
 
     await session.start();
 
-    expect(pausedSnapshot?.state).toBe("paused");
-    expect(pausedSnapshot?.uploadedChunks).toEqual([0]);
-    expect(uploadedChunks).toEqual([0, 1, 2]);
-    expect(session.getState()).toBe("completed");
+    expect(completedReceipts).toHaveLength(1);
+    expect(completedReceipts[0].map((receipt) => receipt.chunkIndex)).toEqual([0, 1, 2]);
+    expect(completedReceipts[0].map((receipt) => receipt.transport.partNumber)).toEqual([1, 2, 3]);
+    expect(session.getSnapshot()?.status).toBe("completed");
+    expect(session.getSnapshot()?.completedChunks).toHaveLength(3);
+
+    const finalFullSnapshot = fullSnapshots.at(-1);
+    const finalEventSnapshot = eventSnapshots.at(-1);
+
+    expect(finalFullSnapshot?.transportSession?.resumeToken).toBe("secret-resume-url");
+    expect(finalFullSnapshot?.transportSession?.remote).toEqual({
+      brokerSessionId: "broker-1"
+    });
+    expect(finalFullSnapshot?.completedChunks[0].transport.location).toBe(
+      "https://example.invalid/part-0"
+    );
+
+    expect(finalEventSnapshot?.transportSession?.resumeToken).toBeUndefined();
+    expect(finalEventSnapshot?.transportSession?.remote).toBeUndefined();
+    expect(finalEventSnapshot?.completedChunks[0].transport.location).toBeUndefined();
+    expect(finalEventSnapshot?.redactions).toEqual({
+      transportSession: ["resumeToken", "remote"],
+      receipts: ["transport.location"]
+    });
   });
 
-  it("resumes from a snapshot and skips chunks reported by the transport", async () => {
-    const file = new File(["a".repeat(600 * 1024)], "wafer.tif", { type: "image/tiff" });
+  it("resumes from a snapshot and skips already completed chunks", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
     const manifest = await createManifest(file, {
-      checksum: false,
-      chunking: { chunkSize: 256 * 1024 }
+      chunking: { chunkSize }
     });
-    const uploadedChunks: number[] = [];
-    const skippedChecks: number[] = [];
-    const snapshot: IngestSessionSnapshot = {
-      schemaVersion: "large-image-ingest.session.v1",
-      createdAt: "2026-01-01T00:00:00.000Z",
-      manifest,
-      nextChunkIndex: 0,
-      state: "paused",
-      updatedAt: "2026-01-01T00:00:00.000Z",
-      uploadId: "upload-1",
-      uploadedBytes: 0,
-      uploadedChunks: []
+    const resumedChunks: number[] = [];
+    const completedReceipts: UploadChunkReceipt[][] = [];
+    const resumeSession: TransportSession = {
+      uploadId: "upload-resume",
+      transportName: fakeCapabilities.name,
+      createdAt: "2026-01-01T00:00:00.000Z"
     };
-    const transport: UploadTransport = {
-      async createSession() {
-        throw new Error("resume should reuse the snapshot uploadId");
+    const resumeFrom: UploadSessionSnapshot = {
+      manifestId: manifest.id,
+      status: "paused",
+      transportSession: resumeSession,
+      chunkPlan: {
+        chunkSize,
+        totalBytes: file.size,
+        totalChunks: 3,
+        chunks: [
+          { index: 0, start: 0, end: chunkSize, size: chunkSize },
+          { index: 1, start: chunkSize, end: chunkSize * 2, size: chunkSize },
+          { index: 2, start: chunkSize * 2, end: file.size, size: file.size - chunkSize * 2 }
+        ]
       },
-      shouldUploadChunk({ chunk }) {
-        skippedChecks.push(chunk.index);
-        return chunk.index !== 0;
-      },
-      async uploadChunk({ chunk }) {
-        uploadedChunks.push(chunk.index);
-      },
-      async completeSession() {}
-    };
-
-    const session = createIngestSession(file, {
-      checksum: false,
-      chunking: { chunkSize: 256 * 1024 },
-      resumeFrom: snapshot,
-      transport
-    });
-
-    await session.start();
-
-    expect(skippedChecks).toEqual([0, 1, 2]);
-    expect(uploadedChunks).toEqual([1, 2]);
-    expect(session.getSnapshot()?.uploadedChunks).toEqual([0, 1, 2]);
-  });
-
-  it("retries failed chunk uploads and emits typed retry events", async () => {
-    const file = new File(["data"], "wafer.tif", { type: "image/tiff" });
-    const events: IngestEvent[] = [];
-    let attempts = 0;
-    const transport: UploadTransport = {
-      async createSession() {
-        return { uploadId: "upload-1" };
-      },
-      async uploadChunk() {
-        attempts += 1;
-        if (attempts === 1) {
-          throw new Error("temporary network failure");
+      completedChunks: [
+        {
+          chunkIndex: 0,
+          sizeBytes: chunkSize,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name,
+            partNumber: 1,
+            etag: "etag-0"
+          }
         }
-      },
-      async completeSession() {}
+      ],
+      uploadedBytes: chunkSize,
+      totalBytes: file.size,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z"
     };
 
-    const session = createIngestSession(file, {
-      checksum: false,
-      chunking: { chunkSize: 256 * 1024 },
-      onEvent(event) {
-        events.push(event);
-      },
-      retries: 1,
-      transport
-    });
-
-    await session.start();
-
-    const retryEvent = events.find((event) => event.type === "chunk:retry");
-    expect(attempts).toBe(2);
-    expect(retryEvent).toMatchObject({
-      type: "chunk:retry",
-      attempt: 1
-    });
-    expect(retryEvent?.error).toMatchObject({
-      code: "transport.failed",
-      details: {
-        operation: "uploadChunk"
-      }
-    });
-  });
-
-  it("wraps transport failures in typed errors", async () => {
-    const file = new File(["data"], "wafer.tif", { type: "image/tiff" });
     const transport: UploadTransport = {
-      async createSession() {
-        throw new Error("session endpoint unavailable");
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        throw new Error("createSession should not be called when resuming.");
       },
-      async uploadChunk() {},
-      async completeSession() {}
+      async resumeSession({ snapshot }): Promise<TransportSession> {
+        expect(snapshot).toBe(resumeFrom);
+        return resumeSession;
+      },
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        resumedChunks.push(chunk.index);
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name,
+            partNumber: chunk.index + 1,
+            etag: `etag-${chunk.index}`
+          }
+        };
+      },
+      async completeSession({ receipts }): Promise<void> {
+        completedReceipts.push([...receipts]);
+      }
     };
 
-    const session = createIngestSession(file, {
-      checksum: false,
+    await createIngestSession(file, {
+      chunking: { chunkSize },
+      manifest,
+      resumeFrom,
       transport
-    });
+    }).start();
 
-    await expect(session.start()).rejects.toMatchObject({
-      code: "transport.failed",
-      details: {
-        operation: "createSession"
-      }
-    });
-    expect(session.getState()).toBe("failed");
+    expect(resumedChunks).toEqual([1, 2]);
+    expect(completedReceipts[0].map((receipt) => receipt.chunkIndex)).toEqual([0, 1, 2]);
   });
 
-  it("aborts while paused without waiting for resume", async () => {
-    const file = new File(["a".repeat(600 * 1024)], "wafer.tif", { type: "image/tiff" });
+  it("rejects invalid chunk receipts without retrying", async () => {
+    const file = new File([new Uint8Array(chunkSize)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    let uploadAttempts = 0;
+
+    const transport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-invalid",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        uploadAttempts += 1;
+        return {
+          chunkIndex: chunk.index + 1,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name
+          }
+        };
+      },
+      async completeSession(): Promise<void> {
+        throw new Error("completeSession should not be called for invalid receipts.");
+      }
+    };
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        retries: 3,
+        transport
+      }).start()
+    ).rejects.toMatchObject({
+      code: "transport.receipt_invalid",
+      retryable: false
+    });
+    expect(uploadAttempts).toBe(1);
+  });
+
+  it("rejects resume snapshots with mismatched chunk plans", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const manifest = await createManifest(file, {
+      chunking: { chunkSize }
+    });
+    let uploadAttempts = 0;
+
+    const transport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        throw new Error("createSession should not be called for invalid resume snapshots.");
+      },
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        uploadAttempts += 1;
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name
+          }
+        };
+      },
+      async completeSession(): Promise<void> {
+        throw new Error("completeSession should not be called for invalid resume snapshots.");
+      }
+    };
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        manifest,
+        resumeFrom: {
+          manifestId: manifest.id,
+          status: "paused",
+          chunkPlan: {
+            chunkSize: chunkSize * 2,
+            totalBytes: file.size,
+            totalChunks: 2,
+            chunks: [
+              { index: 0, start: 0, end: chunkSize * 2, size: chunkSize * 2 },
+              { index: 1, start: chunkSize * 2, end: file.size, size: file.size - chunkSize * 2 }
+            ]
+          },
+          completedChunks: [],
+          uploadedBytes: 0,
+          totalBytes: file.size,
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z"
+        },
+        transport
+      }).start()
+    ).rejects.toMatchObject({
+      code: "transport.resume_failed",
+      retryable: false
+    });
+    expect(uploadAttempts).toBe(0);
+  });
+
+  it("pauses without aborting the remote transport session", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const events: IngestEvent[] = [];
+    let abortCalled = false;
     let session: ReturnType<typeof createIngestSession>;
+
     const transport: UploadTransport = {
-      async createSession() {
-        return { uploadId: "upload-1" };
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-pause",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
       },
-      async uploadChunk() {},
-      async completeSession() {}
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        if (chunk.index === 0) {
+          session.pause("User paused upload.");
+        }
+
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name,
+            partNumber: chunk.index + 1
+          }
+        };
+      },
+      async completeSession(): Promise<void> {
+        throw new Error("completeSession should not be called after pause.");
+      },
+      async abortSession(): Promise<void> {
+        abortCalled = true;
+      }
     };
 
     session = createIngestSession(file, {
-      checksum: false,
-      chunking: { chunkSize: 256 * 1024 },
+      chunking: { chunkSize },
       onEvent(event) {
-        if (event.type === "chunk:completed" && event.chunk.index === 0) {
-          session.pause();
-          setTimeout(() => session.abort(), 0);
+        events.push(event);
+      },
+      transport
+    });
+
+    await expect(session.start()).rejects.toMatchObject({
+      code: "transport.paused",
+      retryable: false
+    });
+
+    expect(abortCalled).toBe(false);
+    expect(session.getSnapshot()?.status).toBe("paused");
+    expect(session.getSnapshot()?.completedChunks.map((receipt) => receipt.chunkIndex)).toEqual([0]);
+    expect(events.some((event) => event.type === "paused")).toBe(true);
+    expect(events.some((event) => event.type === "failed")).toBe(false);
+  });
+
+  it("cancels and asks the transport to abort the remote session", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const events: IngestEvent[] = [];
+    let abortedReceipts: readonly UploadChunkReceipt[] | undefined;
+    let session: ReturnType<typeof createIngestSession>;
+
+    const transport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-cancel",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        if (chunk.index === 0) {
+          session.cancel("User canceled upload.");
         }
+
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name,
+            partNumber: chunk.index + 1
+          }
+        };
       },
-      transport
-    });
-
-    await expect(session.start()).rejects.toMatchObject({
-      code: "session.aborted"
-    });
-    expect(session.getState()).toBe("aborted");
-  });
-
-  it("throws typed errors for validation failures", async () => {
-    const file = new File(["bad"], "wafer.jpg", { type: "image/jpeg" });
-    const transport: UploadTransport = {
-      async createSession() {
-        return { uploadId: "upload-1" };
+      async completeSession(): Promise<void> {
+        throw new Error("completeSession should not be called after cancel.");
       },
-      async uploadChunk() {},
-      async completeSession() {}
-    };
-
-    const session = createIngestSession(file, {
-      checksum: false,
-      transport,
-      validation: {
-        acceptedExtensions: ["tif"],
-        acceptedMimeTypes: ["image/tiff"]
+      async abortSession({ receipts }): Promise<void> {
+        abortedReceipts = receipts;
       }
-    });
-
-    await expect(session.start()).rejects.toMatchObject({
-      code: "validation.failed"
-    });
-    expect(session.getState()).toBe("failed");
-  });
-
-  it("throws typed errors when aborted before start", async () => {
-    const file = new File(["data"], "wafer.tif", { type: "image/tiff" });
-    const transport: UploadTransport = {
-      async createSession() {
-        return { uploadId: "upload-1" };
-      },
-      async uploadChunk() {},
-      async completeSession() {}
     };
-    const session = createIngestSession(file, {
-      checksum: false,
+
+    session = createIngestSession(file, {
+      chunking: { chunkSize },
+      onEvent(event) {
+        events.push(event);
+      },
       transport
     });
 
-    session.abort(new LargeImageIngestError("session.aborted", "Stopped by test."));
-
     await expect(session.start()).rejects.toMatchObject({
-      code: "session.aborted"
+      code: "transport.canceled",
+      retryable: false
     });
-    expect(session.getState()).toBe("aborted");
+
+    expect(abortedReceipts?.map((receipt) => receipt.chunkIndex)).toEqual([0]);
+    expect(session.getSnapshot()?.status).toBe("canceled");
+    expect(session.getSnapshot()?.completedChunks.map((receipt) => receipt.chunkIndex)).toEqual([0]);
+    expect(events.some((event) => event.type === "canceled")).toBe(true);
+    expect(events.some((event) => event.type === "failed")).toBe(false);
   });
 });
