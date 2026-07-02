@@ -2,13 +2,16 @@ import { planChunks } from "./chunks.js";
 import { createFastFingerprint } from "./fingerprint.js";
 import { validateFile } from "./validation.js";
 import type {
-  ManifestIdentityOverride,
   CreateIngestSessionOptions,
   IngestFileLike,
-  IngestManifest
+  IngestManifest,
+  ManifestIdentityOverride
 } from "./types.js";
 
-type CreateManifestOptions = Pick<CreateIngestSessionOptions, "chunking" | "metadata" | "retries" | "storage" | "validation"> & {
+type CreateManifestOptions = Pick<
+  CreateIngestSessionOptions,
+  "chunking" | "metadata" | "retries" | "storage" | "validation"
+> & {
   manifestIdentity?: ManifestIdentityOverride;
 };
 
