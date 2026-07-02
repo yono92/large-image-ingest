@@ -28,4 +28,57 @@ describe("validateFile", () => {
       "file.extension_not_allowed"
     ]);
   });
+
+  it("reports missing required metadata", () => {
+    const file = new File(["data"], "wafer.tif", { type: "image/tiff" });
+
+    const result = validateFile(
+      file,
+      {
+        requiredMetadata: ["lotId", "waferId"]
+      },
+      {
+        lotId: "LOT-001"
+      }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toEqual(["metadata.required_missing"]);
+    expect(result.issues[0]?.path).toBe("metadata.waferId");
+  });
+
+  it("reports unavailable dimensions when dimension rules are configured without image metadata", () => {
+    const file = new File(["data"], "wafer.tif", { type: "image/tiff" });
+
+    const result = validateFile(file, {
+      minWidth: 1024,
+      minHeight: 1024
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toEqual(["image.dimensions_unavailable"]);
+  });
+
+  it("validates provided dimensions", () => {
+    const file = new File(["data"], "wafer.tif", { type: "image/tiff" });
+
+    const result = validateFile(
+      file,
+      {
+        minWidth: 1024,
+        maxHeight: 4096
+      },
+      {},
+      {
+        width: 512,
+        height: 8192
+      }
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toEqual([
+      "image.width_too_small",
+      "image.height_too_large"
+    ]);
+  });
 });

@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "TypeScript-first ingestion toolkit for very large inspection images.",
   "type": "module",
   "license": "MIT",
@@ -21,6 +21,7 @@
   "sideEffects": false,
   "files": [
     "dist",
+    "CHANGELOG.md",
     "docs",
     "examples",
     "README.md",

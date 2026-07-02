@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
 import { createIngestSession } from "../src/session";
 import type {

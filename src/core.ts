@@ -1,4 +1,6 @@
+export { calculateChecksum } from "./checksum.js";
 export { planChunks } from "./chunks.js";
+export { LargeImageIngestError, isLargeImageIngestError } from "./errors.js";
 export { createFastFingerprint } from "./fingerprint.js";
 export { createManifest } from "./manifest.js";
 export {
@@ -27,19 +29,27 @@ export { validateFile } from "./validation.js";
 export { WebStorageResumeStore } from "./web-storage-resume-store.js";
 export type {
   ChecksumAlgorithm,
+  ChecksumOptions,
+  ChecksumProgress,
   ChecksumReceipt,
   ChunkDescriptor,
   ChunkPlan,
   ChunkPlanOptions,
   CompletedChunkRange,
   CreateIngestSessionOptions,
+  FileChecksum,
+  FileChecksumAlgorithm,
+  ImageMetadataInput,
   IngestError,
+  IngestErrorCode,
+  IngestErrorDetails,
   IngestEvent,
   IngestFileLike,
   IngestIssue,
   IngestIssueCode,
   IngestIssueSeverity,
   IngestManifest,
+  IngestManifestSchemaVersion,
   ManifestIdentityOverride,
   OriginalImageManifest,
   ResumeChunkingIdentity,
