@@ -181,10 +181,39 @@ large-image-ingest
 
 For the first implementation, a single package is acceptable. Split packages only when the API stabilizes.
 
+## Current Package Map
+
+The MVP stays in a single npm package and uses subpath exports to keep API boundaries clear. This avoids premature workspace churn while leaving a clean migration path to scoped packages later.
+
+```txt
+large-image-ingest
+large-image-ingest/core
+large-image-ingest/transport-tus
+large-image-ingest/transport-s3
+large-image-ingest/node
+```
+
+Import guidance:
+
+- Use `large-image-ingest/core` for framework-agnostic browser-safe core APIs.
+- Use `large-image-ingest/transport-tus` for the raw `fetch` tus transport.
+- Use `large-image-ingest/transport-s3` for the broker-backed S3 multipart transport.
+- Use `large-image-ingest/node` for server-only NAS gateway APIs.
+- Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.
+
+Future package migration, if needed, should map these subpaths directly to scoped packages:
+
+```txt
+large-image-ingest/core          -> @large-image-ingest/core
+large-image-ingest/transport-tus -> @large-image-ingest/transport-tus
+large-image-ingest/transport-s3  -> @large-image-ingest/transport-s3
+large-image-ingest/node          -> @large-image-ingest/node
+```
+
 ## Example API
 
 ```ts
-import { createIngestSession } from "large-image-ingest";
+import { createIngestSession } from "large-image-ingest/core";
 
 const session = createIngestSession(file, {
   chunking: {
@@ -202,24 +231,50 @@ const session = createIngestSession(file, {
     inspectionType: "defect-review",
   },
   transport: {
+    capabilities: {
+      name: "app-api",
+      resumable: true,
+      abortable: true,
+      expires: false,
+      supportsParallelChunks: false,
+      supportsChunkChecksum: false,
+    },
     async createSession({ manifest }) {
-      return { uploadId: `upload-${manifest.id}` };
+      return {
+        uploadId: `upload-${manifest.id}`,
+        transportName: "app-api",
+        createdAt: new Date().toISOString(),
+      };
     },
     async uploadChunk({ chunk, body }) {
-      await fetch(`/api/uploads/chunks/${chunk.index}`, {
+      const response = await fetch(`/api/uploads/chunks/${chunk.index}`, {
         method: "PUT",
         body,
       });
+
+      return {
+        chunkIndex: chunk.index,
+        sizeBytes: body.size,
+        completedAt: new Date().toISOString(),
+        transport: {
+          name: "app-api",
+          etag: response.headers.get("etag") ?? undefined,
+        },
+      };
     },
-    async completeSession({ manifest, uploadId }) {
+    async completeSession({ manifest, uploadId, receipts }) {
       await fetch(`/api/uploads/${uploadId}/complete`, {
         method: "POST",
-        body: JSON.stringify(manifest),
+        body: JSON.stringify({ manifest, receipts }),
       });
     },
   },
   onEvent(event) {
     console.log(event.type, event);
+  },
+  onSnapshot(snapshot) {
+    // Persist this in IndexedDB or an application session store for resume.
+    console.log(snapshot.status, snapshot.uploadedBytes);
   },
 });
 
@@ -405,10 +460,32 @@ const { createIngestSession } = require("large-image-ingest");
 
 Use tus for resumable browser uploads.
 
-Candidate dependencies:
+Current implementation:
 
-- `tus-js-client`
+- `createTusTransport` implements the tus 1.0 creation/core flow with native `fetch`.
+- Upload URLs are stored as transport resume tokens and redacted from default snapshot events.
+- The transport verifies remote offset with `HEAD` before each sequential `PATCH`.
+- `terminateOnAbort` can send tus `DELETE` when the server supports the termination extension.
+
+```ts
+import { createIngestSession } from "large-image-ingest/core";
+import { createTusTransport } from "large-image-ingest/transport-tus";
+
+const session = createIngestSession(file, {
+  transport: createTusTransport({
+    endpoint: "/files",
+    detectExtensions: true,
+    metadata: {
+      filename: file.name,
+    },
+  }),
+});
+```
+
+Optional companion dependencies:
+
 - `@tus/server`
+- `tus-js-client` if broader tus client behavior is needed later
 
 Best for:
 
@@ -421,16 +498,159 @@ Best for:
 
 Use S3 multipart upload for direct-to-object-storage workflows.
 
-Candidate dependencies:
+Current implementation:
 
-- `@aws-sdk/lib-storage`
-- S3 presigned multipart API
+- `createS3MultipartTransport` uploads parts with browser-safe presigned `PUT` requests.
+- The application broker owns credentials, bucket policy, object key generation, multipart creation, completion, and abort.
+- Intermediate parts must satisfy S3 multipart limits. The final part may be smaller.
+- Completion uses locally recorded `partNumber` and `ETag` receipts, not list-parts output.
+
+```ts
+import {
+  createIngestSession,
+} from "large-image-ingest/core";
+import {
+  createS3MultipartTransport,
+  type S3MultipartBroker,
+} from "large-image-ingest/transport-s3";
+
+const broker: S3MultipartBroker = {
+  async createMultipartUpload({ manifest }) {
+    const response = await fetch("/api/s3/multipart", {
+      method: "POST",
+      body: JSON.stringify({ manifestId: manifest.id }),
+    });
+
+    return response.json();
+  },
+  async getUploadPartUrl({ uploadId, key, partNumber }) {
+    const response = await fetch("/api/s3/multipart/part-url", {
+      method: "POST",
+      body: JSON.stringify({ uploadId, key, partNumber }),
+    });
+
+    return response.json();
+  },
+  async completeMultipartUpload({ uploadId, key, parts }) {
+    await fetch("/api/s3/multipart/complete", {
+      method: "POST",
+      body: JSON.stringify({ uploadId, key, parts }),
+    });
+  },
+  async abortMultipartUpload({ uploadId, key }) {
+    await fetch("/api/s3/multipart/abort", {
+      method: "POST",
+      body: JSON.stringify({ uploadId, key }),
+    });
+  },
+};
+
+const session = createIngestSession(file, {
+  chunking: {
+    chunkSize: 64 * 1024 * 1024,
+  },
+  transport: createS3MultipartTransport({ broker }),
+});
+```
+
+Broker requirements:
+
+- Generate or approve object keys from trusted application policy, not raw filenames.
+- Do not return cloud credentials to browser code.
+- Return only short-lived part upload URLs from `getUploadPartUrl`.
+- Expose `ETag` to browser code through CORS so part receipts can be recorded.
+- Configure lifecycle cleanup for incomplete multipart uploads.
+
+Optional companion dependencies:
+
+- AWS SDK on the application server or broker
+- S3-compatible object storage SDKs on the broker
 
 Best for:
 
 - Cloud-native storage
 - Very large files
 - Avoiding app server bandwidth usage
+
+### NAS Gateway
+
+Use the NAS gateway on the server side. Browsers should upload chunks to an application server or upload gateway, and that server should stage and finalize files into mounted NAS-backed storage.
+
+Current implementation:
+
+- `createNasGateway` is exported from `large-image-ingest/node`.
+- Sessions write JSON metadata under a staging root.
+- Chunks are staged under generated session directories.
+- Target paths are resolved under a configured target root and reject path traversal.
+- Finalize verifies all chunks, assembles a temporary target file, then renames it into place.
+- Finalize is serialized per session through a lock provider. The default uses a shared file lock under `stagingRoot/.locks`.
+- Redis, database, or orchestration-specific locks can be provided with the same `lockProvider` interface.
+- Canceled and expired staging sessions can be cleaned up.
+
+```ts
+import { createNasFileLockProvider, createNasGateway } from "large-image-ingest/node";
+
+const gateway = createNasGateway({
+  stagingRoot: "/mnt/inspection-staging",
+  targetRoot: "/mnt/inspection-originals",
+  defaultExpiresInMs: 24 * 60 * 60 * 1000,
+  lockProvider: createNasFileLockProvider({
+    lockRoot: "/mnt/inspection-staging/.locks",
+    staleLockMs: 2 * 60 * 60 * 1000,
+  }),
+});
+
+const session = await gateway.createSession({
+  sessionId: "upload_01",
+  targetRelativePath: "fab-a/lot-001/wafer-12/original.tif",
+  totalBytes: fileSize,
+  expectedChunks: totalChunks,
+  metadata: {
+    lotId: "LOT-001",
+    waferId: "W12",
+  },
+});
+
+await gateway.stageChunk({
+  sessionId: session.sessionId,
+  index: 0,
+  body: chunkBytes,
+});
+
+await gateway.finalizeSession({
+  sessionId: session.sessionId,
+});
+```
+
+Deployment patterns:
+
+- Browser to application server, then application server to mounted NAS.
+- Browser to tus gateway, then gateway finalizes into NAS with `createNasGateway`.
+- Browser to WebDAV/SFTP gateway, then gateway stages chunks under the server-controlled staging root.
+
+Safety rules:
+
+- Treat filenames and metadata as labels, not trusted paths.
+- Generate `targetRelativePath` from application policy.
+- Keep staging and target roots on the same volume when atomic rename behavior matters.
+- Keep `lockRoot` on shared storage, or provide a Redis/database-backed `lockProvider`, when multiple servers can finalize the same session.
+- Set `staleLockMs` longer than the maximum expected finalize duration if stale file locks should be reclaimed automatically.
+- Run cleanup for expired staging sessions.
+
+## Examples
+
+The repository includes focused examples for the current package map:
+
+- `examples/custom-transport.ts`: custom application upload API.
+- `examples/tus-transport.ts`: browser upload through a tus endpoint.
+- `examples/s3-multipart.ts`: browser upload through a broker-backed S3 multipart flow.
+- `examples/nas-gateway-route.ts`: server-side NAS staging and finalize route shape.
+
+## Integration Tests
+
+Default verification remains local and credential-free. Real tus servers, S3-compatible buckets, and mounted NAS paths should be covered by explicit opt-in integration tests only.
+
+See `docs/integration-tests.md` for the integration test policy, required safeguards, and suggested environment variables.
 
 ## Validation Rules
 
@@ -502,32 +722,15 @@ The React package should not own the core upload logic. It should only map state
 
 ## Server Integration
 
-The Node package can provide:
+The current Node subpath provides the NAS gateway APIs documented above.
+
+Future Node helpers can provide:
 
 - Manifest verification
 - Checksum verification
 - Sharp-based thumbnail generation
 - Sharp-based preview generation
 - Hooks for tile generation
-
-Example:
-
-```ts
-import { verifyManifest, createDerivatives } from "large-image-ingest/node";
-
-await verifyManifest(manifest, {
-  requireChecksum: true,
-});
-
-await createDerivatives({
-  input: "/data/originals/wafer-aoi-001.tif",
-  outputDir: "/data/derivatives/ing_01J...",
-  preview: {
-    maxWidth: 2048,
-    format: "webp",
-  },
-});
-```
 
 ## Architecture Notes
 
@@ -567,10 +770,10 @@ Server code should use:
 
 ### Milestone 3: tus Upload
 
-- Add `tus-js-client` transport.
-- Support start, pause, resume, cancel.
-- Persist resume URLs.
-- Emit upload progress and retry events.
+- Add raw `fetch` tus transport.
+- Support start, pause, resume, cancel, and optional termination.
+- Persist resume URLs through redacted session snapshots.
+- Emit upload progress, retry, and snapshot events.
 
 ### Milestone 4: Node Verification
 
@@ -592,23 +795,23 @@ Server code should use:
 
 ## Open Questions
 
-- Should the first package be single-package or monorepo?
-- Should tus or S3 be the first official transport?
 - Should image dimensions be best-effort only in the browser?
 - Which formats matter first: TIFF, PNG, JPEG, BMP, proprietary raw formats?
 - Should manifest be uploaded before, after, or alongside the original?
 - Should per-chunk checksums be required in v1?
 - How much resume state should be persisted client-side?
+- When the API stabilizes, should subpath exports migrate to scoped packages?
 
 ## Recommended First Build
 
-Start with a single package and one transport.
+Start with a single package and browser-safe transports.
 
 Recommended first stack:
 
 - TypeScript
-- `tus-js-client`
-- `@tus/server`
+- raw `fetch` tus transport
+- broker-backed S3 multipart transport
+- optional `@tus/server`
 - `sharp` for Node derivative examples
 - Vitest for tests
 - tsup or tsdown for build
@@ -618,7 +821,7 @@ First public demo:
 1. Select a large image.
 2. Validate file size and type.
 3. Generate manifest.
-4. Upload with tus.
+4. Upload with tus or S3 multipart.
 5. Pause and resume.
 6. Show checksum and final manifest.
 

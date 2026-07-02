@@ -1,0 +1,70 @@
+export { planChunks } from "./chunks.js";
+export { createFastFingerprint } from "./fingerprint.js";
+export { createManifest } from "./manifest.js";
+export {
+  ResumeConflictError,
+  UploadCanceledError,
+  UploadPausedError,
+  chunkingIdentityMatches,
+  classifyResumeRecordForFile,
+  createResumeChunkingIdentity,
+  createResumeConflict,
+  createResumeFileIdentity,
+  createResumeRecord,
+  fileIdentityMatches,
+  getNextIncompleteChunkIndex,
+  isChunkCompleted,
+  isRecoverableResumeRecord,
+  isRecoverableResumeStatus,
+  isResumeRecordExpired,
+  listRecoverableResumeRecords,
+  mergeCompletedChunkRange,
+  mergeTransportState,
+  normalizeCompletedChunkRanges
+} from "./resume.js";
+export { createIngestSession, LargeImageIngestSession } from "./session.js";
+export { validateFile } from "./validation.js";
+export { WebStorageResumeStore } from "./web-storage-resume-store.js";
+export type {
+  ChecksumAlgorithm,
+  ChecksumReceipt,
+  ChunkDescriptor,
+  ChunkPlan,
+  ChunkPlanOptions,
+  CompletedChunkRange,
+  CreateIngestSessionOptions,
+  IngestError,
+  IngestEvent,
+  IngestFileLike,
+  IngestIssue,
+  IngestIssueCode,
+  IngestIssueSeverity,
+  IngestManifest,
+  ManifestIdentityOverride,
+  OriginalImageManifest,
+  ResumeChunkingIdentity,
+  ResumeCleanupPolicy,
+  ResumeConflictCode,
+  ResumeFileIdentity,
+  ResumeOptions,
+  ResumeProgress,
+  ResumeRecord,
+  ResumeRecordSchemaVersion,
+  ResumeRecordStatus,
+  ResumeSessionContext,
+  ResumeStore,
+  ResumeTransportState,
+  TransportCapabilities,
+  TransportSession,
+  UploadChunkContext,
+  UploadChunkReceipt,
+  UploadChunkResult,
+  UploadSessionContext,
+  UploadSessionResult,
+  UploadSessionSnapshot,
+  UploadSessionStatus,
+  UploadTransport,
+  ValidationResult,
+  ValidationRules
+} from "./types.js";
+export type { ResumeStorageLike } from "./web-storage-resume-store.js";
