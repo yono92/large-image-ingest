@@ -96,9 +96,9 @@ Do not require real cloud credentials in default tests. Any cloud or network int
 
 ## Local Skills
 
-This directory currently includes a skills.sh-installed skill at `.agents/skills/add-community-extension`. It comes from `github/spec-kit`, but it is for maintaining Spec Kit's community extension catalog. Do not use it for this SDK's normal feature work.
+This directory includes a skills.sh-installed skill at `.agents/skills/add-community-extension`. It comes from `github/spec-kit`, but it is for maintaining Spec Kit's community extension catalog. Do not use it for this SDK's normal feature work.
 
-For actual Spec Kit SDD commands and Codex skills, initialize the project with the Specify CLI command shown above.
+The project is initialized with GitHub Spec Kit `0.12.2` and Codex skills integration. Use the generated `.agents/skills/speckit-*` skills for this SDK's normal Spec-Driven Development workflow.
 
 ## Verification
 
