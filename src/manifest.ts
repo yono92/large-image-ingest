@@ -2,14 +2,19 @@ import { planChunks } from "./chunks.js";
 import { createFastFingerprint } from "./fingerprint.js";
 import { validateFile } from "./validation.js";
 import type {
+  ManifestIdentityOverride,
   CreateIngestSessionOptions,
   IngestFileLike,
   IngestManifest
 } from "./types.js";
 
+type CreateManifestOptions = Pick<CreateIngestSessionOptions, "chunking" | "metadata" | "retries" | "storage" | "validation"> & {
+  manifestIdentity?: ManifestIdentityOverride;
+};
+
 export async function createManifest(
   file: IngestFileLike,
-  options: Pick<CreateIngestSessionOptions, "chunking" | "metadata" | "retries" | "storage" | "validation"> = {}
+  options: CreateManifestOptions = {}
 ): Promise<IngestManifest> {
   const validation = validateFile(file, options.validation);
   const chunkPlan = planChunks(file.size, options.chunking);
@@ -42,8 +47,8 @@ export async function createManifest(
 
   const manifest: IngestManifest = {
     schemaVersion: "large-image-ingest.manifest.v0.1",
-    id: createId(),
-    createdAt: new Date().toISOString(),
+    id: options.manifestIdentity?.id ?? createId(),
+    createdAt: options.manifestIdentity?.createdAt ?? new Date().toISOString(),
     library: {
       name: "large-image-ingest",
       version: "0.0.0"
