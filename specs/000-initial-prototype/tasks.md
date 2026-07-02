@@ -14,5 +14,5 @@
 - [x] Install dependencies and run verification.
 - [ ] Initialize official Spec Kit files with `specify init`.
 - [ ] Design future NAS-backed transport requirements.
-- [ ] Create public GitHub repository.
-- [ ] Push initial commit.
+- [x] Create public GitHub repository.
+- [x] Push initial commit.

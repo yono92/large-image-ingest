@@ -5,10 +5,11 @@
 ## Local Setup
 
 ```bash
-npm install
+npm ci
 npm run typecheck
 npm test
 npm run build
+npm pack --dry-run
 ```
 
 ## Contribution Guidelines
@@ -28,3 +29,4 @@ Good first areas for contribution:
 - Chunk planning and retry behavior.
 - Browser-safe hashing.
 - Transport adapter design.
+- Session snapshot persistence examples.

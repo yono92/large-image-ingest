@@ -6,14 +6,31 @@ export type IngestIssueCode =
   | "file.too_small"
   | "file.mime_not_allowed"
   | "file.extension_not_allowed"
+  | "metadata.required_missing"
+  | "checksum.mismatch"
+  | "image.dimensions_unavailable"
+  | "image.width_too_small"
+  | "image.width_too_large"
+  | "image.height_too_small"
+  | "image.height_too_large"
   | "chunk.invalid_size"
   | "transport.failed"
   | "transport.aborted";
+
+export type IngestErrorCode =
+  | IngestIssueCode
+  | "manifest.failed"
+  | "session.failed"
+  | "validation.failed"
+  | "session.aborted"
+  | "session.invalid_state"
+  | "session.snapshot_file_mismatch";
 
 export interface IngestIssue {
   code: IngestIssueCode;
   message: string;
   severity: IngestIssueSeverity;
+  path?: string;
   details?: Record<string, unknown>;
 }
 
@@ -21,8 +38,13 @@ export interface ValidationRules {
   acceptedExtensions?: readonly string[];
   acceptedMimeTypes?: readonly string[];
   maxBytes?: number;
+  maxHeight?: number;
+  maxWidth?: number;
+  minHeight?: number;
   minBytes?: number;
+  minWidth?: number;
   requireNonEmpty?: boolean;
+  requiredMetadata?: readonly string[];
 }
 
 export interface ValidationResult {
@@ -53,7 +75,39 @@ export interface ChunkPlanOptions {
   chunkSize?: number;
 }
 
-export type IngestManifestSchemaVersion = "large-image-ingest.manifest.v0.1";
+export type ChecksumAlgorithm = "sha256";
+
+export interface ChecksumProgress {
+  loadedBytes: number;
+  totalBytes: number;
+  chunkIndex: number;
+  totalChunks: number;
+}
+
+export interface ChecksumOptions {
+  algorithm?: ChecksumAlgorithm;
+  chunkSize?: number;
+  expected?: string;
+  onProgress?: (progress: ChecksumProgress) => void;
+  required?: boolean;
+}
+
+export interface FileChecksum {
+  algorithm: ChecksumAlgorithm;
+  calculatedAt: string;
+  chunkSizeBytes: number;
+  scope: "whole-file";
+  value: string;
+}
+
+export interface ImageMetadataInput {
+  colorDepth?: number;
+  format?: string;
+  height?: number;
+  width?: number;
+}
+
+export type IngestManifestSchemaVersion = "large-image-ingest.manifest.v1";
 
 export type FingerprintAlgorithm = "metadata-sha256" | "metadata-fallback";
 
@@ -66,6 +120,7 @@ export interface FileFingerprint {
 export interface OriginalImageManifest {
   kind: "original";
   name: string;
+  checksum?: FileChecksum;
   extension?: string;
   sizeBytes: number;
   mediaType: string;
@@ -78,11 +133,11 @@ export interface OriginalImageManifest {
 }
 
 export interface ImageInspectionManifest {
-  status: "not_inspected";
+  status: "not_inspected" | "provided";
   format?: string;
-  width: null;
-  height: null;
-  colorDepth: null;
+  width: number | null;
+  height: number | null;
+  colorDepth: number | null;
 }
 
 export interface UploadManifest {
@@ -116,7 +171,7 @@ export interface IngestManifest {
   createdAt: string;
   library: {
     name: "large-image-ingest";
-    version: "0.0.0";
+    version: "1.0.0";
   };
   original: OriginalImageManifest;
   image: ImageInspectionManifest;
@@ -134,14 +189,78 @@ export interface IngestManifest {
   validation: ValidationResult;
 }
 
+export type IngestSessionState =
+  | "idle"
+  | "validating"
+  | "ready"
+  | "uploading"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "aborted";
+
+export type IngestSessionSnapshotSchemaVersion = "large-image-ingest.session.v1";
+
+export interface IngestSessionSnapshot {
+  schemaVersion: IngestSessionSnapshotSchemaVersion;
+  createdAt: string;
+  manifest: IngestManifest;
+  nextChunkIndex: number;
+  state: IngestSessionState;
+  updatedAt: string;
+  uploadId?: string;
+  uploadedBytes: number;
+  uploadedChunks: number[];
+}
+
 export type IngestEvent =
-  | { type: "validated"; manifest: IngestManifest }
-  | { type: "started"; manifest: IngestManifest; uploadId: string }
-  | { type: "chunk:started"; manifestId: string; chunk: ChunkDescriptor }
-  | { type: "chunk:completed"; manifestId: string; chunk: ChunkDescriptor; uploadedBytes: number; totalBytes: number }
-  | { type: "retry"; manifestId: string; chunk: ChunkDescriptor; attempt: number; error: unknown }
-  | { type: "completed"; manifest: IngestManifest; uploadId: string }
-  | { type: "failed"; manifestId?: string; error: unknown };
+  | { type: "session:created"; state: IngestSessionState }
+  | { type: "validation:started"; state: IngestSessionState }
+  | { type: "validation:completed"; manifest: IngestManifest; state: IngestSessionState }
+  | { type: "checksum:started"; state: IngestSessionState }
+  | { type: "checksum:progress"; progress: ChecksumProgress; state: IngestSessionState }
+  | { type: "checksum:completed"; checksum: FileChecksum; state: IngestSessionState }
+  | { type: "manifest:created"; manifest: IngestManifest; state: IngestSessionState }
+  | { type: "upload:started"; manifest: IngestManifest; state: IngestSessionState; uploadId: string }
+  | {
+      type: "upload:progress";
+      completedChunks: number;
+      manifestId: string;
+      state: IngestSessionState;
+      totalBytes: number;
+      totalChunks: number;
+      uploadId: string;
+      uploadedBytes: number;
+    }
+  | { type: "chunk:started"; chunk: ChunkDescriptor; manifestId: string; state: IngestSessionState; uploadId: string }
+  | {
+      type: "chunk:completed";
+      chunk: ChunkDescriptor;
+      manifestId: string;
+      state: IngestSessionState;
+      totalBytes: number;
+      uploadId: string;
+      uploadedBytes: number;
+    }
+  | { type: "chunk:skipped"; chunk: ChunkDescriptor; manifestId: string; state: IngestSessionState; uploadId: string }
+  | {
+      type: "chunk:retry";
+      attempt: number;
+      chunk: ChunkDescriptor;
+      error: unknown;
+      manifestId: string;
+      state: IngestSessionState;
+      uploadId: string;
+    }
+  | { type: "upload:paused"; snapshot: IngestSessionSnapshot; state: IngestSessionState }
+  | { type: "upload:resumed"; snapshot: IngestSessionSnapshot; state: IngestSessionState }
+  | { type: "upload:completed"; manifest: IngestManifest; state: IngestSessionState; uploadId: string }
+  | { type: "upload:failed"; error: unknown; manifestId?: string; state: IngestSessionState }
+  | { type: "upload:aborted"; error: unknown; manifestId?: string; state: IngestSessionState };
+
+export interface IngestErrorDetails {
+  [key: string]: unknown;
+}
 
 export interface UploadSessionContext {
   manifest: IngestManifest;
@@ -155,16 +274,31 @@ export interface UploadChunkContext extends UploadSessionContext {
   body: Blob;
 }
 
+export interface UploadChunkCheckContext extends UploadSessionContext {
+  chunk: ChunkDescriptor;
+  snapshot?: IngestSessionSnapshot;
+  uploadId: string;
+}
+
+export interface UploadResumeContext extends UploadSessionContext {
+  snapshot: IngestSessionSnapshot;
+}
+
 export interface UploadTransport {
   createSession(context: UploadSessionContext): Promise<{ uploadId: string }>;
+  resumeSession?(context: UploadResumeContext): Promise<{ uploadId: string }>;
+  shouldUploadChunk?(context: UploadChunkCheckContext): Promise<boolean> | boolean;
   uploadChunk(context: UploadChunkContext): Promise<void>;
   completeSession(context: UploadSessionContext & { uploadId: string }): Promise<void>;
 }
 
 export interface CreateIngestSessionOptions {
+  checksum?: ChecksumOptions | false;
   chunking?: ChunkPlanOptions;
+  image?: ImageMetadataInput;
   metadata?: Record<string, unknown>;
   onEvent?: (event: IngestEvent) => void;
+  resumeFrom?: IngestSessionSnapshot;
   retries?: number;
   storage?: StorageTargetManifest;
   transport: UploadTransport;
