@@ -1,4 +1,4 @@
-import type { IngestFileLike } from "./types";
+import type { IngestFileLike } from "./types.js";
 
 export async function createFastFingerprint(file: IngestFileLike): Promise<string> {
   const input = [

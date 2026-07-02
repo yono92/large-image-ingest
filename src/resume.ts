@@ -1,5 +1,5 @@
-import { planChunks } from "./chunks";
-import { createFastFingerprint } from "./fingerprint";
+import { planChunks } from "./chunks.js";
+import { createFastFingerprint } from "./fingerprint.js";
 import type {
   ChunkPlanOptions,
   CompletedChunkRange,
@@ -13,7 +13,7 @@ import type {
   ResumeTransportState,
   UploadChunkResult,
   UploadSessionResult
-} from "./types";
+} from "./types.js";
 
 const RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.1" as const;
 
