@@ -226,6 +226,100 @@ const session = createIngestSession(file, {
 const manifest = await session.start();
 ```
 
+## Persistent Resume
+
+Transient retry and persistent resume are separate behaviors:
+
+- Retry happens inside one running session. A failed chunk can be attempted again before the session fails.
+- Persistent resume stores a versioned resume record so a later session can recover after a refresh, crash, or process restart.
+
+Browser resume still requires the application to ask the user for the same original file again. The SDK stores upload metadata, chunk checkpoints, manifest identity, and transport resume handles; it does not store original image bytes.
+
+```ts
+import {
+  WebStorageResumeStore,
+  classifyResumeRecordForFile,
+  createIngestSession,
+  listRecoverableResumeRecords,
+} from "large-image-ingest";
+
+const resumeStore = new WebStorageResumeStore(localStorage);
+
+const transport = {
+  async createSession({ manifest }) {
+    const response = await fetch("/api/uploads", {
+      method: "POST",
+      body: JSON.stringify({ manifestId: manifest.id }),
+    });
+    return response.json() as Promise<{
+      uploadId: string;
+      resumeToken?: string;
+      expiresAt?: string;
+    }>;
+  },
+  async resumeSession({ record }) {
+    const response = await fetch(`/api/uploads/${record.transport.uploadId}/resume`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${record.transport.resumeToken}`,
+      },
+    });
+    return response.json() as Promise<{
+      uploadId: string;
+      resumeToken?: string;
+      expiresAt?: string;
+    }>;
+  },
+  async uploadChunk({ uploadId, chunk, body }) {
+    const response = await fetch(`/api/uploads/${uploadId}/chunks/${chunk.index}`, {
+      method: "PUT",
+      body,
+    });
+    return response.json() as Promise<{ resumeToken?: string; expiresAt?: string }>;
+  },
+  async completeSession({ uploadId, manifest }) {
+    await fetch(`/api/uploads/${uploadId}/complete`, {
+      method: "POST",
+      body: JSON.stringify(manifest),
+    });
+  },
+};
+
+const session = createIngestSession(file, {
+  chunking: { chunkSize: 64 * 1024 * 1024 },
+  resume: { store: resumeStore },
+  transport,
+  onEvent(event) {
+    if (event.type === "resume:checkpoint") {
+      // Persisted after an acknowledged chunk. Safe to update UI progress.
+    }
+  },
+});
+
+await session.start();
+```
+
+To offer recovery after a reload:
+
+```ts
+const records = listRecoverableResumeRecords(await resumeStore.list());
+const record = records[0];
+
+if (record && (await classifyResumeRecordForFile(record, file)) === "compatible") {
+  const session = createIngestSession(file, {
+    resume: { store: resumeStore },
+    transport,
+  });
+  await session.resume(record.id);
+}
+```
+
+By default completed records are deleted. Use `resume: { store, cleanup: "mark-complete" }` when an application wants to retain terminal records for local audit or debugging.
+
+### Resume Security Notes
+
+Resume records can contain sensitive transport handles, remote upload IDs, filenames, and user metadata. Do not print full resume records, presigned URLs, credentials, or customer metadata in default logs. Store records only in an application-approved persistence layer, and prefer short-lived or revocable transport resume tokens. Canceling a session marks the record `canceled`, so default recovery helpers will not offer it again.
+
 ## Manifest Example
 
 ```json
