@@ -1,19 +1,30 @@
+import { calculateChecksum } from "./checksum.js";
 import { planChunks } from "./chunks.js";
 import { createFastFingerprint } from "./fingerprint.js";
 import { validateFile } from "./validation.js";
 import type {
+  ChecksumOptions,
   CreateIngestSessionOptions,
+  FileChecksum,
+  ImageInspectionManifest,
   IngestFileLike,
-  IngestManifest
+  IngestIssue,
+  IngestManifest,
+  ValidationResult
 } from "./types.js";
 
 export async function createManifest(
   file: IngestFileLike,
-  options: Pick<CreateIngestSessionOptions, "chunking" | "metadata" | "retries" | "storage" | "validation"> = {}
+  options: Pick<
+    CreateIngestSessionOptions,
+    "checksum" | "chunking" | "image" | "metadata" | "retries" | "storage" | "validation"
+  > = {}
 ): Promise<IngestManifest> {
-  const validation = validateFile(file, options.validation);
+  const metadata = options.metadata ?? {};
+  const validation = validateFile(file, options.validation, metadata, options.image);
   const chunkPlan = planChunks(file.size, options.chunking);
   const fingerprintValue = await createFastFingerprint(file);
+  const checksum = await calculateManifestChecksum(file, options.checksum, validation);
 
   const original = {
     kind: "original" as const,
@@ -35,26 +46,25 @@ export async function createManifest(
     Object.assign(original, { lastModifiedAt: new Date(file.lastModified).toISOString() });
   }
 
+  if (checksum) {
+    Object.assign(original, { checksum });
+  }
+
   const extension = getExtension(file.name);
   if (extension) {
     Object.assign(original, { extension });
   }
 
   const manifest: IngestManifest = {
-    schemaVersion: "large-image-ingest.manifest.v0.1",
+    schemaVersion: "large-image-ingest.manifest.v1",
     id: createId(),
     createdAt: new Date().toISOString(),
     library: {
       name: "large-image-ingest",
-      version: "0.0.0"
+      version: "1.0.0"
     },
     original,
-    image: {
-      status: "not_inspected",
-      width: null,
-      height: null,
-      colorDepth: null
-    },
+    image: createImageManifest(options.image),
     chunking: {
       strategy: "fixed-size",
       chunkSizeBytes: chunkPlan.chunkSize,
@@ -67,13 +77,66 @@ export async function createManifest(
       resumable: true,
       retryLimit: options.retries ?? 2
     },
-    metadata: options.metadata ?? {},
+    metadata,
     derivatives: [],
     validation
   };
 
   if (options.storage) {
     manifest.storage = options.storage;
+  }
+
+  return manifest;
+}
+
+async function calculateManifestChecksum(
+  file: IngestFileLike,
+  checksumOptions: ChecksumOptions | false | undefined,
+  validation: ValidationResult
+): Promise<FileChecksum | undefined> {
+  if (checksumOptions === false) {
+    return undefined;
+  }
+
+  const checksum = await calculateChecksum(file, checksumOptions);
+  const expected = checksumOptions?.expected;
+  if (expected && checksum.value.toLowerCase() !== expected.toLowerCase()) {
+    appendValidationIssue(validation, {
+      code: "checksum.mismatch",
+      message: "File checksum does not match the expected checksum.",
+      path: "original.checksum.value",
+      severity: "error",
+      details: { expected, actual: checksum.value, algorithm: checksum.algorithm }
+    });
+  }
+
+  return checksum;
+}
+
+function appendValidationIssue(validation: ValidationResult, issue: IngestIssue): void {
+  validation.issues.push(issue);
+  validation.ok = validation.issues.every((currentIssue) => currentIssue.severity !== "error");
+}
+
+function createImageManifest(image: CreateIngestSessionOptions["image"]): ImageInspectionManifest {
+  if (!image) {
+    return {
+      status: "not_inspected",
+      width: null,
+      height: null,
+      colorDepth: null
+    };
+  }
+
+  const manifest: ImageInspectionManifest = {
+    status: "provided",
+    width: image.width ?? null,
+    height: image.height ?? null,
+    colorDepth: image.colorDepth ?? null
+  };
+
+  if (image.format) {
+    manifest.format = image.format;
   }
 
   return manifest;

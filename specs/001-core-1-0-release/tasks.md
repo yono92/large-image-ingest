@@ -1,0 +1,23 @@
+# Tasks: Core 1.0 Release
+
+- [x] Review current product, security, contribution, package, CI, and prototype spec documentation.
+- [x] Attempt Spec Kit CLI initialization.
+- [x] Add manual 1.0 SDD spec, plan, research, and task artifacts.
+- [x] Define v1 public types for manifest, validation, checksum, state, events, errors, snapshot, and transport hooks.
+- [x] Implement dependency-free chunked SHA-256 checksum calculation.
+- [x] Extend validation for required metadata, checksum mismatch, and caller-provided dimensions.
+- [x] Update manifest generation to `large-image-ingest.manifest.v1`.
+- [x] Implement typed public errors.
+- [x] Implement explicit session state transitions.
+- [x] Implement pause, resume, abort, snapshot, and resume-from-snapshot behavior.
+- [x] Add tests for checksum generation.
+- [x] Add tests for manifest v1.
+- [x] Add tests for metadata and dimension validation.
+- [x] Add tests for session state transitions, retry, pause/resume, snapshot resume, abort, and transport chunk skipping.
+- [x] Add package smoke tests for ESM and CommonJS consumption.
+- [x] Add `npm pack --dry-run` to CI.
+- [x] Update README for 1.0 install, TS/JS examples, validation, checksum, manifest, session state, pause/resume, and transport adapter usage.
+- [x] Update SECURITY.md from pre-1.0 wording.
+- [x] Add CHANGELOG.md for 1.0.0.
+- [x] Set package version to 1.0.0.
+- [x] Run final verification.

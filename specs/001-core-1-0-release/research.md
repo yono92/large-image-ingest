@@ -1,0 +1,37 @@
+# Research: Core 1.0 Release
+
+## Runtime Dependencies
+
+Decision: keep runtime dependencies empty for 1.0.
+
+Reasoning: the core package is the trust boundary for large source-of-truth inspection files. A small dependency surface makes browser and Node usage easier to audit. Transport adapters can add provider dependencies later.
+
+## Checksum Implementation
+
+Decision: implement incremental SHA-256 in core rather than adding a hashing dependency.
+
+Reasoning: WebCrypto does not expose incremental hashing, and digesting a whole multi-GB file at once would violate the memory goals. A small internal SHA-256 implementation keeps bounded memory and avoids shipping a runtime dependency.
+
+## Pause Semantics
+
+Decision: pause between chunks.
+
+Reasoning: interrupting in-flight network requests is provider-specific and can corrupt resumability semantics. Between-chunk pause is deterministic and sufficient for 1.0 core behavior.
+
+## Resume Persistence
+
+Decision: expose serializable snapshots but do not persist them.
+
+Reasoning: browser storage choices depend on application policy, quota, privacy requirements, and authentication boundaries. The core should provide the state object, not own persistence.
+
+## Dimension Validation
+
+Decision: validate dimensions only when callers provide image metadata.
+
+Reasoning: inspection image formats can be TIFF, microscopy formats, satellite formats, or proprietary files. Decoding them in core would add dependencies and memory risk. Dedicated preview or node packages can enrich manifests later.
+
+## Transports
+
+Decision: keep official tus, S3, and NAS transports out of the 1.0 core.
+
+Reasoning: the 1.0 contract should stabilize the adapter boundary first. Provider-specific packages can then implement the contract without forcing dependencies into all users' bundles.

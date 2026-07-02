@@ -1,5 +1,7 @@
 # Implementation Plan: Initial Prototype
 
+> Superseded by `specs/001-core-1-0-release/`. This plan remains as historical prototype context.
+
 ## Architecture
 
 The first prototype is a single package with a small framework-agnostic core:
@@ -21,7 +23,7 @@ The first manifest schema is `large-image-ingest.manifest.v0.1`. It is intention
 
 - The prototype uses a fast metadata fingerprint instead of hashing entire multi-GB files. Strong checksums should be designed separately so browser memory is not exhausted.
 - Chunk uploads are sequential for predictable behavior. Parallel upload should be added only after retry, resume, and ordering semantics are specified.
-- The package is ESM-first and TypeScript-first. CommonJS compatibility is deferred until there is a concrete consumer need.
+- The prototype began as ESM-first and TypeScript-first. CommonJS compatibility was added for npm consumers before the 1.0 work.
 - NAS support is harder than object storage because browsers cannot directly target SMB/NFS and because partially written files need atomic finalize semantics. Design it later as a server-side adapter or gateway.
 - The manifest stores chunking summary rather than all byte ranges to avoid oversized manifest documents for very large files with small chunks.
 

@@ -26,7 +26,8 @@ describe("createManifest", () => {
       }
     });
 
-    expect(manifest.schemaVersion).toBe("large-image-ingest.manifest.v0.1");
+    expect(manifest.schemaVersion).toBe("large-image-ingest.manifest.v1");
+    expect(manifest.library.version).toBe("1.0.0");
     expect(manifest.original).toMatchObject({
       kind: "original",
       name: "wafer-aoi-001.tif",
@@ -39,6 +40,11 @@ describe("createManifest", () => {
       }
     });
     expect(manifest.original.fingerprint.scope).toBe("file-metadata");
+    expect(manifest.original.checksum).toMatchObject({
+      algorithm: "sha256",
+      scope: "whole-file"
+    });
+    expect(manifest.original.checksum?.value).toHaveLength(64);
     expect(manifest.chunking).toEqual({
       strategy: "fixed-size",
       chunkSizeBytes: 256 * 1024,
@@ -59,10 +65,38 @@ describe("createManifest", () => {
     expect(manifest.validation.ok).toBe(true);
   });
 
+  it("records provided image metadata", async () => {
+    const file = new File(["inspection-data"], "wafer-aoi-001.tif", { type: "image/tiff" });
+
+    const manifest = await createManifest(file, {
+      checksum: false,
+      image: {
+        format: "tiff",
+        width: 4096,
+        height: 2048,
+        colorDepth: 16
+      },
+      validation: {
+        minWidth: 1024,
+        minHeight: 1024
+      }
+    });
+
+    expect(manifest.image).toEqual({
+      status: "provided",
+      format: "tiff",
+      width: 4096,
+      height: 2048,
+      colorDepth: 16
+    });
+    expect(manifest.validation.ok).toBe(true);
+  });
+
   it("keeps validation failures inside the manifest", async () => {
     const file = new File(["bad"], "wafer.jpg", { type: "image/jpeg" });
 
     const manifest = await createManifest(file, {
+      checksum: false,
       validation: {
         acceptedExtensions: ["tif"],
         acceptedMimeTypes: ["image/tiff"]
@@ -74,5 +108,18 @@ describe("createManifest", () => {
       "file.mime_not_allowed",
       "file.extension_not_allowed"
     ]);
+  });
+
+  it("reports checksum mismatches inside the manifest", async () => {
+    const file = new File(["abc"], "wafer.tif", { type: "image/tiff" });
+
+    const manifest = await createManifest(file, {
+      checksum: {
+        expected: "0".repeat(64)
+      }
+    });
+
+    expect(manifest.validation.ok).toBe(false);
+    expect(manifest.validation.issues.map((issue) => issue.code)).toContain("checksum.mismatch");
   });
 });
