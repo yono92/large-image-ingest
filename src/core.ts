@@ -26,6 +26,11 @@ export {
 } from "./resume.js";
 export { createIngestSession, LargeImageIngestSession } from "./session.js";
 export { validateFile } from "./validation.js";
+export {
+  verifyIngestIntegrity,
+  verifyManifest,
+  verifyUploadReceipts
+} from "./verification.js";
 export { WebStorageResumeStore } from "./web-storage-resume-store.js";
 export type {
   ChecksumAlgorithm,
@@ -74,6 +79,12 @@ export type {
   UploadSessionSnapshot,
   UploadSessionStatus,
   UploadTransport,
+  VerificationChecksumPolicy,
+  VerificationIssueCode,
+  VerificationResult,
+  VerifyIngestIntegrityOptions,
+  VerifyManifestOptions,
+  VerifyUploadReceiptsOptions,
   ValidationResult,
   ValidationRules
 } from "./types.js";
