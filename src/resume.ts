@@ -18,6 +18,8 @@ import type {
 const RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.1" as const;
 
 export class ResumeConflictError extends Error {
+  readonly retryable = false;
+
   constructor(
     readonly code: ResumeConflictCode,
     message: string,

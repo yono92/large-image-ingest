@@ -1,4 +1,5 @@
 ﻿import { planChunks } from "./chunks.js";
+import { LargeImageIngestError } from "./errors.js";
 import { createManifest } from "./manifest.js";
 import {
   ResumeConflictError,
@@ -22,9 +23,9 @@ import type {
   CompletedChunkRange,
   CreateIngestSessionOptions,
   IngestError,
+  IngestErrorCode,
   IngestEvent,
   IngestFileLike,
-  IngestIssueCode,
   IngestManifest,
   ResumeRecord,
   ResumeRecordStatus,
@@ -831,16 +832,16 @@ export class LargeImageIngestSession {
       return;
     }
 
-    const issueCode = this.toIssueCode(error);
+    const errorCode = this.toErrorCode(error);
     this.currentRecord = await this.putResumeRecord(
-      this.withStatus(this.currentRecord, "failed", issueCode)
+      this.withStatus(this.currentRecord, "failed", errorCode)
     );
   }
 
   private withStatus(
     record: ResumeRecord,
     status: ResumeRecordStatus,
-    lastErrorCode?: IngestIssueCode
+    lastErrorCode?: IngestErrorCode
   ): ResumeRecord {
     const progress: ResumeRecord["progress"] = {
       ...record.progress,
@@ -991,7 +992,7 @@ export class LargeImageIngestSession {
     return status === "completed" || status === "canceled" || status === "expired" || status === "paused";
   }
 
-  private toIssueCode(error: unknown): IngestIssueCode {
+  private toErrorCode(error: unknown): IngestErrorCode {
     if (error instanceof ResumeConflictError) {
       return error.code;
     }
@@ -1337,20 +1338,12 @@ function unique(values: readonly string[]): string[] | undefined {
 }
 
 function createIngestError(
-  code: IngestIssueCode,
+  code: IngestErrorCode,
   message: string,
   retryable: boolean,
   details?: Record<string, unknown>
 ): IngestError {
-  const error = new Error(message) as IngestError;
-  error.code = code;
-  error.retryable = retryable;
-
-  if (details) {
-    error.details = details;
-  }
-
-  return error;
+  return new LargeImageIngestError(code, message, details, retryable);
 }
 
 function isIngestError(error: unknown): error is IngestError {

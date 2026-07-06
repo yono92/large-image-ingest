@@ -1,6 +1,7 @@
+import { LargeImageIngestError } from "./errors.js";
 import type {
   IngestError,
-  IngestIssueCode,
+  IngestErrorCode,
   TransportSession,
   UploadChunkContext,
   UploadChunkReceipt,
@@ -474,20 +475,12 @@ function isRetryableStatus(status: number): boolean {
 }
 
 function createTusError(
-  code: IngestIssueCode,
+  code: IngestErrorCode,
   message: string,
   retryable: boolean,
   details?: Record<string, unknown>
 ): IngestError {
-  const error = new Error(message) as IngestError;
-  error.code = code;
-  error.retryable = retryable;
-
-  if (details) {
-    error.details = details;
-  }
-
-  return error;
+  return new LargeImageIngestError(code, message, details, retryable);
 }
 
 function nowIso(): string {

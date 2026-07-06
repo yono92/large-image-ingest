@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented release candidate. The 1.0 package exposes official transport modules through subpath exports while keeping `large-image-ingest/core` provider-agnostic.
+Implemented and included in the `v1.0.0` release. The 1.0 package exposes official transport modules through subpath exports while keeping `large-image-ingest/core` provider-agnostic.
 
 ## Goal
 
