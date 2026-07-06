@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-02
 
-**Status**: Draft
+**Status**: Implemented release candidate
 
 **Input**: User description: "Implement real resumable persistence for large image ingest sessions; current behavior only retries chunks inside one in-memory session."
 
@@ -118,7 +118,7 @@ A UI developer lists recoverable sessions and shows whether each record is activ
 
 ### Out Of Scope
 
-- Built-in tus or S3 transport implementations.
+- Transport-specific tus or S3 protocol behavior; those adapters are covered by `specs/001-official-transports/`.
 - Browser resume without the user providing the original file again.
 - Cross-device resume unless the application supplies compatible shared storage and transport handles.
 - Strong whole-file checksum verification before resume.
