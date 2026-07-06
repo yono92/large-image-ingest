@@ -1,6 +1,6 @@
-# Public Contract Draft: Persistent Resumable Upload
+# Public Contract: Persistent Resumable Upload
 
-This contract describes the public TypeScript surface expected by the feature. Exact names may be refined during implementation, but the behavior and schema boundaries are required by the spec.
+This contract describes the public TypeScript surface implemented for persistent resumable upload. Names and behavior should remain compatible within the `1.x` release line unless a future spec explicitly changes them.
 
 ## Resume Store
 

@@ -1,6 +1,6 @@
 # Specification Quality Checklist: Persistent Resumable Upload
 
-**Purpose**: Validate specification completeness and quality before proceeding to planning
+**Purpose**: Validate specification completeness, quality, and release readiness
 **Created**: 2026-07-02
 **Feature**: [spec.md](../spec.md)
 
@@ -31,4 +31,4 @@
 
 ## Notes
 
-- The feature is ready for planning. The API shape and module-level details belong in `plan.md`.
+- The feature has completed planning, implementation, and release-candidate verification.

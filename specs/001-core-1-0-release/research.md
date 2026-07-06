@@ -30,8 +30,8 @@ Decision: validate dimensions only when callers provide image metadata.
 
 Reasoning: inspection image formats can be TIFF, microscopy formats, satellite formats, or proprietary files. Decoding them in core would add dependencies and memory risk. Dedicated preview or node packages can enrich manifests later.
 
-## Transports
+## Transport Packaging
 
-Decision: keep official tus, S3, and NAS transports out of the 1.0 core.
+Decision: keep official tus, S3, and NAS protocol code out of `large-image-ingest/core`, but ship first-party adapters as isolated package subpaths in `large-image-ingest@1.0.0`.
 
-Reasoning: the 1.0 contract should stabilize the adapter boundary first. Provider-specific packages can then implement the contract without forcing dependencies into all users' bundles.
+Reasoning: the core contract stays provider-neutral and runtime-dependency-free, while the package can still give users practical first-party adapters. Subpath exports keep browser-safe core imports separate from protocol-specific code and leave a clean migration path to future scoped packages.
