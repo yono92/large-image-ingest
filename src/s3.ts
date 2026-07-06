@@ -1,8 +1,9 @@
+import { LargeImageIngestError } from "./errors.js";
 import type {
   ChunkDescriptor,
   ChecksumReceipt,
   IngestError,
-  IngestIssueCode,
+  IngestErrorCode,
   TransportSession,
   UploadChunkContext,
   UploadChunkReceipt,
@@ -458,20 +459,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function createS3Error(
-  code: IngestIssueCode,
+  code: IngestErrorCode,
   message: string,
   retryable: boolean,
   details?: Record<string, unknown>
 ): IngestError {
-  const error = new Error(message) as IngestError;
-  error.code = code;
-  error.retryable = retryable;
-
-  if (details) {
-    error.details = details;
-  }
-
-  return error;
+  return new LargeImageIngestError(code, message, details, retryable);
 }
 
 function toErrorMessage(error: unknown, fallback: string): string {

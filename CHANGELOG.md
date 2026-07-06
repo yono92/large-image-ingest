@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Clarified that Core 1.0 is released as `v1.0.0` rather than pending.
+- Clarified snapshot security documentation: event snapshots are redacted, while `onSnapshot` and `getSnapshot()` expose caller-controlled full snapshots.
+- Added example typechecking to CI.
+- Aligned public ingest errors around `LargeImageIngestError` with typed codes and retryability.
+
 ## 1.0.0
 
 - Promoted the core package API to a stable 1.0 release target.

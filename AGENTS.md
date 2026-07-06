@@ -4,13 +4,30 @@
 
 `large-image-ingest` is a TypeScript-first SDK for safely ingesting very large inspection images. The primary domain is semiconductor and industrial inspection imagery, where the uploaded original is a source-of-truth artifact and must remain verifiable.
 
-Use `README.md` as the current product brief until formal Spec Kit artifacts exist.
+Use `README.md` together with the active `specs/<feature>/` artifacts as the
+current product brief. Formal Spec Kit artifacts exist in this repository.
+
+## Current Release State
+
+- Core 1.0 has already been released as `v1.0.0`. Do not describe Core 1.0 as
+  pending or merely a release candidate in new work.
+- Treat `specs/001-core-1-0-release/` as the historical release contract for
+  Core 1.0 and use it for regression checks against released behavior.
+- The released 1.0 package includes the provider-neutral core plus documented
+  subpath exports such as `large-image-ingest/core`,
+  `large-image-ingest/transport-tus`, `large-image-ingest/transport-s3`, and
+  `large-image-ingest/node`.
+- Future work after Core 1.0 should be scoped as maintenance, patch fixes, or a
+  new Spec Kit feature. Update specs, README examples, tests, changelog, and
+  package versioning according to the compatibility impact.
 
 ## Spec-Driven Development
 
 This project should be developed with GitHub Spec Kit's Spec-Driven Development workflow.
 
-If `.specify/` does not exist and the user asks to begin formal SDD, initialize Spec Kit in this project directory with the Codex skills integration:
+`.specify/` already exists. Do not initialize Spec Kit again. If working in a
+fresh clone where `.specify/` is absent and the user asks to begin formal SDD,
+initialize Spec Kit in that project directory with the Codex skills integration:
 
 ```bash
 specify init --here --integration codex --integration-options="--skills"
@@ -28,6 +45,19 @@ Follow this order for non-trivial product or architecture work:
 8. Converge: compare implementation against spec, plan, and tasks when work is incomplete or uncertain.
 
 Do not implement broad features before the relevant spec and plan exist. Small documentation corrections and narrow housekeeping edits can be made directly.
+
+For future non-trivial specs, prefer explicit traceability:
+
+- Functional requirements should use stable `FR-###` identifiers.
+- Success criteria that imply buildable work should use stable `SC-###`
+  identifiers.
+- Tasks should use stable `T###` identifiers and reference the relevant story,
+  requirement, files, and tests when practical.
+- Before implementation, run the relevant Spec Kit analyze/checklist workflow
+  and resolve critical coverage or constitution issues.
+- Check the active feature directory with the Spec Kit prerequisite script
+  instead of assuming the most recent or lowest-numbered `specs/` directory is
+  the current work item.
 
 ## Product Principles
 

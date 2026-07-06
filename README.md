@@ -667,7 +667,10 @@ if (!result.ok) {
 
 ## Session Snapshots And Events
 
-Sessions emit typed events and can publish redacted snapshots through `onSnapshot`. Snapshot status values include:
+Sessions emit typed events with redacted snapshot payloads. `onSnapshot` and
+`getSnapshot()` expose full caller-controlled snapshots for persistence, so
+applications should store them only in approved storage and avoid logging them
+by default. Snapshot status values include:
 
 ```txt
 idle
@@ -768,7 +771,7 @@ Server code should use:
 
 ## Release Status
 
-The `1.0.0` release candidate includes:
+The released `1.0.0` package includes:
 
 - original-preserving manifest v1 generation
 - file validation for size, MIME type, extension, required metadata, caller-provided dimensions, and checksum mismatch
