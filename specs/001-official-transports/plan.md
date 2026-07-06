@@ -29,7 +29,7 @@ Transport packages own:
 
 ## Package Layout
 
-Keep the MVP in one npm package and publish stable subpath exports:
+Keep the 1.0 release in one npm package and publish stable subpath exports:
 
 ```text
 large-image-ingest

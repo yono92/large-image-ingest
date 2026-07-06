@@ -2,7 +2,7 @@
 
 ## Architecture
 
-The 1.0 release remains a single framework-agnostic package. Optional transports, React bindings, and Node-specific derivative helpers stay outside the core.
+The 1.0 release remains a single npm package with provider-agnostic core APIs and stable subpath exports. Protocol-specific tus, S3 multipart, and Node NAS gateway code stays outside `large-image-ingest/core`, but ships in the package as isolated subpath modules.
 
 Core modules:
 
@@ -14,6 +14,11 @@ Core modules:
 - `session.ts`: explicit upload state machine, retry handling, pause/resume, abort, and snapshots.
 - `errors.ts`: typed public error class and error helpers.
 - `types.ts`: public contracts.
+- `resume.ts`: persistent resume records, compatibility checks, and checkpoint helpers.
+- `tus.ts`: browser-safe tus transport adapter.
+- `s3.ts`: broker-backed S3 multipart transport adapter.
+- `nas.ts`: server-side NAS gateway and file-lock provider.
+- `web-storage-resume-store.ts`: small browser storage adapter for resume records.
 
 ## Data Contracts
 
@@ -41,29 +46,34 @@ The original entry contains:
 - SHA-256 checksum
 - preservation policy
 
-The session snapshot contains:
+The upload session snapshot contains:
 
-- snapshot schema version
-- manifest
-- upload ID when established
-- state
-- uploaded chunk indexes
+- manifest ID
+- transport session data after redaction when emitted through events
+- chunk plan
+- completed chunk receipts
 - uploaded bytes
-- next chunk index
+- total bytes
+- status
 - timestamps
+- safe error summary when available
+
+Persistent resume records are separate operational data from the manifest. They contain file identity, chunking identity, transport state, progress, lifecycle status, and timestamps, but never original image bytes.
 
 ## State Model
 
-Allowed states:
+Allowed statuses:
 
 - `idle`: session object exists but upload has not started.
 - `validating`: manifest and validation are being prepared.
-- `ready`: manifest is valid and upload can start.
+- `creating`: transport session is being created.
 - `uploading`: chunks are being uploaded.
-- `paused`: upload is intentionally paused between chunks.
+- `paused`: local work stopped after a recoverable checkpoint.
+- `resuming`: a persisted resume record is being validated and restored.
+- `completing`: transport completion/finalization is running.
 - `completed`: transport completed successfully.
 - `failed`: validation, checksum, transport, or completion failed.
-- `aborted`: abort signal stopped the session.
+- `canceled`: the application canceled the session and default recovery should not offer it.
 
 ## Transport Contract
 
@@ -76,9 +86,9 @@ The 1.0 core keeps transport provider-neutral. Required hooks:
 Optional hooks:
 
 - `resumeSession`
-- `shouldUploadChunk`
+- `abortSession`
 
-`shouldUploadChunk` allows adapters to skip chunks already present on the remote side during snapshot resume.
+`resumeSession` validates or refreshes remote resume state before the core skips locally completed chunk ranges. `abortSession` lets cancel clean up provider-side upload state when supported.
 
 ## Checksum Strategy
 
@@ -90,9 +100,9 @@ The default checksum is whole-file SHA-256. Per-chunk checksum can be added late
 
 - Whole-file SHA-256 can take time for multi-GB images, but it provides the verifiability expected from a 1.0 ingestion core.
 - Pause takes effect between chunks rather than interrupting an in-flight chunk. This keeps transport adapters simple and avoids provider-specific partial request behavior.
-- Resume uses caller-provided snapshot persistence. IndexedDB/localStorage are not built into core because persistence policy is application-specific.
+- Resume uses caller-provided persistence through a generic store contract. A small Web Storage adapter is included for simple browser use, while applications can provide custom or encrypted stores.
 - Dimension validation is based on caller-provided image metadata. The core does not decode inspection image formats in 1.0.
-- Parallel upload is deferred so retry, ordering, and snapshot semantics stay stable.
+- Parallel upload is deferred so retry, ordering, receipt, and resume semantics stay stable.
 
 ## Verification
 
@@ -100,6 +110,7 @@ Required checks:
 
 ```bash
 npm run typecheck
+npm run typecheck:examples
 npm test
 npm run build
 npm pack --dry-run
