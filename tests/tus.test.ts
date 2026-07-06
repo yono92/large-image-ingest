@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
+import {
+  createResumeChunkingIdentity,
+  createResumeFileIdentity,
+  createResumeRecord
+} from "../src/resume";
 import { createIngestSession } from "../src/session";
 import { createTusTransport } from "../src/tus";
 import type {
@@ -7,6 +12,7 @@ import type {
   TusFetch,
   UploadSessionSnapshot
 } from "../src";
+import { MemoryResumeStore } from "./resume-fixtures";
 
 const endpoint = "https://tus.example/uploads";
 const uploadUrl = "https://tus.example/uploads/upload-1";
@@ -14,6 +20,7 @@ const chunkSize = 256 * 1024;
 
 interface TusRequest {
   bodySize: number;
+  credentials?: RequestCredentials;
   headers: Headers;
   input: string;
   method: string;
@@ -21,6 +28,7 @@ interface TusRequest {
 
 interface FakeTusServerOptions {
   extensions?: string;
+  headStatus?: number;
   initialOffset?: number;
   onPatchComplete?: () => void;
 }
@@ -49,10 +57,15 @@ describe("createTusTransport", () => {
         endpoint,
         detectExtensions: true,
         fetch: server.fetch,
-        metadata: {
-          lotId: "LOT-1"
+        metadata({ manifest }) {
+          return {
+            lotId: manifest.metadata.lotId as string
+          };
         }
-      })
+      }),
+      metadata: {
+        lotId: "LOT-1"
+      }
     });
 
     await session.start();
@@ -150,6 +163,210 @@ describe("createTusTransport", () => {
     expect(server.offset).toBe(file.size);
   });
 
+  it("validates persistent resume records against the remote tus offset", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const manifest = await createManifest(file, {
+      chunking: { chunkSize }
+    });
+    const store = new MemoryResumeStore();
+    const record = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
+      transport: {
+        name: "tus",
+        uploadId: "tus-existing",
+        resumeToken: uploadUrl
+      }
+    });
+    record.progress.uploadedBytes = chunkSize;
+    record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
+    record.progress.nextChunkIndex = 1;
+    await store.put(record);
+
+    const server = createFakeTusServer({
+      initialOffset: chunkSize
+    });
+
+    await createIngestSession(file, {
+      chunking: { chunkSize },
+      resume: { store },
+      transport: createTusTransport({
+        endpoint,
+        fetch: server.fetch
+      })
+    }).resume(record.id);
+
+    expect(server.requests.some((request) => request.method === "POST")).toBe(false);
+    expect(server.requests.filter((request) => request.method === "PATCH")).toHaveLength(2);
+    expect(server.offset).toBe(file.size);
+    await expect(store.get(record.id)).resolves.toBeUndefined();
+  });
+
+  it("rejects persistent resume when the remote tus offset is behind local progress", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const manifest = await createManifest(file, {
+      chunking: { chunkSize }
+    });
+    const store = new MemoryResumeStore();
+    const record = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
+      transport: {
+        name: "tus",
+        uploadId: "tus-existing",
+        resumeToken: uploadUrl
+      }
+    });
+    record.progress.uploadedBytes = chunkSize;
+    record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
+    record.progress.nextChunkIndex = 1;
+    await store.put(record);
+
+    const server = createFakeTusServer({
+      initialOffset: 0
+    });
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        resume: { store },
+        transport: createTusTransport({
+          endpoint,
+          fetch: server.fetch
+        })
+      }).resume(record.id)
+    ).rejects.toMatchObject({
+      code: "resume.transport_mismatch"
+    });
+
+    expect(server.requests.some((request) => request.method === "PATCH")).toBe(false);
+  });
+
+  it("rejects persistent resume when the remote tus offset is ahead of local progress", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const manifest = await createManifest(file, {
+      chunking: { chunkSize }
+    });
+    const store = new MemoryResumeStore();
+    const record = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
+      transport: {
+        name: "tus",
+        uploadId: "tus-existing",
+        resumeToken: uploadUrl
+      }
+    });
+    record.progress.uploadedBytes = chunkSize;
+    record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
+    record.progress.nextChunkIndex = 1;
+    await store.put(record);
+
+    const server = createFakeTusServer({
+      initialOffset: chunkSize * 2
+    });
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        resume: { store },
+        transport: createTusTransport({
+          endpoint,
+          fetch: server.fetch
+        })
+      }).resume(record.id)
+    ).rejects.toMatchObject({
+      code: "resume.transport_mismatch"
+    });
+
+    expect(server.requests.some((request) => request.method === "PATCH")).toBe(false);
+  });
+
+  it("rejects persistent resume when the remote tus upload is unavailable", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const manifest = await createManifest(file, {
+      chunking: { chunkSize }
+    });
+    const store = new MemoryResumeStore();
+    const record = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
+      transport: {
+        name: "tus",
+        uploadId: "tus-existing",
+        resumeToken: uploadUrl
+      }
+    });
+    record.progress.uploadedBytes = chunkSize;
+    record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
+    record.progress.nextChunkIndex = 1;
+    await store.put(record);
+
+    const server = createFakeTusServer({
+      headStatus: 404,
+      initialOffset: chunkSize
+    });
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        resume: { store },
+        transport: createTusTransport({
+          endpoint,
+          fetch: server.fetch
+        })
+      }).resume(record.id)
+    ).rejects.toMatchObject({
+      code: "resume.transport_mismatch"
+    });
+
+    expect(server.requests.some((request) => request.method === "PATCH")).toBe(false);
+  });
+
+  it("applies metadata mapper, async headers, credentials, and custom fetch", async () => {
+    const server = createFakeTusServer({
+      extensions: "creation"
+    });
+    const file = new File([new Uint8Array(chunkSize)], "wafer.tif", {
+      type: "image/tiff"
+    });
+
+    await createIngestSession(file, {
+      chunking: { chunkSize },
+      metadata: {
+        lotId: "LOT-2"
+      },
+      transport: createTusTransport({
+        endpoint,
+        credentials: "include",
+        fetch: server.fetch,
+        headers: async () => ({ "X-Tenant": "fab-a" }),
+        metadata({ manifest }) {
+          return {
+            lotId: manifest.metadata.lotId as string
+          };
+        }
+      })
+    }).start();
+
+    const post = server.requests.find((request) => request.method === "POST");
+    expect(post?.headers.get("X-Tenant")).toBe("fab-a");
+    expect(post?.headers.get("Upload-Metadata")).toBe("lotId TE9ULTI=");
+    expect(post?.credentials).toBe("include");
+  });
+
   it("rejects missing required tus extensions during OPTIONS discovery", async () => {
     const server = createFakeTusServer({
       extensions: "creation"
@@ -240,6 +457,7 @@ function createFakeTusServer(options: FakeTusServerOptions = {}): {
       const bodySize = bodyByteLength(init?.body);
       const request = {
         bodySize,
+        credentials: init?.credentials,
         headers: new Headers(init?.headers),
         input,
         method
@@ -266,6 +484,9 @@ function createFakeTusServer(options: FakeTusServerOptions = {}): {
 
       if (method === "HEAD" && input === uploadUrl) {
         expect(request.headers.get("Tus-Resumable")).toBe("1.0.0");
+        if (options.headStatus) {
+          return createResponse(options.headStatus);
+        }
 
         return createResponse(204, {
           "Upload-Offset": String(server.offset),
