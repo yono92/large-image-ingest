@@ -15,13 +15,18 @@ const TUS_PATCH_CONTENT_TYPE = "application/offset+octet-stream";
 export type TusFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type TusMetadataValue = string | number | boolean | null | undefined;
+export type TusMetadataRecord = Record<string, TusMetadataValue>;
+export type TusMetadataMapper = (
+  context: UploadSessionContext
+) => TusMetadataRecord | Promise<TusMetadataRecord>;
 
 export interface TusTransportOptions {
   endpoint: string | URL;
   detectExtensions?: boolean;
   fetch?: TusFetch;
   headers?: HeadersInit | (() => HeadersInit | Promise<HeadersInit>);
-  metadata?: Record<string, TusMetadataValue>;
+  metadata?: TusMetadataRecord | TusMetadataMapper;
+  credentials?: RequestCredentials;
   requiredExtensions?: readonly string[];
   terminateOnAbort?: boolean;
   uploadIdPrefix?: string;
@@ -53,18 +58,18 @@ export function createTusTransport(options: TusTransportOptions): UploadTranspor
         "Tus-Resumable": TUS_VERSION,
         "Upload-Length": String(context.file.size)
       });
-      const metadata = createUploadMetadata(options.metadata);
+      const metadata = createUploadMetadata(await resolveMetadata(options.metadata, context));
 
       if (metadata) {
         headers.set("Upload-Metadata", metadata);
       }
 
-      const response = await fetchImpl(endpoint, {
+      const response = await fetchImpl(endpoint, withRequestOptions(options, {
         method: "POST",
         headers,
         body: new Blob([]),
         signal: context.signal
-      });
+      }));
 
       if (response.status !== 201) {
         throw createTusError(
@@ -91,26 +96,55 @@ export function createTusTransport(options: TusTransportOptions): UploadTranspor
         resumeToken: uploadUrl
       };
     },
-    async resumeSession({ snapshot }) {
-      if (!snapshot) {
+    async resumeSession({ record, signal, snapshot }) {
+      if (snapshot) {
+        const session = snapshot.transportSession;
+
+        if (!session?.resumeToken) {
+          throw createTusError(
+            "transport.resume_failed",
+            "Cannot resume tus upload because the snapshot does not include a resume token.",
+            false
+          );
+        }
+
+        return session;
+      }
+
+      const uploadUrl = record.transport.resumeToken;
+      if (!uploadUrl) {
         throw createTusError(
           "transport.resume_failed",
-          "tus transport requires a session snapshot to resume.",
+          "Cannot resume tus upload because the resume record does not include a resume token.",
           false
         );
       }
 
-      const session = snapshot.transportSession;
+      const remote = await readRemoteOffset(fetchImpl, uploadUrl, options, signal);
+      const expectedOffset = record.progress.uploadedBytes;
 
-      if (!session?.resumeToken) {
+      if (remote.offset !== expectedOffset) {
         throw createTusError(
-          "transport.resume_failed",
-          "Cannot resume tus upload because the snapshot does not include a resume token.",
-          false
+          "transport.offset_mismatch",
+          `tus remote offset ${remote.offset} does not match local checkpoint ${expectedOffset}.`,
+          false,
+          {
+            remoteOffset: remote.offset,
+            expectedOffset
+          }
         );
       }
 
-      return session;
+      return {
+        uploadId: record.transport.uploadId,
+        transportName: TUS_TRANSPORT_NAME,
+        createdAt: record.createdAt,
+        expiresAt: remote.expiresAt ?? record.transport.expiresAt,
+        resumeToken: uploadUrl,
+        remote: {
+          offset: remote.offset
+        }
+      };
     },
     async uploadChunk(context) {
       const uploadUrl = getUploadUrl(context.session);
@@ -133,7 +167,7 @@ export function createTusTransport(options: TusTransportOptions): UploadTranspor
         );
       }
 
-      const response = await fetchImpl(uploadUrl, {
+      const response = await fetchImpl(uploadUrl, withRequestOptions(options, {
         method: "PATCH",
         headers: await createHeaders(options, {
           "Tus-Resumable": TUS_VERSION,
@@ -142,7 +176,7 @@ export function createTusTransport(options: TusTransportOptions): UploadTranspor
         }),
         body: context.body,
         signal: context.signal
-      });
+      }));
 
       if (response.status === 409) {
         throw createTusError("transport.offset_mismatch", "tus server rejected the chunk offset.", false, {
@@ -201,12 +235,12 @@ export function createTusTransport(options: TusTransportOptions): UploadTranspor
       }
 
       const uploadUrl = getUploadUrl(context.session);
-      const response = await fetchImpl(uploadUrl, {
+      const response = await fetchImpl(uploadUrl, withRequestOptions(options, {
         method: "DELETE",
         headers: await createHeaders(options, {
           "Tus-Resumable": TUS_VERSION
         })
-      });
+      }));
 
       if (![200, 202, 204].includes(response.status)) {
         throw createTusError(
@@ -239,10 +273,10 @@ async function detectServerCapabilities(
     return;
   }
 
-  const response = await fetchImpl(endpoint, {
+  const response = await fetchImpl(endpoint, withRequestOptions(options, {
     method: "OPTIONS",
     headers: await resolveHeaders(options.headers)
-  });
+  }));
 
   if (![200, 204].includes(response.status)) {
     throw createTusError(
@@ -277,13 +311,13 @@ async function readRemoteOffset(
   options: TusTransportOptions,
   signal: AbortSignal
 ): Promise<{ offset: number; expiresAt?: string | undefined }> {
-  const response = await fetchImpl(uploadUrl, {
+  const response = await fetchImpl(uploadUrl, withRequestOptions(options, {
     method: "HEAD",
     headers: await createHeaders(options, {
       "Tus-Resumable": TUS_VERSION
     }),
     signal
-  });
+  }));
 
   assertUploadStillExists(response);
 
@@ -322,7 +356,18 @@ async function resolveHeaders(
   return new Headers(value);
 }
 
-function createUploadMetadata(metadata: TusTransportOptions["metadata"]): string | undefined {
+async function resolveMetadata(
+  metadata: TusTransportOptions["metadata"],
+  context: UploadSessionContext
+): Promise<TusMetadataRecord | undefined> {
+  if (!metadata) {
+    return undefined;
+  }
+
+  return typeof metadata === "function" ? metadata(context) : metadata;
+}
+
+function createUploadMetadata(metadata: TusMetadataRecord | undefined): string | undefined {
   if (!metadata) {
     return undefined;
   }
@@ -374,6 +419,17 @@ function createReceipt(
       name: TUS_TRANSPORT_NAME,
       offset
     }
+  };
+}
+
+function withRequestOptions(options: TusTransportOptions, init: RequestInit): RequestInit {
+  if (options.credentials === undefined) {
+    return init;
+  }
+
+  return {
+    ...init,
+    credentials: options.credentials
   };
 }
 

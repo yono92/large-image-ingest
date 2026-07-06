@@ -414,6 +414,7 @@ Current implementation:
 - `createTusTransport` implements the tus 1.0 creation/core flow with native `fetch`.
 - Upload URLs are stored as transport resume tokens and redacted from default snapshot events.
 - The transport verifies remote offset with `HEAD` before each sequential `PATCH`.
+- Persistent `resume(recordId)` validates the remote offset before completed local chunks are skipped.
 - `terminateOnAbort` can send tus `DELETE` when the server supports the termination extension.
 
 ```ts
@@ -424,8 +425,12 @@ const session = createIngestSession(file, {
   transport: createTusTransport({
     endpoint: "/files",
     detectExtensions: true,
-    metadata: {
-      filename: file.name,
+    metadata({ manifest }) {
+      return {
+        manifestId: manifest.id,
+        filename: manifest.original.name,
+        mediaType: manifest.original.mediaType,
+      };
     },
   }),
 });
