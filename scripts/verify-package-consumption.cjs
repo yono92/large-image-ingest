@@ -18,12 +18,14 @@ async function main() {
   assert.equal(typeof esmTus.createTusTransport, "function");
   assert.equal(typeof esmS3.createS3MultipartTransport, "function");
   assert.equal(typeof esmNode.createNasGateway, "function");
+  assert.equal(typeof esmNode.calculateNodeFileChecksum, "function");
   assert.equal(typeof cjs.planChunks, "function");
   assert.equal(typeof cjs.createIngestSession, "function");
   assert.equal(typeof cjsCore.createIngestSession, "function");
   assert.equal(typeof cjsTus.createTusTransport, "function");
   assert.equal(typeof cjsS3.createS3MultipartTransport, "function");
   assert.equal(typeof cjsNode.createNasGateway, "function");
+  assert.equal(typeof cjsNode.calculateNodeFileChecksum, "function");
   assert.deepEqual(esm.planChunks(10, { chunkSize: 256 * 1024 }).chunks, [
     { index: 0, start: 0, end: 10, size: 10 }
   ]);
