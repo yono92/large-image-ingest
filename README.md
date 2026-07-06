@@ -23,6 +23,7 @@ The 1.0 package provides a framework-agnostic core:
 - Upload sessions with progress, retry, pause, cancel, failure, completion, and resume events.
 - Redacted session snapshots and persistent resume records for app-owned persistence.
 - Provider-neutral transport adapter interface.
+- Manifest, receipt, and stored-file verification helpers.
 - Browser-safe tus and S3 multipart transport helpers.
 - Server-side NAS gateway helpers under the Node subpath.
 - ESM, CommonJS, and TypeScript declaration entrypoints.
@@ -73,7 +74,7 @@ Import guidance:
 - Use `large-image-ingest/core` for framework-agnostic browser-safe core APIs.
 - Use `large-image-ingest/transport-tus` for the raw `fetch` tus transport.
 - Use `large-image-ingest/transport-s3` for the broker-backed S3 multipart transport.
-- Use `large-image-ingest/node` for server-only NAS gateway APIs.
+- Use `large-image-ingest/node` for server-only NAS gateway and stored-file verification APIs.
 - Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.
 
 Future package migration, if needed, should map these subpaths directly to scoped packages:
@@ -287,6 +288,41 @@ if (!manifest.validation.ok) {
 ```
 
 For specialized workflows where checksum calculation is handled elsewhere, pass `checksum: false`.
+
+## Verification
+
+Use core verification when you need to check a manifest, file-like object, and upload receipts before promoting an upload in application state.
+
+```ts
+import { verifyIngestIntegrity } from "large-image-ingest/core";
+
+const report = await verifyIngestIntegrity({
+  manifest,
+  file,
+  receipts,
+});
+
+if (!report.ok) {
+  console.log(report.issues.map((issue) => issue.code));
+}
+```
+
+Use Node verification after a server-side publish or NAS finalize step to compare the stored file against the manifest without loading the whole file into memory.
+
+```ts
+import { verifyNodeFileManifest } from "large-image-ingest/node";
+
+const report = await verifyNodeFileManifest(
+  "/mnt/inspection-originals/fab-a/lot-001/wafer-12/original.tif",
+  manifest
+);
+
+if (!report.ok) {
+  throw new Error(`Stored original failed verification: ${report.issues[0]?.code}`);
+}
+```
+
+Verification reports use typed `verification.*` issue codes and avoid including presigned URLs, credentials, raw customer metadata, or full manifests in default issue details.
 
 ## Validation
 
@@ -696,7 +732,7 @@ try {
 
 The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a filesystem. Use a server-side gateway for those targets.
 
-The current Node subpath provides the NAS gateway APIs documented above.
+The current Node subpath provides the NAS gateway and stored-file verification APIs documented above.
 
 ## Architecture Notes
 
@@ -734,6 +770,7 @@ The `1.0.0` release candidate includes:
 - dependency-free whole-file SHA-256 calculation with bounded `Blob.slice` reads
 - receipt-aware upload sessions with retry, checkpoint, pause, cancel, completion, and failure events
 - persistent resumable upload records with compatibility checks and Web Storage support
+- manifest, receipt, and stored-file verification helpers
 - tus transport through `large-image-ingest/transport-tus`
 - S3 multipart transport through `large-image-ingest/transport-s3`
 - server-side NAS gateway APIs through `large-image-ingest/node`
@@ -751,8 +788,8 @@ npm pack --dry-run
 Likely follow-up work after the first npm release:
 
 - opt-in integration tests against real tus servers, S3-compatible storage, and mounted NAS paths
+- minimal `@tus/server` example
 - per-chunk checksum options for transports that require provider-specific integrity records
-- manifest verification helpers for server-side audit workflows
 - browser or Node derivative packages for previews, thumbnails, tiles, and image metadata enrichment
 - React hooks and lightweight UI bindings
 - optional migration from package subpaths to scoped packages if the API surface grows

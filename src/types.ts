@@ -10,6 +10,21 @@ export type ResumeConflictCode =
   | "resume.expired"
   | "resume.store_failed";
 
+export type VerificationIssueCode =
+  | "verification.manifest_schema_unsupported"
+  | "verification.manifest_invalid"
+  | "verification.original_mismatch"
+  | "verification.checksum_missing"
+  | "verification.checksum_unsupported"
+  | "verification.checksum_mismatch"
+  | "verification.receipt_missing"
+  | "verification.receipt_duplicate"
+  | "verification.receipt_invalid"
+  | "verification.receipt_incomplete"
+  | "verification.transport_mismatch"
+  | "verification.file_not_found"
+  | "verification.file_unreadable";
+
 export type IngestIssueCode =
   | "file.empty"
   | "file.too_large"
@@ -38,6 +53,7 @@ export type IngestIssueCode =
   | "transport.resume_failed"
   | "transport.unsafe_path"
   | "transport.unrecoverable"
+  | VerificationIssueCode
   | ResumeConflictCode;
 
 export type IngestErrorCode =
@@ -83,6 +99,31 @@ export interface ValidationRules {
 export interface ValidationResult {
   ok: boolean;
   issues: IngestIssue[];
+}
+
+export interface VerificationResult {
+  ok: boolean;
+  issues: IngestIssue[];
+}
+
+export type VerificationChecksumPolicy = "required" | "when-present" | false;
+
+export interface VerifyManifestOptions {
+  checksum?: VerificationChecksumPolicy;
+  checksumChunkSize?: number;
+  file?: IngestFileLike;
+}
+
+export interface VerifyUploadReceiptsOptions {
+  allowPartial?: boolean;
+  expectedTransportName?: string;
+  requireChunkChecksums?: boolean;
+}
+
+export interface VerifyIngestIntegrityOptions extends VerifyManifestOptions {
+  manifest: IngestManifest;
+  receiptVerification?: VerifyUploadReceiptsOptions | false;
+  receipts?: readonly UploadChunkReceipt[];
 }
 
 export interface IngestFileLike extends Blob {
