@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft. This feature extends the initial prototype by designing official transport adapters before implementation.
+Implemented release candidate. The 1.0 package exposes official transport modules through subpath exports while keeping `large-image-ingest/core` provider-agnostic.
 
 ## Goal
 
@@ -16,7 +16,7 @@ The first official transports are:
 
 ## Background
 
-The current prototype exposes an `UploadTransport` interface and requires applications to supply their own adapter. That is correct for the initial core, but official transports need stronger contracts than the prototype currently exposes.
+The initial prototype exposed an `UploadTransport` interface and required applications to supply their own adapter. The 1.0 release keeps that custom-adapter path, and adds first-party transport modules that use the same receipt-aware contract.
 
 In particular, S3 multipart completion needs ordered part receipts such as part numbers and ETags. NAS finalization needs explicit staged chunk records. tus resume needs durable upload URL and offset state. These records should not live only inside adapter-local mutable memory, because uploads must be observable and recoverable.
 
@@ -102,8 +102,8 @@ In particular, S3 multipart completion needs ordered part receipts such as part 
 
 ## Acceptance Criteria
 
-- The design identifies the core transport contract changes needed before official adapters are implemented.
-- The design describes tus, S3 multipart, and NAS gateway responsibilities separately.
-- The design specifies how resumable session state and chunk receipts are persisted.
-- The design documents security constraints for presigned URLs, metadata, and filesystem paths.
-- The design includes implementation tasks that can be executed incrementally.
+- The package exposes stable subpaths for core, tus, S3 multipart, and Node NAS APIs.
+- tus, S3 multipart, and NAS gateway tests use local fakes or temporary directories and require no real credentials.
+- Resumable session state and chunk receipts are persisted through the shared core contract.
+- Security constraints for presigned URLs, metadata, and filesystem paths are documented in README examples and integration test guidance.
+- Package export regression and smoke tests verify ESM, CommonJS, and subpath consumption.

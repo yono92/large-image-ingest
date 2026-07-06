@@ -1,4 +1,4 @@
-# Implementation Plan: Persistent Resumable Upload
+﻿# Implementation Plan: Persistent Resumable Upload
 
 **Branch**: `001-persistent-resumable-upload` | **Date**: 2026-07-02 | **Spec**: [spec.md](./spec.md)
 
@@ -12,7 +12,7 @@ Add durable resume persistence to the existing framework-agnostic ingest session
 
 **Language/Version**: TypeScript 5.x, ESM-first package, Node.js >=20 for tests/build
 
-**Primary Dependencies**: Existing runtime APIs plus native `Blob`, `Storage`, `AbortSignal`, and small local helpers. No new runtime dependency is planned for the core MVP.
+**Primary Dependencies**: Existing runtime APIs plus native `Blob`, `Storage`, `AbortSignal`, and small local helpers. No new runtime dependency is planned for the core release.
 
 **Storage**: Versioned resume records through an async `ResumeStore` contract; small Web Storage adapter for browser `localStorage`/`sessionStorage`; custom stores for IndexedDB, encrypted, or server-backed persistence.
 
@@ -37,7 +37,7 @@ Add durable resume persistence to the existing framework-agnostic ingest session
 - Adapter boundaries: PASS. Core owns resume contracts and orchestration; transports own remote session validation; storage is behind a store contract.
 - TypeScript contracts: PASS. Plan defines exported resume records, store contracts, transport result changes, lifecycle state, and typed resume conflicts.
 - Validation and security: PASS. File/chunking/transport validation happens before upload; sensitive handles and metadata are not logged by default; cloud/network tests remain opt-in.
-- Documentation and tests: PASS. README updates and focused fake-store/fake-transport tests are required before implementation completion.
+- Documentation and tests: PASS. README updates, focused fake-store/fake-transport tests, and package checks are complete for the release candidate.
 
 ## Project Structure
 
@@ -45,42 +45,42 @@ Add durable resume persistence to the existing framework-agnostic ingest session
 
 ```text
 specs/001-persistent-resumable-upload/
-├── spec.md
-├── plan.md
-├── research.md
-├── data-model.md
-├── quickstart.md
-├── contracts/
-│   └── resume-contracts.md
-├── checklists/
-│   └── requirements.md
-└── tasks.md
+- spec.md
+- plan.md
+- research.md
+- data-model.md
+- quickstart.md
+- contracts/
+  - resume-contracts.md
+- checklists/
+  - requirements.md
+- tasks.md
 ```
 
 ### Source Code (repository root)
 
 ```text
 src/
-├── chunks.ts
-├── fingerprint.ts
-├── index.ts
-├── manifest.ts
-├── resume.ts
-├── session.ts
-├── types.ts
-├── validation.ts
-└── web-storage-resume-store.ts
+- chunks.ts
+- fingerprint.ts
+- index.ts
+- manifest.ts
+- resume.ts
+- session.ts
+- types.ts
+- validation.ts
+- web-storage-resume-store.ts
 
 tests/
-├── chunks.test.ts
-├── manifest.test.ts
-├── resume.test.ts
-├── session-resume.test.ts
-├── validation.test.ts
-└── web-storage-resume-store.test.ts
+- chunks.test.ts
+- manifest.test.ts
+- resume.test.ts
+- session-resume.test.ts
+- validation.test.ts
+- web-storage-resume-store.test.ts
 ```
 
-**Structure Decision**: Keep the MVP in the existing single package. Add focused resume modules and tests at the repository root, preserving a future split into core and browser persistence adapters.
+**Structure Decision**: Keep the 1.0 release in the existing single package. Add focused resume modules and tests at the repository root, preserving a future split into core and browser persistence adapters.
 
 ## Complexity Tracking
 
@@ -97,7 +97,7 @@ Research decisions are captured in [research.md](./research.md). No unresolved c
 ## Phase 1 Output
 
 - Data model: [data-model.md](./data-model.md)
-- Public contract draft: [contracts/resume-contracts.md](./contracts/resume-contracts.md)
+- Public contract: [contracts/resume-contracts.md](./contracts/resume-contracts.md)
 - Validation guide: [quickstart.md](./quickstart.md)
 
 ## Post-Design Constitution Check
@@ -105,6 +105,6 @@ Research decisions are captured in [research.md](./research.md). No unresolved c
 - Original preservation: PASS. Data model prevents original byte persistence.
 - Recoverability: PASS. State transitions and contracts define retry/resume separation.
 - Adapter boundaries: PASS. Contracts require transport validation but not provider-specific logic.
-- TypeScript contracts: PASS. Contract draft names exported types and schema versions.
+- TypeScript contracts: PASS. Contract names exported types and schema versions.
 - Validation and security: PASS. Conflict states and sensitive field handling are documented.
 - Documentation and tests: PASS. Quickstart and tasks require README, fake transports, fake stores, and package checks.

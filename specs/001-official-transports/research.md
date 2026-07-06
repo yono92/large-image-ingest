@@ -108,7 +108,7 @@ Rationale:
 - Server-side path normalization, locking, checksum verification, and atomic finalize are required for safe NAS behavior.
 - Abandoned staging sessions need explicit cleanup or expiration so failed uploads do not accumulate indefinitely.
 
-## Decision: Keep The MVP In One Package With Subpath Exports
+## Decision: Keep The 1.0 Release In One Package With Subpath Exports
 
 The first public packaging surface should remain one npm package named `large-image-ingest`. API boundaries should be published with subpath exports: `large-image-ingest/core`, `large-image-ingest/transport-tus`, `large-image-ingest/transport-s3`, and `large-image-ingest/node`.
 
@@ -119,8 +119,8 @@ Rationale:
 - Node-only NAS gateway APIs can remain isolated from browser imports.
 - Existing root imports can continue to work for core plus browser-safe transports.
 
-## Open Questions
+## Post-1.0 Follow-Ups
 
-- Should persisted session state be core-only, or should transports be allowed to provide their own encrypted resume tokens?
-- Should checksum support be per-chunk first, whole-file later, or both in the same feature?
-- Should S3-compatible providers be represented as one generic multipart adapter, or should AWS S3 get a separate package from S3-compatible storage?
+- Evaluate encrypted or application-managed resume token storage for transports that need stronger client-side secrecy.
+- Specify optional per-chunk checksum behavior separately from the default whole-file SHA-256 manifest checksum.
+- Decide whether AWS S3 needs a dedicated adapter after broader S3-compatible provider feedback.
