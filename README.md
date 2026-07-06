@@ -58,7 +58,7 @@ TypeScript declarations are published with the package.
 
 ## Current Package Map
 
-The MVP stays in a single npm package and uses subpath exports to keep API boundaries clear. This avoids premature workspace churn while leaving a clean migration path to scoped packages later.
+The 1.0 package stays in a single npm package and uses subpath exports to keep API boundaries clear. This avoids premature workspace churn while leaving a clean migration path to scoped packages later.
 
 ```txt
 large-image-ingest
@@ -725,90 +725,34 @@ Server code should use:
 - object storage multipart APIs
 - checksum verification after upload
 
-## MVP Milestones
+## Release Status
 
-### Milestone 1: Core Session Model
+The `1.0.0` release candidate includes:
 
-- Define types.
-- Implement `createIngestor`.
-- Implement `createSession`.
-- Implement typed events.
-- Implement validation.
-- Generate basic manifest.
+- original-preserving manifest v1 generation
+- file validation for size, MIME type, extension, required metadata, caller-provided dimensions, and checksum mismatch
+- dependency-free whole-file SHA-256 calculation with bounded `Blob.slice` reads
+- receipt-aware upload sessions with retry, checkpoint, pause, cancel, completion, and failure events
+- persistent resumable upload records with compatibility checks and Web Storage support
+- tus transport through `large-image-ingest/transport-tus`
+- S3 multipart transport through `large-image-ingest/transport-s3`
+- server-side NAS gateway APIs through `large-image-ingest/node`
+- ESM, CommonJS, TypeScript declaration, and package export smoke tests
 
-### Milestone 2: Hashing and Fingerprint
+Default verification is credential-free and should pass with:
 
-- Implement chunked SHA-256 hashing.
-- Add progress events.
-- Add duplicate fingerprint helper.
-- Avoid reading full files into memory.
+```bash
+npm run prepublishOnly
+npm pack --dry-run
+```
 
-### Milestone 3: tus Upload
+## Post-1.0 Roadmap
 
-- Add raw `fetch` tus transport.
-- Support start, pause, resume, cancel, and optional termination.
-- Persist resume URLs through redacted session snapshots.
-- Emit upload progress, retry, and snapshot events.
+Likely follow-up work after the first npm release:
 
-### Milestone 4: Node Verification
-
-- Add manifest verifier.
-- Add checksum verification helper.
-- Add minimal `@tus/server` example.
-
-### Milestone 5: Preview Derivatives
-
-- Add browser-safe preview generation.
-- Add Node `sharp` preview generation.
-- Keep original file untouched.
-
-### Milestone 6: React Adapter
-
-- Add `useLargeImageIngest`.
-- Add minimal dropzone example.
-- Keep UI unopinionated.
-
-## Open Questions
-
-- Should image dimensions be best-effort only in the browser?
-- Which formats matter first: TIFF, PNG, JPEG, BMP, proprietary raw formats?
-- Should manifest be uploaded before, after, or alongside the original?
-- Should per-chunk checksums be required in v1?
-- How much resume state should be persisted client-side?
-- When the API stabilizes, should subpath exports migrate to scoped packages?
-
-## Recommended First Build
-
-Start with a single package and browser-safe transports.
-
-Recommended first stack:
-
-- TypeScript
-- raw `fetch` tus transport
-- broker-backed S3 multipart transport
-- optional `@tus/server`
-- `sharp` for Node derivative examples
-- Vitest for tests
-- tsup or tsdown for build
-
-First public demo:
-
-1. Select a large image.
-2. Validate file size and type.
-3. Generate manifest.
-4. Upload with tus or S3 multipart.
-5. Pause and resume.
-6. Show checksum and final manifest.
-
-## Success Criteria
-
-The MVP is successful if a developer can install the package and reliably upload a multi-GB inspection image with:
-
-- original preservation
-- progress events
-- resumable upload
-- retry behavior
-- manifest output
-- checksum verification
-
-without building all of that infrastructure from scratch.
+- opt-in integration tests against real tus servers, S3-compatible storage, and mounted NAS paths
+- per-chunk checksum options for transports that require provider-specific integrity records
+- manifest verification helpers for server-side audit workflows
+- browser or Node derivative packages for previews, thumbnails, tiles, and image metadata enrichment
+- React hooks and lightweight UI bindings
+- optional migration from package subpaths to scoped packages if the API surface grows
