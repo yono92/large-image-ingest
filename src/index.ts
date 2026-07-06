@@ -15,6 +15,8 @@ export type {
 } from "./s3.js";
 export type {
   TusFetch,
+  TusMetadataMapper,
+  TusMetadataRecord,
   TusMetadataValue,
   TusTransportOptions
 } from "./tus.js";
