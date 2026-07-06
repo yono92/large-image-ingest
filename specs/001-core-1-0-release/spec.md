@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented release candidate. Spec Kit CLI initialization was attempted first, but the `specify` command is not installed in this environment. This artifact follows the project SDD structure until formal `.specify/` artifacts can be generated.
+Implemented release candidate. Formal Spec Kit artifacts now exist in `.specify/`; this release spec records the finalized 1.0 core package contract.
 
 ## Goal
 
@@ -12,9 +12,9 @@ Ship `large-image-ingest` as a stable 1.0 core SDK for browser and Node-compatib
 
 1. As a frontend engineer, I can validate file size, MIME type, extension, required metadata, optional image dimensions, and expected checksum before upload finalization.
 2. As a platform engineer, I can receive a versioned v1 manifest containing original identity, preservation policy, checksum data, chunking summary, upload session details, storage hints, validation results, and derivative placeholders.
-3. As an application developer, I can plug in a transport adapter without coupling the core package to S3, tus, NAS, React, or any cloud provider.
-4. As a UI developer, I can observe explicit session states and typed events for validation, checksum progress, upload progress, retry, pause, resume, completion, failure, and abort.
-5. As an application developer, I can pause an upload between chunks, persist a session snapshot, and resume later through the same transport contract.
+3. As an application developer, I can plug in a custom transport adapter without coupling `large-image-ingest/core` to S3, tus, NAS, React, or any cloud provider.
+4. As a UI developer, I can observe explicit session statuses and typed events for validation, upload progress, retry, pause, resume, completion, failure, and cancellation.
+5. As an application developer, I can persist resume records or redacted session snapshots and resume later through a transport that validates remote resume state.
 6. As a JavaScript consumer, I can use either ESM `import` or CommonJS `require` from the published npm package.
 
 ## Functional Requirements
@@ -27,26 +27,27 @@ Ship `large-image-ingest` as a stable 1.0 core SDK for browser and Node-compatib
 - The checksum helper MUST process the file in bounded chunks and MUST NOT require loading the full file into memory at once.
 - Validation MUST return stable typed issue codes and MUST support required metadata keys.
 - Dimension validation MUST be supported when callers provide image metadata; if dimension rules are configured without image metadata, validation MUST report that dimensions are unavailable.
-- Upload sessions MUST expose an explicit state model: `idle`, `validating`, `ready`, `uploading`, `paused`, `completed`, `failed`, and `aborted`.
-- Upload sessions MUST support pause and resume between chunks.
-- Upload sessions MUST provide a serializable snapshot containing manifest, upload ID when established, uploaded chunks, uploaded bytes, next chunk index, state, and timestamps.
-- A new session MUST be able to resume from a compatible snapshot.
-- Transport adapters MUST be able to skip already-uploaded chunks when resuming by implementing an optional `shouldUploadChunk` hook.
+- Upload sessions MUST expose an explicit status model: `idle`, `validating`, `creating`, `uploading`, `paused`, `resuming`, `completing`, `completed`, `failed`, and `canceled`.
+- Upload sessions MUST support pause, cancel, and persistent resume through explicit lifecycle methods and typed events.
+- Upload sessions MUST provide serializable, redacted snapshots containing manifest ID, transport session data when safe, chunk plan, completed chunk receipts, uploaded bytes, status, timestamps, and safe error summaries.
+- Persistent resume MUST use versioned resume records that preserve manifest identity, file identity, chunking identity, transport state, progress, and lifecycle status.
+- Transport adapters MUST validate or refresh remote resume state before local completed chunks are skipped.
+- Transport adapters MUST return durable chunk receipts, and the core MUST validate receipt chunk index and size before checkpointing progress.
 - Retry behavior MUST remain configurable and MUST emit typed retry events.
 - Public errors thrown by the core MUST use typed error codes.
-- The package MUST keep runtime dependencies empty for the 1.0 core.
-- The npm package MUST publish ESM, CommonJS, and TypeScript declarations.
+- The core module MUST keep runtime dependencies empty.
+- The npm package MUST publish ESM, CommonJS, and TypeScript declarations for the root entrypoint and supported subpath exports.
+- The npm package MUST expose `large-image-ingest/core`, `large-image-ingest/transport-tus`, `large-image-ingest/transport-s3`, and `large-image-ingest/node`.
 
 ## Non-Goals
 
-- Built-in S3 multipart upload implementation.
-- Built-in tus upload implementation.
-- Built-in NAS, SMB, NFS, WebDAV, SFTP, or filesystem upload implementation.
+- Protocol-specific implementation inside the core module.
+- Browser-direct NAS, SMB, NFS, WebDAV, SFTP, or filesystem writes.
 - React hooks or UI components.
 - Thumbnail, preview, or tile generation.
 - Image decoding from binary formats.
 - Parallel chunk upload.
-- Persistent browser storage such as IndexedDB.
+- Cloud or NAS integration tests in the default test suite.
 
 ## Acceptance Criteria
 
@@ -58,10 +59,10 @@ Ship `large-image-ingest` as a stable 1.0 core SDK for browser and Node-compatib
 - Required metadata validation reports missing keys.
 - Dimension validation reports unavailable dimensions when configured without provided image metadata.
 - Chunk ranges are deterministic.
-- Session events expose state transitions and progress.
-- Pause prevents the next chunk from starting until resume is called.
-- A snapshot from a paused or interrupted session can resume without re-uploading completed chunks when the transport supports chunk skipping.
-- Abort emits an aborted event and throws a typed aborted error.
+- Session events expose lifecycle progress, checkpoints, pause, cancellation, completion, and failure.
+- Pause leaves a recoverable record after the current chunk settles.
+- A recoverable resume record can resume without re-uploading completed chunks when the transport validates the remote session.
+- Cancel prevents the record from being offered for default recovery.
 - README examples match the public API.
 
 ## Release Criteria
