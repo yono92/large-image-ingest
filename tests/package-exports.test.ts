@@ -31,9 +31,9 @@ describe("package exports", () => {
         require: "./dist/cjs/tus.js"
       },
       "./node": {
-        types: "./dist/esm/nas.d.ts",
-        import: "./dist/esm/nas.js",
-        require: "./dist/cjs/nas.js"
+        types: "./dist/esm/node.d.ts",
+        import: "./dist/esm/node.js",
+        require: "./dist/cjs/node.js"
       }
     });
     expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "docs", "examples"]));
