@@ -66,7 +66,7 @@ export async function createManifest(
     createdAt: options.manifestIdentity?.createdAt ?? new Date().toISOString(),
     library: {
       name: "large-image-ingest",
-      version: "1.0.0"
+      version: "1.0.1"
     },
     original,
     image: createImageManifest(options.image),

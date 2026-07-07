@@ -382,7 +382,7 @@ Example shape:
   "createdAt": "2026-07-01T00:00:00.000Z",
   "library": {
     "name": "large-image-ingest",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "original": {
     "kind": "original",
@@ -771,7 +771,7 @@ Server code should use:
 
 ## Release Status
 
-The released `1.0.0` package includes:
+The released `1.0.1` package includes:
 
 - original-preserving manifest v1 generation
 - file validation for size, MIME type, extension, required metadata, caller-provided dimensions, and checksum mismatch
