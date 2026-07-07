@@ -253,7 +253,7 @@ export interface IngestManifest {
   createdAt: string;
   library: {
     name: "large-image-ingest";
-    version: "1.0.0";
+    version: string;
   };
   original: OriginalImageManifest;
   image: ImageInspectionManifest;
