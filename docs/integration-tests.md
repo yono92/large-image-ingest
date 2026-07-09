@@ -6,11 +6,12 @@ Default test commands must stay local and credential-free:
 npm run typecheck
 npm run typecheck:examples
 npm test
+npm run test:integration
 npm run build
 npm run smoke:exports
 ```
 
-The default test suite should use in-memory fakes, mocked `fetch`, and temporary directories only. It must not require a real tus server, cloud credentials, object storage buckets, or mounted NAS paths.
+The default test suite should use in-memory fakes, mocked `fetch`, and temporary directories only. It must not require a real tus server, cloud credentials, object storage buckets, or mounted NAS paths. `npm run test:integration` also stays safe by default: without target-specific environment variables it prints skip messages and performs no real network or filesystem writes.
 
 ## Opt-In Targets
 
@@ -20,6 +21,14 @@ Use opt-in integration tests for infrastructure-specific behavior:
 - S3-compatible storage: multipart upload creation, presigned URL CORS, ETag visibility, completion, abort, and lifecycle cleanup.
 - NAS mounts: cross-process file locking, rename behavior, permissions, stale staging cleanup, and throughput under production-like mount options.
 
+The current harness entry point is:
+
+```bash
+npm run test:integration
+```
+
+Target enablement is all-or-skip per target. Partial configuration must skip that target.
+
 ## Required Safeguards
 
 Infrastructure tests should:
@@ -28,6 +37,7 @@ Infrastructure tests should:
 - Use dedicated test buckets, prefixes, directories, or tus namespaces.
 - Generate object keys and target paths from test-owned prefixes only.
 - Avoid logging credentials, presigned URLs, raw customer metadata, or full manifests.
+- Avoid logging raw endpoint values, mounted storage paths, full resume records, or opaque transport state.
 - Clean up incomplete multipart uploads, staged NAS sessions, and server-side tus uploads after each run.
 - Be excluded from default CI unless the CI job is explicitly configured for that target.
 

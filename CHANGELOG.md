@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- Added operational safety planning and roadmap documentation.
+- Added safe diagnostics helper contracts for events, snapshots, resume records, and verification reports.
+- Added retry policy planning for transient upload failures.
+- Added opt-in integration test harness planning for real TUS, S3-compatible, and NAS-backed paths.
+
 ## 1.0.0
 
 - Promoted the core package API to a stable 1.0 release target.

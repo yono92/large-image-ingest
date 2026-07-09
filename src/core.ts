@@ -1,5 +1,11 @@
 export { calculateChecksum } from "./checksum.js";
 export { planChunks } from "./chunks.js";
+export {
+  createSafeEventSummary,
+  createSafeVerificationSummary,
+  redactResumeRecord,
+  redactUploadSessionSnapshot
+} from "./diagnostics.js";
 export { LargeImageIngestError, isLargeImageIngestError } from "./errors.js";
 export { createFastFingerprint } from "./fingerprint.js";
 export { createManifest } from "./manifest.js";
@@ -69,6 +75,8 @@ export type {
   ResumeSessionContext,
   ResumeStore,
   ResumeTransportState,
+  RetryDecisionContext,
+  RetryPolicy,
   TransportCapabilities,
   TransportSession,
   UploadChunkContext,
@@ -88,4 +96,13 @@ export type {
   ValidationResult,
   ValidationRules
 } from "./types.js";
+export type {
+  RedactedResumeRecord,
+  RedactedSnapshotResult,
+  RedactionSummary,
+  SafeErrorSummary,
+  SafeEventSummary,
+  SafeProgressSummary,
+  SafeVerificationSummary
+} from "./diagnostics.js";
 export type { ResumeStorageLike } from "./web-storage-resume-store.js";
