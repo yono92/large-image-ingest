@@ -4,10 +4,12 @@ This roadmap captures likely minor-release work after 1.1.0. Items here are not 
 
 ## 1.2.0 TODO - Derivatives And Preview Foundations
 
-- [ ] Specify browser-safe derivative manifest entries for previews, thumbnails, and tile metadata without mutating the original.
-- [ ] Add preview/thumbnail/tile package planning under the adapter model.
-- [ ] Define image metadata enrichment boundaries for formats where dimensions are caller-provided or server-derived.
-- [ ] Decide whether preview generation belongs in browser helpers, Node helpers, or both.
+Spec Kit planning artifacts: [specs/004-derivatives-preview-foundations](../specs/004-derivatives-preview-foundations/spec.md)
+
+- [x] Specify browser-safe derivative manifest entries for previews, thumbnails, and tile metadata without mutating the original.
+- [x] Add preview/thumbnail/tile package planning under the adapter model.
+- [x] Define image metadata enrichment boundaries for formats where dimensions are caller-provided or server-derived.
+- [x] Decide whether preview generation belongs in browser helpers, Node helpers, or both.
 - [ ] Add tests proving derivatives are separately referenced and never replace original manifest identity.
 - [ ] Update README examples for derivative references once the public contract is specified.
 
