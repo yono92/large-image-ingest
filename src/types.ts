@@ -426,6 +426,22 @@ export interface ManifestIdentityOverride {
   createdAt: string;
 }
 
+export interface RetryDecisionContext {
+  manifestId: string;
+  chunk: ChunkDescriptor;
+  attempt: number;
+  error: unknown;
+}
+
+export interface RetryPolicy {
+  maxAttempts?: number | undefined;
+  delayMs?: number | undefined;
+  backoffFactor?: number | undefined;
+  maxDelayMs?: number | undefined;
+  jitter?: "none" | "full" | undefined;
+  isRetryable?: ((error: unknown, context: RetryDecisionContext) => boolean) | undefined;
+}
+
 export type IngestEvent =
   | { type: "validated"; manifest: IngestManifest }
   | { type: "started"; manifest: IngestManifest; uploadId: string }
@@ -512,6 +528,7 @@ export interface CreateIngestSessionOptions {
   onEvent?: (event: IngestEvent) => void;
   onSnapshot?: (snapshot: UploadSessionSnapshot) => void;
   retries?: number;
+  retryPolicy?: RetryPolicy | undefined;
   resume?: ResumeOptions;
   resumeFrom?: UploadSessionSnapshot;
   storage?: StorageTargetManifest;

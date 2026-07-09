@@ -30,6 +30,8 @@ import type {
   ResumeRecordStatus,
   ResumeStore,
   ResumeTransportState,
+  RetryDecisionContext,
+  RetryPolicy,
   TransportCapabilities,
   TransportSession,
   UploadChunkReceipt,
@@ -44,6 +46,15 @@ const SUPPORTED_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.1";
 interface NormalizedUploadChunkResult {
   receipt: UploadChunkReceipt;
   transportResult?: UploadChunkResult | undefined;
+}
+
+interface NormalizedRetryPolicy {
+  maxAttempts: number;
+  delayMs: number;
+  backoffFactor: number;
+  maxDelayMs: number;
+  jitter: "none" | "full";
+  isRetryable?: RetryPolicy["isRetryable"];
 }
 
 export class LargeImageIngestSession {
@@ -478,9 +489,9 @@ export class LargeImageIngestSession {
     session: TransportSession,
     chunk: ChunkDescriptor
   ): Promise<NormalizedUploadChunkResult> {
-    const retries = this.options.retries ?? 2;
+    const retryPolicy = normalizeRetryPolicy(this.options.retryPolicy, this.options.retries);
 
-    for (let attempt = 0; attempt <= retries; attempt += 1) {
+    for (let attempt = 0; attempt < retryPolicy.maxAttempts; attempt += 1) {
       try {
         this.throwIfStopped();
         const result = await this.options.transport.uploadChunk({
@@ -500,19 +511,65 @@ export class LargeImageIngestSession {
           throw new UploadCanceledError(this.currentRecord?.id);
         }
 
+        if (this.lifecycleAction === "pause") {
+          throw new UploadPausedError(this.currentRecord?.id);
+        }
+
+        if (this.abortController.signal.aborted) {
+          throw this.abortController.signal.reason ?? error;
+        }
+
         if (isNonRetryableIngestError(error)) {
           throw error;
         }
 
-        if (attempt >= retries) {
+        if (!shouldRetry(error, retryPolicy, {
+          attempt: attempt + 1,
+          chunk,
+          manifestId: manifest.id,
+          error
+        })) {
+          throw error;
+        }
+
+        if (attempt >= retryPolicy.maxAttempts - 1) {
           throw error;
         }
 
         this.emit({ type: "retry", manifestId: manifest.id, chunk, attempt: attempt + 1, error });
+        await this.waitForRetryDelay(calculateRetryDelay(retryPolicy, attempt + 1));
       }
     }
 
     throw createIngestError("transport.failed", "Chunk upload failed.", true);
+  }
+
+  private async waitForRetryDelay(delayMs: number): Promise<void> {
+    if (delayMs <= 0) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      if (this.abortController.signal.aborted) {
+        reject(this.abortController.signal.reason);
+        return;
+      }
+
+      const cleanup = (): void => {
+        this.abortController.signal.removeEventListener("abort", abort);
+      };
+      const timeout = setTimeout(() => {
+        cleanup();
+        resolve();
+      }, delayMs);
+      const abort = (): void => {
+        clearTimeout(timeout);
+        cleanup();
+        reject(this.abortController.signal.reason);
+      };
+
+      this.abortController.signal.addEventListener("abort", abort, { once: true });
+    });
   }
 
   private async completeUpload(
@@ -1334,6 +1391,70 @@ function cloneRecord<T extends Record<string, unknown> | undefined>(record: T): 
 function unique(values: readonly string[]): string[] | undefined {
   const result = Array.from(new Set(values));
   return result.length > 0 ? result : undefined;
+}
+
+function normalizeRetryPolicy(
+  policy: RetryPolicy | undefined,
+  legacyRetries: number | undefined
+): NormalizedRetryPolicy {
+  const maxAttempts = policy?.maxAttempts ?? (legacyRetries ?? 2) + 1;
+  assertRetryInteger(maxAttempts, "retryPolicy.maxAttempts", 1);
+
+  const delayMs = policy?.delayMs ?? 0;
+  assertRetryNumber(delayMs, "retryPolicy.delayMs");
+
+  const backoffFactor = policy?.backoffFactor ?? 1;
+  assertRetryNumber(backoffFactor, "retryPolicy.backoffFactor");
+  if (backoffFactor < 1) {
+    throw new RangeError("retryPolicy.backoffFactor must be at least 1.");
+  }
+
+  const maxDelayMs = policy?.maxDelayMs ?? Number.MAX_SAFE_INTEGER;
+  assertRetryNumber(maxDelayMs, "retryPolicy.maxDelayMs");
+
+  return {
+    maxAttempts,
+    delayMs,
+    backoffFactor,
+    maxDelayMs,
+    jitter: policy?.jitter ?? "none",
+    isRetryable: policy?.isRetryable
+  };
+}
+
+function shouldRetry(
+  error: unknown,
+  policy: NormalizedRetryPolicy,
+  context: RetryDecisionContext
+): boolean {
+  if (policy.isRetryable) {
+    return policy.isRetryable(error, context);
+  }
+
+  return true;
+}
+
+function calculateRetryDelay(policy: NormalizedRetryPolicy, retryNumber: number): number {
+  const baseDelay = policy.delayMs * Math.pow(policy.backoffFactor, Math.max(0, retryNumber - 1));
+  const capped = Math.min(baseDelay, policy.maxDelayMs);
+
+  if (policy.jitter === "full" && capped > 0) {
+    return Math.floor(Math.random() * capped);
+  }
+
+  return capped;
+}
+
+function assertRetryInteger(value: number, name: string, min: number): void {
+  if (!Number.isSafeInteger(value) || value < min) {
+    throw new RangeError(`${name} must be a safe integer greater than or equal to ${min}.`);
+  }
+}
+
+function assertRetryNumber(value: number, name: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new RangeError(`${name} must be a non-negative finite number.`);
+  }
 }
 
 function createIngestError(

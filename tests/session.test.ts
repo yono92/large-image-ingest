@@ -230,6 +230,183 @@ describe("LargeImageIngestSession", () => {
     expect(uploadAttempts).toBe(1);
   });
 
+  it("uses retryPolicy maxAttempts for retryable chunk failures", async () => {
+    const file = new File([new Uint8Array(chunkSize)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const retryEvents: number[] = [];
+    let uploadAttempts = 0;
+
+    const transport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-retry-policy",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        uploadAttempts += 1;
+        if (uploadAttempts < 3) {
+          throw new Error("Temporary chunk failure.");
+        }
+
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: {
+            name: fakeCapabilities.name
+          }
+        };
+      },
+      async completeSession(): Promise<void> {}
+    };
+
+    await createIngestSession(file, {
+      chunking: { chunkSize },
+      retryPolicy: {
+        maxAttempts: 3,
+        delayMs: 0
+      },
+      onEvent(event) {
+        if (event.type === "retry") {
+          retryEvents.push(event.attempt);
+        }
+      },
+      transport
+    }).start();
+
+    expect(uploadAttempts).toBe(3);
+    expect(retryEvents).toEqual([1, 2]);
+  });
+
+  it("stops retrying when retryPolicy attempts are exhausted", async () => {
+    const file = new File([new Uint8Array(chunkSize)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const retryEvents: number[] = [];
+    let uploadAttempts = 0;
+
+    const transport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-retry-exhausted",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk(): Promise<void> {
+        uploadAttempts += 1;
+        throw new Error("Temporary chunk failure.");
+      },
+      async completeSession(): Promise<void> {
+        throw new Error("completeSession should not be called after retry exhaustion.");
+      }
+    };
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        retryPolicy: {
+          maxAttempts: 2,
+          delayMs: 0
+        },
+        onEvent(event) {
+          if (event.type === "retry") {
+            retryEvents.push(event.attempt);
+          }
+        },
+        transport
+      }).start()
+    ).rejects.toThrow("Temporary chunk failure.");
+
+    expect(uploadAttempts).toBe(2);
+    expect(retryEvents).toEqual([1]);
+  });
+
+  it("does not retry non-retryable failures or pause requests", async () => {
+    const file = new File([new Uint8Array(chunkSize)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    let nonRetryableAttempts = 0;
+
+    const nonRetryableTransport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-non-retryable",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk(): Promise<void> {
+        nonRetryableAttempts += 1;
+        throw {
+          code: "transport.offset_mismatch",
+          message: "Remote offset mismatch.",
+          retryable: false
+        };
+      },
+      async completeSession(): Promise<void> {
+        throw new Error("completeSession should not be called for non-retryable failures.");
+      }
+    };
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        retryPolicy: {
+          maxAttempts: 3,
+          delayMs: 0
+        },
+        transport: nonRetryableTransport
+      }).start()
+    ).rejects.toMatchObject({
+      code: "transport.offset_mismatch",
+      retryable: false
+    });
+    expect(nonRetryableAttempts).toBe(1);
+
+    let pauseAttempts = 0;
+    let session: ReturnType<typeof createIngestSession>;
+    const pauseTransport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-pause-retry-policy",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk(): Promise<void> {
+        pauseAttempts += 1;
+        session.pause("User paused.");
+        throw new Error("Aborted in-flight chunk.");
+      },
+      async completeSession(): Promise<void> {
+        throw new Error("completeSession should not be called after pause.");
+      }
+    };
+
+    session = createIngestSession(file, {
+      chunking: { chunkSize },
+      retryPolicy: {
+        maxAttempts: 3,
+        delayMs: 0
+      },
+      transport: pauseTransport
+    });
+
+    await expect(session.start()).rejects.toMatchObject({
+      code: "transport.paused",
+      retryable: false
+    });
+    expect(pauseAttempts).toBe(1);
+  });
+
   it("rejects resume snapshots with mismatched chunk plans", async () => {
     const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
       type: "image/tiff"

@@ -153,10 +153,16 @@ const session = createIngestSession(file, {
     }
   },
   onEvent(event) {
-    console.log(event.type, event);
+    if (event.type === "chunk:completed") {
+      console.log(event.type, event.uploadedBytes, event.totalBytes);
+      return;
+    }
+
+    console.log(event.type);
   },
   onSnapshot(snapshot) {
-    // Persist this in IndexedDB or an application session store for resume.
+    // Full snapshots may include transport resume handles. Store them only in
+    // an application-approved persistence layer, and do not log the full object.
     console.log(snapshot.status, snapshot.uploadedBytes);
   },
 });
@@ -642,6 +648,12 @@ Default verification remains local and credential-free. Real tus servers, S3-com
 
 See `docs/integration-tests.md` for the integration test policy, required safeguards, and suggested environment variables.
 
+Run the opt-in harness without configuration to verify that real infrastructure is skipped:
+
+```bash
+npm run test:integration
+```
+
 ## Validation Rules
 
 Initial validation should support:
@@ -667,7 +679,11 @@ if (!result.ok) {
 
 ## Session Snapshots And Events
 
-Sessions emit typed events and can publish redacted snapshots through `onSnapshot`. Snapshot status values include:
+Sessions emit typed events through `onEvent` and can publish full caller-controlled snapshots through `onSnapshot`.
+
+Snapshot events emitted through `onEvent` are redacted before delivery. Full snapshots delivered through `onSnapshot` are intended for application-owned persistence, such as IndexedDB or a server-side session store, and may include transport resume handles needed for recovery. Do not log full events, manifests, resume records, or snapshots by default; log stable identifiers, status, progress counters, and typed error codes instead.
+
+Snapshot status values include:
 
 ```txt
 idle
@@ -710,6 +726,7 @@ Pause and cancel are lifecycle actions. A paused session records a recoverable s
 const session = createIngestSession(file, {
   transport,
   onSnapshot(snapshot) {
+    // Full snapshot for caller-controlled persistence; avoid default full-object logging.
     void saveSnapshot(snapshot);
   },
 });
@@ -718,6 +735,50 @@ const upload = session.start();
 session.pause();
 await upload.catch(() => undefined);
 ```
+
+## Safe Diagnostics
+
+Use diagnostics helpers when writing logs, telemetry, support traces, or recovery UI state. These helpers keep public IDs, status, progress, typed codes, and retryability while omitting full manifests, customer metadata, resume tokens, presigned URLs, opaque transport payloads, and sensitive resume state.
+
+```ts
+import {
+  createSafeEventSummary,
+  redactResumeRecord,
+  redactUploadSessionSnapshot,
+} from "large-image-ingest/core";
+
+const session = createIngestSession(file, {
+  transport,
+  onEvent(event) {
+    void writeLog(createSafeEventSummary(event));
+  },
+  onSnapshot(snapshot) {
+    const { snapshot: safeSnapshot } = redactUploadSessionSnapshot(snapshot);
+    void updateSupportPanel(safeSnapshot.status, safeSnapshot.uploadedBytes);
+  },
+});
+
+const safeRecord = redactResumeRecord(record);
+```
+
+## Retry Policy
+
+The `retries` option remains supported. For more explicit behavior, use `retryPolicy`.
+
+```ts
+const session = createIngestSession(file, {
+  transport,
+  retryPolicy: {
+    maxAttempts: 4,
+    delayMs: 250,
+    backoffFactor: 2,
+    maxDelayMs: 5_000,
+    jitter: "full",
+  },
+});
+```
+
+`maxAttempts` is the total number of attempts for a chunk operation. Pause, cancel, aborted signals, validation failures, checksum mismatches, resume conflicts, remote offset mismatches, expired resume state, and non-retryable transport errors bypass retry.
 
 ## Errors
 
@@ -739,7 +800,19 @@ The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a fi
 
 The current Node subpath provides the NAS gateway and stored-file verification APIs documented above.
 
+See [docs/server-operational-guide.md](docs/server-operational-guide.md) for server-owned credential, object key, NAS path, cleanup, and final verification responsibilities.
+
 ## Architecture Notes
+
+The package is intentionally shipped as one npm package with subpath exports for the 1.0 line. The subpaths preserve architectural boundaries without forcing a workspace split before the API surface proves it needs separate scoped packages.
+
+- `large-image-ingest/core` owns validation, fingerprinting, manifest generation, chunk planning, resumable session orchestration, state events, checksum helpers, resume records, and verification contracts.
+- `large-image-ingest/transport-tus` and `large-image-ingest/transport-s3` are adapters over the provider-neutral `UploadTransport` contract. They do not change core session semantics and do not mutate original bytes.
+- `large-image-ingest/node` isolates server-only filesystem behavior, NAS gateway helpers, and stored-file verification from browser-safe core imports.
+- Transport adapters receive original file slices from the active chunk plan. Derivatives, previews, tiles, and transformed images should remain separate manifest entries instead of replacing or rewriting the original artifact.
+- Event snapshots are redacted for default observer flows. Full snapshots and resume records are caller-controlled operational state and should be stored only in an application-approved persistence layer.
+
+Future scoped packages should map directly from the current subpaths if independent release cadence or package size starts to matter.
 
 ## Development
 
@@ -768,7 +841,7 @@ Server code should use:
 
 ## Release Status
 
-The `1.0.0` release candidate includes:
+The `1.1.0` release candidate includes:
 
 - original-preserving manifest v1 generation
 - file validation for size, MIME type, extension, required metadata, caller-provided dimensions, and checksum mismatch
@@ -779,6 +852,9 @@ The `1.0.0` release candidate includes:
 - tus transport through `large-image-ingest/transport-tus`
 - S3 multipart transport through `large-image-ingest/transport-s3`
 - server-side NAS gateway APIs through `large-image-ingest/node`
+- safe diagnostics helpers for logs, telemetry, support traces, and recovery UI
+- configurable retry policy for transient upload failures
+- opt-in integration harness entry point through `npm run test:integration`
 - ESM, CommonJS, TypeScript declaration, and package export smoke tests
 
 Default verification is credential-free and should pass with:
@@ -790,11 +866,13 @@ npm pack --dry-run
 
 ## Post-1.0 Roadmap
 
-Likely follow-up work after the first npm release:
+Likely follow-up work after the first npm release is tracked in [docs/roadmap.md](docs/roadmap.md).
 
-- opt-in integration tests against real tus servers, S3-compatible storage, and mounted NAS paths
-- minimal `@tus/server` example
-- per-chunk checksum options for transports that require provider-specific integrity records
-- browser or Node derivative packages for previews, thumbnails, tiles, and image metadata enrichment
-- React hooks and lightweight UI bindings
-- optional migration from package subpaths to scoped packages if the API surface grows
+Near-term 1.1.0 planning focuses on operational safety:
+
+- safe event, snapshot, resume record, and verification summaries for logs and diagnostics
+- configurable retry policy for transient upload failures
+- opt-in integration test harnesses for real TUS, S3-compatible, and NAS-backed paths
+- minimal server-side example guidance
+
+Later 1.2 and 1.3 candidates are kept as TODOs in the roadmap until they receive dedicated Spec Kit artifacts.

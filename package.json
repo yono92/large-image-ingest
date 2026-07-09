@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "TypeScript-first ingestion toolkit for very large inspection images.",
   "type": "module",
   "license": "MIT",
@@ -66,6 +66,7 @@
     "prepack": "npm run build",
     "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm test && npm run build && npm audit --audit-level=moderate",
     "smoke:exports": "node scripts/verify-package-consumption.cjs",
+    "test:integration": "node scripts/run-integration-tests.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.cjs.json --noEmit",
     "typecheck:examples": "tsc -p tsconfig.examples.json",
     "test": "vitest run"
