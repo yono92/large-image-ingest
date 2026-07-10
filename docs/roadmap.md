@@ -11,9 +11,9 @@ Spec Kit artifacts:
 
 - [x] Add safe summaries for events, snapshots, resume records, and verification reports.
 - [x] Add configurable retry policy support for transient upload failures.
-- [x] Add opt-in integration harness planning for real TUS, S3-compatible, and NAS-backed paths.
+- [x] Add opt-in integration harness for real TUS, S3-compatible, and NAS-backed paths.
 - [x] Specify browser-safe derivative manifest entries for previews, thumbnails, and tile metadata without mutating the original.
-- [x] Add preview/thumbnail/tile package planning under the adapter model.
+- [x] Add preview/thumbnail/tile package boundaries under the adapter model.
 - [x] Define image metadata enrichment boundaries for formats where dimensions are caller-provided or server-derived.
 - [x] Decide whether preview generation belongs in browser helpers, Node helpers, or both.
 - [x] Add tests proving derivatives are separately referenced and never replace original manifest identity.
