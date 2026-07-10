@@ -24,4 +24,23 @@ describe("planChunks", () => {
       88 * 1024
     ]);
   });
+
+  it("returns an empty deterministic plan for an empty file", () => {
+    expect(planChunks(0, { chunkSize: 256 * 1024 })).toEqual({
+      chunkSize: 256 * 1024,
+      totalBytes: 0,
+      totalChunks: 0,
+      chunks: []
+    });
+  });
+
+  it("rejects unsafe totals and undersized chunk configuration", () => {
+    for (const totalBytes of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => planChunks(totalBytes)).toThrow(RangeError);
+    }
+
+    for (const chunkSize of [0, 128 * 1024, 256 * 1024 + 0.5]) {
+      expect(() => planChunks(1, { chunkSize })).toThrow(RangeError);
+    }
+  });
 });

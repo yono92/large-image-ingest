@@ -35,7 +35,9 @@ export {
   listRecoverableResumeRecords,
   mergeCompletedChunkRange,
   mergeTransportState,
-  normalizeCompletedChunkRanges
+  normalizeCompletedChunkRanges,
+  parseResumeRecord,
+  validateResumeRecord
 } from "./resume.js";
 export { createIngestSession, LargeImageIngestSession } from "./session.js";
 export { validateFile } from "./validation.js";
@@ -95,8 +97,13 @@ export type {
   ResumeOptions,
   ResumeProgress,
   ResumeRecord,
+  ResumeRecordBase,
   ResumeRecordSchemaVersion,
   ResumeRecordStatus,
+  ResumeRecordV0_1,
+  ResumeRecordV0_2,
+  ResumeRecordValidationIssue,
+  ResumeRecordValidationResult,
   ResumeSessionContext,
   ResumeStore,
   ResumeTransportState,

@@ -2,7 +2,10 @@ export type IngestIssueSeverity = "error" | "warning";
 
 export type ResumeConflictCode =
   | "resume.record_not_found"
+  | "resume.record_invalid"
   | "resume.schema_unsupported"
+  | "resume.receipt_missing"
+  | "resume.receipt_invalid"
   | "resume.file_mismatch"
   | "resume.chunking_mismatch"
   | "resume.transport_unsupported"
@@ -431,6 +434,8 @@ export interface TransportCapabilities {
   expires: boolean;
   supportsParallelChunks: boolean;
   supportsChunkChecksum: boolean;
+  supportsSnapshotResume?: boolean;
+  supportsPersistentResume?: boolean;
   minChunkSizeBytes?: number;
   minFinalChunkSizeBytes?: number;
   maxChunkSizeBytes?: number;
@@ -502,7 +507,9 @@ export interface UploadSessionSnapshot {
   } | undefined;
 }
 
-export type ResumeRecordSchemaVersion = "large-image-ingest.resume.v0.1";
+export type ResumeRecordSchemaVersion =
+  | "large-image-ingest.resume.v0.1"
+  | "large-image-ingest.resume.v0.2";
 
 export type ResumeRecordStatus =
   | "active"
@@ -550,8 +557,7 @@ export interface ResumeProgress {
   lastErrorCode?: IngestIssueCode;
 }
 
-export interface ResumeRecord {
-  schemaVersion: ResumeRecordSchemaVersion;
+export interface ResumeRecordBase {
   id: string;
   manifest: IngestManifest;
   file: ResumeFileIdentity;
@@ -561,6 +567,37 @@ export interface ResumeRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ResumeRecordV0_1 extends ResumeRecordBase {
+  schemaVersion: "large-image-ingest.resume.v0.1";
+}
+
+export interface ResumeRecordV0_2 extends ResumeRecordBase {
+  schemaVersion: "large-image-ingest.resume.v0.2";
+  receipts: UploadChunkReceipt[];
+}
+
+export type ResumeRecord = ResumeRecordV0_1 | ResumeRecordV0_2;
+
+export interface ResumeRecordValidationIssue {
+  code:
+    | "resume.record_invalid"
+    | "resume.receipt_invalid"
+    | "resume.schema_unsupported";
+  message: string;
+  path?: string;
+}
+
+export type ResumeRecordValidationResult =
+  | {
+      ok: true;
+      issues: readonly [];
+      record: ResumeRecord;
+    }
+  | {
+      ok: false;
+      issues: readonly ResumeRecordValidationIssue[];
+    };
 
 export interface ResumeStore {
   get(recordId: string): Promise<ResumeRecord | undefined>;

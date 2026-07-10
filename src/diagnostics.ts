@@ -249,6 +249,11 @@ export function redactUploadSessionSnapshot(snapshot: UploadSessionSnapshot): Re
   redacted.completedChunks = redacted.completedChunks.map((receipt) => {
     const transport = { ...receipt.transport };
 
+    if (transport.etag !== undefined) {
+      delete transport.etag;
+      redactions.push("snapshot.completedChunks.transport.etag");
+    }
+
     if (transport.location !== undefined) {
       delete transport.location;
       redactions.push("snapshot.completedChunks.transport.location");
@@ -297,6 +302,10 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
 
   if (record.transport.data !== undefined) {
     redactions.push("resume.transport.data");
+  }
+
+  if (record.schemaVersion === "large-image-ingest.resume.v0.2" && record.receipts.length > 0) {
+    redactions.push("resume.receipts");
   }
 
   return {

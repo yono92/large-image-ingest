@@ -82,6 +82,33 @@ describe("node verification helpers", () => {
     });
     expect(report.issues[0]).not.toHaveProperty("details");
   });
+
+  it("enforces required stored-file checksum policy", async () => {
+    const root = await createTempRoot();
+    const filePath = join(root, "checksum-required.bin");
+    const file = new File(["abc"], "wafer.bin", { type: "application/octet-stream" });
+    const manifest = await createManifest(file, {
+      checksum: false,
+      chunking: { chunkSize: 256 * 1024 }
+    });
+    await writeFile(filePath, "abc");
+
+    const report = await verifyNodeFileManifest(filePath, manifest, { checksum: "required" });
+
+    expect(report.ok).toBe(false);
+    expect(report.issues.map((issue) => issue.code)).toContain("verification.checksum_missing");
+  });
+
+  it("rejects unsupported algorithms and undersized stream chunks", async () => {
+    const root = await createTempRoot();
+    const filePath = join(root, "invalid-options.bin");
+    await writeFile(filePath, "abc");
+
+    await expect(calculateNodeFileChecksum(filePath, { algorithm: "md5" as never })).rejects.toThrow(
+      "Unsupported checksum algorithm"
+    );
+    await expect(calculateNodeFileChecksum(filePath, { chunkSize: 1024 })).rejects.toThrow(RangeError);
+  });
 });
 
 async function createTempRoot(): Promise<string> {

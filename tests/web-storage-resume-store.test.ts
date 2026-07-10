@@ -53,6 +53,8 @@ describe("WebStorageResumeStore", () => {
 
     await expect(store.get("resume-1")).resolves.toMatchObject({
       id: "resume-1",
+      schemaVersion: "large-image-ingest.resume.v0.2",
+      receipts: [],
       transport: { uploadId: "upload-1", resumeToken: "secret-token" }
     });
 
@@ -61,5 +63,31 @@ describe("WebStorageResumeStore", () => {
     await store.delete("resume-1");
     await expect(store.get("resume-1")).resolves.toBeUndefined();
     await expect(store.list()).resolves.toEqual([]);
+  });
+
+  it("rejects malformed and structurally invalid stored records", async () => {
+    const storage = new MemoryStorage();
+    const store = new WebStorageResumeStore(storage);
+
+    storage.setItem("large-image-ingest.resume.bad-json", "{");
+    await expect(store.get("bad-json")).rejects.toMatchObject({
+      code: "resume.record_invalid"
+    });
+
+    storage.removeItem("large-image-ingest.resume.bad-json");
+    storage.setItem("large-image-ingest.resume.bad-shape", JSON.stringify({
+      schemaVersion: "large-image-ingest.resume.v0.2",
+      id: "bad-shape"
+    }));
+
+    await expect(store.get("bad-shape")).rejects.toMatchObject({
+      code: "resume.record_invalid"
+    });
+    await expect(store.list()).rejects.toMatchObject({
+      code: "resume.record_invalid"
+    });
+    await expect(store.put({ id: "invalid-put" } as never)).rejects.toMatchObject({
+      code: "resume.schema_unsupported"
+    });
   });
 });

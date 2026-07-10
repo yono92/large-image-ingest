@@ -2,7 +2,6 @@ import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
 import {
   mkdir,
-  open,
   readFile,
   readdir,
   rename,
@@ -177,6 +176,12 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
       const stagingPath = sessionPath(stagingRoot, sessionId);
       const createdAt = clock().toISOString();
       const expiresAt = normalizeExpiresAt(sessionOptions.expiresAt, createdAt, options.defaultExpiresInMs);
+
+      if (await exists(stagingPath)) {
+        throw createNasError("nas.invalid_session", "NAS session id already exists.", {
+          sessionId
+        });
+      }
 
       await mkdir(join(stagingPath, chunksDirectoryName), { recursive: true });
 
@@ -875,7 +880,7 @@ function createSha256(bytes: Uint8Array): NasGatewayChecksum {
 
 async function exists(path: string): Promise<boolean> {
   try {
-    await open(path, "r");
+    await stat(path);
     return true;
   } catch (error) {
     if (isNodeError(error, "ENOENT")) {

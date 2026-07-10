@@ -95,10 +95,11 @@ describe("LargeImageIngestSession", () => {
 
     expect(finalEventSnapshot?.transportSession?.resumeToken).toBeUndefined();
     expect(finalEventSnapshot?.transportSession?.remote).toBeUndefined();
+    expect(finalEventSnapshot?.completedChunks[0].transport.etag).toBeUndefined();
     expect(finalEventSnapshot?.completedChunks[0].transport.location).toBeUndefined();
     expect(finalEventSnapshot?.redactions).toEqual({
       transportSession: ["resumeToken", "remote"],
-      receipts: ["transport.location"]
+      receipts: ["transport.etag", "transport.location"]
     });
   });
 
