@@ -1,4 +1,4 @@
-# Data Model: 1.2.0 Derivatives And Preview Foundations
+# Data Model: 1.1.0 Derivatives And Preview Foundations
 
 ## DerivativeReference
 

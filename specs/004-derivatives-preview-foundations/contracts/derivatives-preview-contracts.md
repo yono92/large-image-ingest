@@ -1,6 +1,6 @@
-# Contracts: 1.2.0 Derivatives And Preview Foundations
+# Contracts: 1.1.0 Derivatives And Preview Foundations
 
-Draft TypeScript contract direction for additive 1.2.0 APIs. Final names may be adjusted during task generation, but behavior should remain aligned with this contract.
+Draft TypeScript contract direction for additive 1.1.0 APIs. Final names may be adjusted during task generation, but behavior should remain aligned with this contract.
 
 ## Derivative Reference Types
 
@@ -99,6 +99,7 @@ export interface DerivativeValidationOptions {
 export interface DerivativeValidationIssue {
   code:
     | "derivative.id.missing"
+    | "derivative.id.duplicate"
     | "derivative.kind.unsupported"
     | "derivative.status.invalid"
     | "derivative.source.missing"
@@ -182,6 +183,7 @@ export interface TilePyramidLevelDescriptor {
 export interface CreateTilePyramidDerivativeInput {
   manifest: IngestManifest;
   id?: string;
+  kind?: "tile";
   status: DerivativeStatus;
   mediaType?: string;
   tileWidth?: number;
@@ -207,13 +209,14 @@ Contract rules:
 export interface CreateMetadataDerivativeInput {
   manifest: IngestManifest;
   id?: string;
+  kind?: "metadata";
   status: DerivativeStatus;
   format?: string;
   width?: number;
   height?: number;
   colorDepth?: number;
   channels?: number;
-  tilePyramid?: CreateTilePyramidDerivativeInput;
+  tilePyramid?: TilePyramidDescriptor;
   provenance?: DerivativeProvenance;
   failure?: DerivativeFailure;
 }

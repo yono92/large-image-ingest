@@ -6,6 +6,10 @@
 - Added safe diagnostics helper contracts for events, snapshots, resume records, and verification reports.
 - Added retry policy planning for transient upload failures.
 - Added opt-in integration test harness planning for real TUS, S3-compatible, and NAS-backed paths.
+- Added derivative manifest foundations for previews, thumbnails, tiles, metadata enrichments, and custom derivative references.
+- Added browser-safe preview and thumbnail descriptor planning that does not read, decode, rewrite, or embed original bytes by default.
+- Added metadata enrichment and tile pyramid contract planning for server-side or caller-owned image inspection outputs.
+- Preserved the single-package subpath model while keeping derivative processing, storage, UI, and provider behavior adapter-owned.
 
 ## 1.0.0
 

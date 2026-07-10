@@ -6,9 +6,16 @@ export {
   redactResumeRecord,
   redactUploadSessionSnapshot
 } from "./diagnostics.js";
+export {
+  attachDerivative,
+  createDerivativeReference,
+  validateDerivativeReference,
+  validateManifestDerivatives
+} from "./derivatives.js";
 export { LargeImageIngestError, isLargeImageIngestError } from "./errors.js";
 export { createFastFingerprint } from "./fingerprint.js";
 export { createManifest } from "./manifest.js";
+export { createPreviewDerivative } from "./preview.js";
 export {
   ResumeConflictError,
   UploadCanceledError,
@@ -47,7 +54,25 @@ export type {
   ChunkPlan,
   ChunkPlanOptions,
   CompletedChunkRange,
+  AttachDerivativeOptions,
+  CreateDerivativeReferenceInput,
+  CreateMetadataDerivativeInput,
+  CreatePreviewDerivativeInput,
+  CreateTilePyramidDerivativeInput,
   CreateIngestSessionOptions,
+  DerivativeFailure,
+  DerivativeKind,
+  DerivativeManifest,
+  DerivativeMetadata,
+  DerivativeProvenance,
+  DerivativeSourceIdentity,
+  DerivativeStatus,
+  DerivativeStorageKind,
+  DerivativeStorageReference,
+  DerivativeValidationIssue,
+  DerivativeValidationIssueCode,
+  DerivativeValidationOptions,
+  DerivativeValidationResult,
   FileChecksum,
   FileChecksumAlgorithm,
   ImageMetadataInput,
@@ -77,6 +102,8 @@ export type {
   ResumeTransportState,
   RetryDecisionContext,
   RetryPolicy,
+  TilePyramidDescriptor,
+  TilePyramidLevelDescriptor,
   TransportCapabilities,
   TransportSession,
   UploadChunkContext,

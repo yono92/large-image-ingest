@@ -1,12 +1,12 @@
-# Research: 1.2.0 Derivatives And Preview Foundations
+# Research: 1.1.0 Derivatives And Preview Foundations
 
 ## Decision: Evolve The Existing Derivative Placeholder Additively
 
-**Rationale**: The current manifest already contains a `derivatives` array and a minimal derivative entry shape. Replacing it or bumping the entire manifest schema would create unnecessary migration pressure for a minor release. Additive fields and helper-generated complete references let 1.1.x consumers keep working while allowing 1.2.0 consumers to opt into stronger validation.
+**Rationale**: The current manifest already contains a `derivatives` array and a minimal derivative entry shape. Replacing it or bumping the entire manifest schema would create unnecessary migration pressure for a minor release. Additive fields and helper-generated complete references let 1.1.x consumers keep working while allowing 1.1.0 consumers to opt into stronger validation.
 
 **Alternatives considered**:
 
-- Create a new manifest schema version: rejected for 1.2.0 because the planned behavior can be expressed additively.
+- Create a new manifest schema version: rejected for 1.1.0 because the planned behavior can be expressed additively.
 - Replace the existing derivative entry with a completely new required shape: rejected because it would be source-incompatible for consumers that already type against the placeholder.
 
 ## Decision: Store Derivative References, Not Derivative Bytes
@@ -20,7 +20,7 @@
 
 ## Decision: Keep Browser Preview Foundations Descriptor-First
 
-**Rationale**: Browsers can work with large `Blob` and `File` objects, but decoding industrial formats or rendering thumbnails can be memory-intensive and format-specific. The 1.2.0 foundation should record planned or externally generated preview outputs without requiring full-file reads or a built-in decoder.
+**Rationale**: Browsers can work with large `Blob` and `File` objects, but decoding industrial formats or rendering thumbnails can be memory-intensive and format-specific. The 1.1.0 foundation should record planned or externally generated preview outputs without requiring full-file reads or a built-in decoder.
 
 **Alternatives considered**:
 
@@ -45,11 +45,11 @@
 - Fail the entire manifest whenever any derivative is invalid: rejected because optional previews should not block source-of-truth ingest.
 - Ignore derivative validation until storage adapters exist: rejected because unsafe references and stale relationships are contract-level concerns.
 
-## Decision: Keep The Current Single-Package Layout For 1.2.0
+## Decision: Keep The Current Single-Package Layout For 1.1.0
 
-**Rationale**: The package already uses clear subpath exports and the 1.2.0 scope can fit without workspace churn. Maintaining one package lowers release risk while preserving a direct future migration path to scoped packages if derivative or UI helpers grow.
+**Rationale**: The package already uses clear subpath exports and the 1.1.0 scope can fit without workspace churn. Maintaining one package lowers release risk while preserving a direct future migration path to scoped packages if derivative or UI helpers grow.
 
 **Alternatives considered**:
 
-- Move immediately to scoped packages: rejected because it adds packaging and migration work before 1.2.0 proves the new boundaries.
+- Move immediately to scoped packages: rejected because it adds packaging and migration work before 1.1.0 proves the new boundaries.
 - Put preview and metadata helpers directly into transport adapters: rejected because derivative metadata is independent of upload protocol.

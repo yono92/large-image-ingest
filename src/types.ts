@@ -53,6 +53,7 @@ export type IngestIssueCode =
   | "transport.resume_failed"
   | "transport.unsafe_path"
   | "transport.unrecoverable"
+  | DerivativeValidationIssueCode
   | VerificationIssueCode
   | ResumeConflictCode;
 
@@ -237,14 +238,86 @@ export interface StorageTargetManifest {
   locationHint?: string;
 }
 
+export type DerivativeKind = "preview" | "thumbnail" | "tile" | "metadata" | "custom";
+
+export type DerivativeStatus = "planned" | "created" | "failed";
+
+export type DerivativeStorageKind = "object" | "url" | "path" | "inline-reference" | "custom";
+
+export interface DerivativeStorageReference {
+  kind: DerivativeStorageKind;
+  label?: string;
+  locationHint?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface DerivativeSourceIdentity {
+  manifestId: string;
+  schemaVersion: IngestManifestSchemaVersion;
+  fingerprint?: FileFingerprint;
+  checksum?: FileChecksum;
+  sizeBytes?: number;
+  mediaType?: string;
+}
+
+export interface DerivativeProvenance {
+  generator?: string;
+  generatorVersion?: string;
+  parametersLabel?: string;
+  environment?: "browser" | "server" | "external" | "custom";
+}
+
+export interface DerivativeFailure {
+  code: string;
+  message: string;
+  retryable?: boolean;
+}
+
+export interface TilePyramidLevelDescriptor {
+  level: number;
+  width: number;
+  height: number;
+  columns: number;
+  rows: number;
+  scale?: number;
+  storage?: DerivativeStorageReference;
+}
+
+export interface TilePyramidDescriptor {
+  tileWidth?: number;
+  tileHeight?: number;
+  levels: readonly TilePyramidLevelDescriptor[];
+  storage?: DerivativeStorageReference;
+}
+
+export interface DerivativeMetadata {
+  format?: string;
+  width?: number;
+  height?: number;
+  colorDepth?: number;
+  channels?: number;
+  tilePyramid?: TilePyramidDescriptor;
+}
+
 export interface DerivativeManifest {
   id: string;
-  kind: "preview" | "thumbnail" | "tile" | "metadata" | "custom";
-  status: "planned" | "created" | "failed";
+  kind: DerivativeKind;
+  status: DerivativeStatus;
+  role?: string;
   mediaType?: string;
   width?: number;
   height?: number;
+  sizeBytes?: number;
+  checksum?: FileChecksum;
   source: "original";
+  sourceIdentity?: DerivativeSourceIdentity;
+  storage?: DerivativeStorageReference;
+  createdAt?: string;
+  updatedAt?: string;
+  provenance?: DerivativeProvenance;
+  failure?: DerivativeFailure;
+  tilePyramid?: TilePyramidDescriptor;
+  metadata?: DerivativeMetadata;
 }
 
 export interface IngestManifest {
@@ -269,6 +342,86 @@ export interface IngestManifest {
   metadata: Record<string, unknown>;
   derivatives: DerivativeManifest[];
   validation: ValidationResult;
+}
+
+export type DerivativeValidationIssueCode =
+  | "derivative.id.missing"
+  | "derivative.id.duplicate"
+  | "derivative.kind.unsupported"
+  | "derivative.status.invalid"
+  | "derivative.source.missing"
+  | "derivative.source.mismatch"
+  | "derivative.storage.unsafe"
+  | "derivative.payload.embedded"
+  | "derivative.failure.unsafe"
+  | "derivative.tile.invalid"
+  | "derivative.required.missing";
+
+export interface DerivativeValidationIssue {
+  code: DerivativeValidationIssueCode;
+  message: string;
+  path?: string;
+  severity: IngestIssueSeverity;
+  derivativeId?: string;
+}
+
+export interface DerivativeValidationOptions {
+  strictSourceIdentity?: boolean;
+  allowUnsafeLocationHints?: boolean;
+  requiredDerivativeIds?: readonly string[];
+}
+
+export interface DerivativeValidationResult {
+  ok: boolean;
+  issues: readonly DerivativeValidationIssue[];
+}
+
+export interface CreateDerivativeReferenceInput {
+  manifest: IngestManifest;
+  id?: string;
+  kind: DerivativeKind;
+  status: DerivativeStatus;
+  role?: string;
+  mediaType?: string;
+  width?: number;
+  height?: number;
+  sizeBytes?: number;
+  checksum?: FileChecksum;
+  storage?: DerivativeStorageReference;
+  provenance?: DerivativeProvenance;
+  failure?: DerivativeFailure;
+  tilePyramid?: TilePyramidDescriptor;
+  metadata?: DerivativeMetadata;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AttachDerivativeOptions {
+  replaceExisting?: boolean;
+}
+
+export interface CreatePreviewDerivativeInput
+  extends Omit<CreateDerivativeReferenceInput, "kind" | "metadata" | "tilePyramid"> {
+  kind: "preview" | "thumbnail";
+}
+
+export interface CreateTilePyramidDerivativeInput
+  extends Omit<CreateDerivativeReferenceInput, "kind" | "metadata" | "tilePyramid"> {
+  kind?: "tile";
+  tileWidth?: number;
+  tileHeight?: number;
+  levels?: readonly TilePyramidLevelDescriptor[];
+}
+
+export interface CreateMetadataDerivativeInput
+  extends Omit<CreateDerivativeReferenceInput, "kind" | "mediaType" | "metadata" | "tilePyramid"> {
+  kind?: "metadata";
+  format?: string;
+  width?: number;
+  height?: number;
+  colorDepth?: number;
+  channels?: number;
+  tilePyramid?: TilePyramidDescriptor;
 }
 
 export interface TransportCapabilities {

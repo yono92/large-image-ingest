@@ -1,4 +1,4 @@
-﻿# large-image-ingest
+# large-image-ingest
 
 `large-image-ingest` is a TypeScript-first core SDK for safely ingesting very large inspection images.
 
@@ -12,9 +12,9 @@ This is not a generic drag-and-drop uploader. The core package focuses on origin
 npm install large-image-ingest
 ```
 
-## Core 1.0 Scope
+## Core Scope
 
-The 1.0 package provides a framework-agnostic core:
+The package provides a framework-agnostic core:
 
 - File validation for size, MIME type, extension, required metadata, and caller-provided dimensions.
 - Whole-file SHA-256 checksum generation with bounded `Blob.slice` reads.
@@ -24,11 +24,12 @@ The 1.0 package provides a framework-agnostic core:
 - Redacted session snapshots and persistent resume records for app-owned persistence.
 - Provider-neutral transport adapter interface.
 - Manifest, receipt, and stored-file verification helpers.
+- Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs.
 - Browser-safe tus and S3 multipart transport helpers.
 - Server-side NAS gateway helpers under the Node subpath.
 - ESM, CommonJS, and TypeScript declaration entrypoints.
 
-The 1.0 package does not include React, thumbnail, preview, tile, or image decoding implementations. Those remain optional adapters or companion packages.
+The package does not include React, image decoding, thumbnail rendering, tile generation, cloud SDKs, or UI implementations. Those remain optional adapters or companion packages.
 
 ## Design Principles
 
@@ -445,6 +446,50 @@ Example shape:
 }
 ```
 
+## Derivatives And Previews
+
+Derivatives are separate manifest entries that point back to the original source identity. Adding a preview, thumbnail, tile pyramid, metadata extraction, or custom output never rewrites `manifest.original`.
+
+```ts
+import {
+  attachDerivative,
+  createPreviewDerivative,
+  validateManifestDerivatives
+} from "large-image-ingest";
+
+const preview = createPreviewDerivative({
+  manifest,
+  id: "preview-1024",
+  kind: "preview",
+  status: "created",
+  mediaType: "image/jpeg",
+  width: 1024,
+  height: 1024,
+  storage: {
+    kind: "object",
+    label: "preview-store",
+    locationHint: "previews/manifest-id-1024.jpg"
+  },
+  provenance: {
+    generator: "app-preview-worker",
+    environment: "browser"
+  }
+});
+
+const manifestWithPreview = attachDerivative(manifest, preview);
+const derivativeValidation = validateManifestDerivatives(manifestWithPreview);
+```
+
+Derivative statuses:
+
+- `planned`: expected later, but no generated asset is claimed yet.
+- `created`: the derivative asset or metadata output exists and is referenced outside the manifest.
+- `failed`: derivative generation failed while the original manifest remains intact unless the application marks the derivative as required.
+
+Browser preview helpers accept caller-provided descriptors and do not read, decode, rewrite, or embed original bytes by default. Server-side metadata and tile helpers are available from `large-image-ingest/node`.
+
+See [docs/derivatives.md](docs/derivatives.md) for derivative boundaries and examples.
+
 ## Session State
 
 ### tus
@@ -854,6 +899,9 @@ The `1.1.0` release candidate includes:
 - server-side NAS gateway APIs through `large-image-ingest/node`
 - safe diagnostics helpers for logs, telemetry, support traces, and recovery UI
 - configurable retry policy for transient upload failures
+- derivative reference helpers for previews, thumbnails, tile pyramids, metadata enrichments, and custom outputs
+- browser-safe preview descriptors that avoid default full-file reads or embedded derivative bytes
+- server-side metadata and tile descriptor helpers through `large-image-ingest/node`
 - opt-in integration harness entry point through `npm run test:integration`
 - ESM, CommonJS, TypeScript declaration, and package export smoke tests
 
@@ -868,11 +916,11 @@ npm pack --dry-run
 
 Likely follow-up work after the first npm release is tracked in [docs/roadmap.md](docs/roadmap.md).
 
-Near-term 1.1.0 planning focuses on operational safety:
+Near-term 1.1.0 work focuses on derivative and preview foundations:
 
-- safe event, snapshot, resume record, and verification summaries for logs and diagnostics
-- configurable retry policy for transient upload failures
-- opt-in integration test harnesses for real TUS, S3-compatible, and NAS-backed paths
-- minimal server-side example guidance
+- separate derivative manifest entries for previews, thumbnails, tiles, metadata enrichments, and custom outputs
+- browser-safe preview descriptors
+- server-side metadata and tile descriptor helpers
+- adapter boundaries that keep image processing, storage upload, UI, and providers outside core
 
-Later 1.2 and 1.3 candidates are kept as TODOs in the roadmap until they receive dedicated Spec Kit artifacts.
+Later 1.3 candidates are kept as TODOs in the roadmap until they receive dedicated Spec Kit artifacts.
