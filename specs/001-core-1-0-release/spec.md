@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented release candidate. Formal Spec Kit artifacts now exist in `.specify/`; this release spec records the finalized 1.0 core package contract.
+Implemented. Formal Spec Kit artifacts now exist in `.specify/`; this release spec records the finalized 1.0 core package contract.
 
 ## Goal
 

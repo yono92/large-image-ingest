@@ -19,7 +19,7 @@ Spec Kit artifacts:
 - [x] Add tests proving derivatives are separately referenced and never replace original manifest identity.
 - [x] Update README examples for derivative references once the public contract is specified.
 
-## 1.2.0 In Progress - Ingest Integrity Hardening
+## 1.2.0 Included - Resume Integrity Hardening
 
 Spec Kit artifacts:
 
@@ -28,6 +28,11 @@ Spec Kit artifacts:
 - [x] Persist authoritative chunk receipts in versioned resume records.
 - [x] Resume S3 multipart uploads after restart without caller-managed snapshots.
 - [x] Validate untrusted resume records before chunk skipping or transport calls.
+- [x] Report snapshot and persistent resume capabilities separately for official transports.
+- [x] Reject unsafe NAS session collisions and existing finalize targets.
+
+## Future TODO - Remaining Ingest Integrity
+
 - [ ] Harden source-file content identity for persistent resume.
 - [ ] Reconcile remote completion with local cleanup and observer failures.
 - [ ] Make NAS staging metadata updates atomic and concurrency-safe.

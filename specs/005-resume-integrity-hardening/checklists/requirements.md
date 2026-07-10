@@ -32,4 +32,4 @@
 ## Notes
 
 - Validation completed on 2026-07-10 with no unresolved clarification markers.
-- The specification intentionally defers remote completion reconciliation and worker execution to separately planned 1.2.0 hardening work.
+- The specification intentionally defers remote completion reconciliation and worker execution to separately planned future hardening work.

@@ -37,7 +37,7 @@ Add durable resume persistence to the existing framework-agnostic ingest session
 - Adapter boundaries: PASS. Core owns resume contracts and orchestration; transports own remote session validation; storage is behind a store contract.
 - TypeScript contracts: PASS. Plan defines exported resume records, store contracts, transport result changes, lifecycle state, and typed resume conflicts.
 - Validation and security: PASS. File/chunking/transport validation happens before upload; sensitive handles and metadata are not logged by default; cloud/network tests remain opt-in.
-- Documentation and tests: PASS. README updates, focused fake-store/fake-transport tests, and package checks are complete for the release candidate.
+- Documentation and tests: PASS. README updates, focused fake-store/fake-transport tests, and package checks completed release verification.
 
 ## Project Structure
 

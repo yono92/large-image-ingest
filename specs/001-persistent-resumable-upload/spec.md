@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-02
 
-**Status**: Implemented release candidate
+**Status**: Implemented
 
 **Input**: User description: "Implement real resumable persistence for large image ingest sessions; current behavior only retries chunks inside one in-memory session."
 
