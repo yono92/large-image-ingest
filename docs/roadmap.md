@@ -1,11 +1,17 @@
-# Roadmap TODO
+# Roadmap
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
-## 1.1.0 Included - Derivatives And Preview Foundations
+## 1.1.0 Included - Operational Safety And Derivative Foundations
 
-Spec Kit planning artifacts: [specs/004-derivatives-preview-foundations](../specs/004-derivatives-preview-foundations/spec.md)
+Spec Kit artifacts:
 
+- [Operational safety](../specs/003-operational-safety/spec.md)
+- [Derivatives and preview foundations](../specs/004-derivatives-preview-foundations/spec.md)
+
+- [x] Add safe summaries for events, snapshots, resume records, and verification reports.
+- [x] Add configurable retry policy support for transient upload failures.
+- [x] Add opt-in integration harness planning for real TUS, S3-compatible, and NAS-backed paths.
 - [x] Specify browser-safe derivative manifest entries for previews, thumbnails, and tile metadata without mutating the original.
 - [x] Add preview/thumbnail/tile package planning under the adapter model.
 - [x] Define image metadata enrichment boundaries for formats where dimensions are caller-provided or server-derived.

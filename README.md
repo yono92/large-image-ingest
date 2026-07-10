@@ -60,7 +60,7 @@ TypeScript declarations are published with the package.
 
 ## Current Package Map
 
-The 1.0 package stays in a single npm package and uses subpath exports to keep API boundaries clear. This avoids premature workspace churn while leaving a clean migration path to scoped packages later.
+The current package stays in a single npm package and uses subpath exports to keep API boundaries clear. This avoids premature workspace churn while leaving a clean migration path to scoped packages later.
 
 ```txt
 large-image-ingest
@@ -849,7 +849,7 @@ See [docs/server-operational-guide.md](docs/server-operational-guide.md) for ser
 
 ## Architecture Notes
 
-The package is intentionally shipped as one npm package with subpath exports for the 1.0 line. The subpaths preserve architectural boundaries without forcing a workspace split before the API surface proves it needs separate scoped packages.
+The package is intentionally shipped as one npm package with subpath exports for the current package line. The subpaths preserve architectural boundaries without forcing a workspace split before the API surface proves it needs separate scoped packages.
 
 - `large-image-ingest/core` owns validation, fingerprinting, manifest generation, chunk planning, resumable session orchestration, state events, checksum helpers, resume records, and verification contracts.
 - `large-image-ingest/transport-tus` and `large-image-ingest/transport-s3` are adapters over the provider-neutral `UploadTransport` contract. They do not change core session semantics and do not mutate original bytes.
@@ -886,7 +886,7 @@ Server code should use:
 
 ## Release Status
 
-The `1.1.0` release candidate includes:
+The current `1.1.0` release includes:
 
 - original-preserving manifest v1 generation
 - file validation for size, MIME type, extension, required metadata, caller-provided dimensions, and checksum mismatch
@@ -912,12 +912,15 @@ npm run prepublishOnly
 npm pack --dry-run
 ```
 
-## Post-1.0 Roadmap
+## Roadmap
 
 Likely follow-up work after the first npm release is tracked in [docs/roadmap.md](docs/roadmap.md).
 
-Near-term 1.1.0 work focuses on derivative and preview foundations:
+Version 1.1.0 includes operational safety and derivative foundation work:
 
+- safe event, snapshot, resume record, and verification summaries
+- configurable retry policy for transient upload failures
+- opt-in integration harness entry point
 - separate derivative manifest entries for previews, thumbnails, tiles, metadata enrichments, and custom outputs
 - browser-safe preview descriptors
 - server-side metadata and tile descriptor helpers
