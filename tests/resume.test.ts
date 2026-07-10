@@ -5,7 +5,9 @@ import {
   createResumeFileIdentity,
   createResumeRecord,
   listRecoverableResumeRecords,
-  mergeCompletedChunkRange
+  mergeCompletedChunkRange,
+  parseResumeRecord,
+  validateResumeRecord
 } from "../src/index";
 import { createManifest } from "../src/manifest";
 import type { ResumeRecord, ResumeRecordStatus } from "../src/types";
@@ -98,5 +100,72 @@ describe("resume helpers", () => {
     await expect(
       classifyResumeRecordForFile(record, file, { chunkSize: 512 * 1024 })
     ).resolves.toBe("chunking_mismatch");
+  });
+
+  it("creates and validates detached v0.2 resume records", async () => {
+    const record = await createRecord();
+    const result = validateResumeRecord(record);
+
+    expect(record.schemaVersion).toBe("large-image-ingest.resume.v0.2");
+    expect(record).toMatchObject({ receipts: [] });
+    expect(result).toMatchObject({ ok: true });
+
+    const parsed = parseResumeRecord(record);
+    expect(parsed).toEqual(record);
+    expect(parsed).not.toBe(record);
+    expect(parsed.manifest).not.toBe(record.manifest);
+  });
+
+  it("rejects out-of-range progress before iterating it", async () => {
+    const record = await createRecord();
+    const invalid = structuredClone(record);
+    invalid.progress.completedChunkRanges = [
+      { startIndex: 0, endIndexInclusive: Number.MAX_SAFE_INTEGER }
+    ];
+
+    expect(() => parseResumeRecord(invalid)).toThrow(expect.objectContaining({
+      code: "resume.record_invalid"
+    }));
+  });
+
+  it("rejects duplicate and inconsistent durable receipts", async () => {
+    const record = await createRecord();
+    if (record.schemaVersion !== "large-image-ingest.resume.v0.2") {
+      throw new Error("Expected a v0.2 record.");
+    }
+
+    const receipt = {
+      chunkIndex: 0,
+      sizeBytes: 256 * 1024,
+      completedAt: "2026-07-10T00:00:00.000Z",
+      transport: { name: "fake" }
+    };
+    record.receipts = [receipt, structuredClone(receipt)];
+    record.progress = {
+      ...record.progress,
+      uploadedBytes: receipt.sizeBytes * 2,
+      completedChunkRanges: [{ startIndex: 0, endIndexInclusive: 0 }],
+      nextChunkIndex: 1
+    };
+
+    const result = validateResumeRecord(record);
+    expect(result).toMatchObject({
+      ok: false,
+      issues: [expect.objectContaining({ code: "resume.receipt_invalid" })]
+    });
+    expect(() => parseResumeRecord(record)).toThrow(expect.objectContaining({
+      code: "resume.receipt_invalid"
+    }));
+  });
+
+  it("rejects binary payloads embedded in persisted metadata", async () => {
+    const record = await createRecord();
+    record.transport.data = {
+      sourceBytes: new Blob(["inspection-bytes"])
+    };
+
+    expect(() => parseResumeRecord(record)).toThrow(expect.objectContaining({
+      code: "resume.record_invalid"
+    }));
   });
 });

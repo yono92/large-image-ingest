@@ -106,6 +106,30 @@ describe("verification helpers", () => {
       issues: []
     });
   });
+
+  it("rejects malformed manifests without throwing", async () => {
+    const report = await verifyManifest({
+      schemaVersion: "unknown",
+      original: null
+    } as never);
+
+    expect(report.ok).toBe(false);
+    expect(report.issues.map((issue) => issue.code)).toEqual(expect.arrayContaining([
+      "verification.manifest_schema_unsupported",
+      "verification.manifest_invalid"
+    ]));
+  });
+
+  it("enforces required chunk checksum evidence", async () => {
+    const file = new File([new Uint8Array(300 * 1024)], "wafer.tif", { type: "image/tiff" });
+    const manifest = await createManifest(file, { chunking: { chunkSize: 256 * 1024 } });
+    const receipts = createReceipts(file.size, manifest.chunking.chunkSizeBytes, "custom");
+
+    const report = verifyUploadReceipts(manifest, receipts, { requireChunkChecksums: true });
+
+    expect(report.ok).toBe(false);
+    expect(report.issues.filter((issue) => issue.code === "verification.checksum_missing")).toHaveLength(2);
+  });
 });
 
 function createReceipts(totalBytes: number, chunkSize: number, transportName: string): UploadChunkReceipt[] {

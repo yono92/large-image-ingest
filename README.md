@@ -90,7 +90,7 @@ More examples are in [docs/quickstart.md](docs/quickstart.md).
 - Whole-file SHA-256 checksums using bounded `Blob.slice` reads
 - Deterministic chunk planning for large files
 - Upload sessions with progress, retry, pause, cancel, failure, completion, and resume events
-- Persistent resume records and redacted session snapshots
+- Versioned persistent resume records with durable chunk receipts and redacted session snapshots
 - Safe diagnostics helpers for logs, telemetry, support traces, and recovery UI
 - Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs
 - Browser-safe tus and S3 multipart transport helpers
@@ -154,6 +154,10 @@ See [docs/derivatives.md](docs/derivatives.md) for derivative boundaries and exa
 - NAS: server-side staging/finalize gateway through `large-image-ingest/node`
 
 The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a filesystem. Use a server-side gateway for those targets.
+
+Persistent resume records created by 1.2.0 use schema `large-image-ingest.resume.v0.2` and retain acknowledged chunk receipts. This allows S3 multipart uploads to resume after a page or process restart without relying on an in-memory snapshot. Legacy v0.1 records remain readable when the transport can recover safely; progressed S3 v0.1 records are rejected because their ETags cannot be reconstructed safely.
+
+Full resume records can contain upload identifiers, tus upload URLs, customer metadata, object keys, and provider receipt evidence. Store them according to application security policy and use the diagnostic redaction helpers for logs and support output.
 
 Server-owned credential, object key, NAS path, cleanup, and final verification responsibilities are documented in [docs/server-operational-guide.md](docs/server-operational-guide.md).
 

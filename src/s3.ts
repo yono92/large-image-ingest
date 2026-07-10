@@ -118,6 +118,8 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
       expires: false,
       supportsParallelChunks: false,
       supportsChunkChecksum: true,
+      supportsSnapshotResume: true,
+      supportsPersistentResume: true,
       minChunkSizeBytes: minPartSizeBytes,
       minFinalChunkSizeBytes: 0,
       maxChunkSizeBytes: maxPartSizeBytes,
@@ -140,26 +142,42 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
         }
       };
     },
-    async resumeSession({ snapshot }) {
-      if (!snapshot) {
+    async resumeSession({ record, snapshot }) {
+      if (snapshot) {
+        const session = snapshot.transportSession;
+
+        if (!session) {
+          throw createS3Error(
+            "transport.resume_failed",
+            "Cannot resume S3 multipart upload because the snapshot has no transport session.",
+            false
+          );
+        }
+
+        getRemoteState(session);
+        return session;
+      }
+
+      if (
+        record.schemaVersion === "large-image-ingest.resume.v0.1" &&
+        record.progress.completedChunkRanges.length > 0
+      ) {
         throw createS3Error(
-          "transport.resume_failed",
-          "S3 multipart transport requires a session snapshot to resume.",
+          "resume.receipt_missing",
+          "Cannot resume progressed legacy S3 state without durable part receipts.",
           false
         );
       }
 
-      const session = snapshot.transportSession;
-
-      if (!session) {
-        throw createS3Error(
-          "transport.resume_failed",
-          "Cannot resume S3 multipart upload because the snapshot has no transport session.",
-          false
-        );
+      const session: TransportSession = {
+        uploadId: record.transport.uploadId,
+        transportName: S3_TRANSPORT_NAME,
+        createdAt: record.createdAt,
+        remote: getPersistedRemoteState(record.transport.data)
+      };
+      if (record.transport.expiresAt !== undefined) {
+        session.expiresAt = record.transport.expiresAt;
       }
-
-      getRemoteState(session);
       return session;
     },
     async uploadChunk(context) {
@@ -344,6 +362,25 @@ function getRemoteState(session: TransportSession): S3MultipartRemoteState {
     key: session.remote.key,
     metadata: isRecord(session.remote.metadata) ? session.remote.metadata : undefined
   };
+}
+
+function getPersistedRemoteState(value: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!value || typeof value.key !== "string" || value.key.length === 0) {
+    throw createS3Error(
+      "transport.resume_failed",
+      "Persisted S3 multipart state is missing a trusted object key.",
+      false
+    );
+  }
+
+  const remote: Record<string, unknown> = { key: value.key };
+  if (typeof value.bucket === "string") {
+    remote.bucket = value.bucket;
+  }
+  if (isRecord(value.metadata)) {
+    remote.metadata = value.metadata;
+  }
+  return remote;
 }
 
 function partNumberForChunk(chunk: ChunkDescriptor): number {

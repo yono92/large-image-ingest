@@ -12,7 +12,7 @@ import type {
   TusFetch,
   UploadSessionSnapshot
 } from "../src";
-import { MemoryResumeStore } from "./resume-fixtures";
+import { MemoryResumeStore, toLegacyResumeRecord } from "./resume-fixtures";
 
 const endpoint = "https://tus.example/uploads";
 const uploadUrl = "https://tus.example/uploads/upload-1";
@@ -34,6 +34,16 @@ interface FakeTusServerOptions {
 }
 
 describe("createTusTransport", () => {
+  it("advertises snapshot and persistent resume separately", () => {
+    const transport = createTusTransport({ endpoint, fetch: createFakeTusServer().fetch });
+
+    expect(transport.capabilities).toMatchObject({
+      resumable: true,
+      supportsSnapshotResume: true,
+      supportsPersistentResume: true
+    });
+  });
+
   it("uploads chunks through the tus creation, offset, and patch flow", async () => {
     const server = createFakeTusServer({
       extensions: "creation,expiration,termination"
@@ -171,7 +181,7 @@ describe("createTusTransport", () => {
       chunking: { chunkSize }
     });
     const store = new MemoryResumeStore();
-    const record = createResumeRecord({
+    let record = createResumeRecord({
       manifest,
       file: await createResumeFileIdentity(file),
       chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
@@ -184,6 +194,7 @@ describe("createTusTransport", () => {
     record.progress.uploadedBytes = chunkSize;
     record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
     record.progress.nextChunkIndex = 1;
+    record = toLegacyResumeRecord(record);
     await store.put(record);
 
     const server = createFakeTusServer({
@@ -213,7 +224,7 @@ describe("createTusTransport", () => {
       chunking: { chunkSize }
     });
     const store = new MemoryResumeStore();
-    const record = createResumeRecord({
+    let record = createResumeRecord({
       manifest,
       file: await createResumeFileIdentity(file),
       chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
@@ -226,6 +237,7 @@ describe("createTusTransport", () => {
     record.progress.uploadedBytes = chunkSize;
     record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
     record.progress.nextChunkIndex = 1;
+    record = toLegacyResumeRecord(record);
     await store.put(record);
 
     const server = createFakeTusServer({
@@ -256,7 +268,7 @@ describe("createTusTransport", () => {
       chunking: { chunkSize }
     });
     const store = new MemoryResumeStore();
-    const record = createResumeRecord({
+    let record = createResumeRecord({
       manifest,
       file: await createResumeFileIdentity(file),
       chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
@@ -269,6 +281,7 @@ describe("createTusTransport", () => {
     record.progress.uploadedBytes = chunkSize;
     record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
     record.progress.nextChunkIndex = 1;
+    record = toLegacyResumeRecord(record);
     await store.put(record);
 
     const server = createFakeTusServer({
@@ -299,7 +312,7 @@ describe("createTusTransport", () => {
       chunking: { chunkSize }
     });
     const store = new MemoryResumeStore();
-    const record = createResumeRecord({
+    let record = createResumeRecord({
       manifest,
       file: await createResumeFileIdentity(file),
       chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
@@ -312,6 +325,7 @@ describe("createTusTransport", () => {
     record.progress.uploadedBytes = chunkSize;
     record.progress.completedChunkRanges = [{ startIndex: 0, endIndexInclusive: 0 }];
     record.progress.nextChunkIndex = 1;
+    record = toLegacyResumeRecord(record);
     await store.put(record);
 
     const server = createFakeTusServer({

@@ -134,6 +134,14 @@ if (record && (await classifyResumeRecordForFile(record, file)) === "compatible"
 
 Browser resume still requires the application to ask the user for the same original file again. The SDK stores upload metadata, chunk checkpoints, manifest identity, and transport resume handles; it does not store original image bytes.
 
+Records created by 1.2.0 use `large-image-ingest.resume.v0.2`. Each acknowledged chunk stores its validated receipt together with derived progress, so a new S3 multipart session object can restore the original part numbers and ETags after all in-memory state is gone.
+
+The reader also recognizes legacy `large-image-ingest.resume.v0.1` records. tus and zero-progress S3 records can continue after remote validation. A progressed S3 v0.1 record fails with `resume.receipt_missing` because inventing or reconstructing authoritative ETags would be unsafe.
+
+`WebStorageResumeStore` validates stored JSON on read, list, and write. Custom stores are validated again by `resume(recordId)` before range hydration or transport calls. Invalid records fail with typed `resume.record_invalid`, `resume.receipt_invalid`, or `resume.schema_unsupported` conflicts without including raw record contents in default events.
+
+Full resume records are sensitive persistence objects. They may contain customer metadata, remote upload IDs, tus upload URLs, object keys, ETags, locations, or opaque provider evidence. Do not log them directly; use `redactResumeRecord()` or `createSafeEventSummary()`.
+
 ## Verification
 
 Use core verification when you need to check a manifest, file-like object, and upload receipts before promoting an upload in application state.
