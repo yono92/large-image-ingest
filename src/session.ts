@@ -27,6 +27,7 @@ import type {
   IngestFileLike,
   IngestIssueCode,
   IngestManifest,
+  IngestObserverFailure,
   ResumeRecord,
   ResumeRecordStatus,
   ResumeStore,
@@ -650,20 +651,35 @@ export class LargeImageIngestSession {
       return;
     }
 
+    const completed = this.withStatus(record, "completed");
+    this.currentRecord = completed;
+
+    try {
+      await store.put(completed);
+    } catch (error) {
+      this.emit({
+        type: "resume:cleanup-failed",
+        recordId: record.id,
+        code: "resume.store_failed",
+        operation: "mark-complete",
+        error
+      });
+    }
+
     if (this.options.resume?.cleanup === "mark-complete") {
-      await this.putResumeRecord(this.withStatus(record, "completed"));
       return;
     }
 
     try {
       await store.delete(record.id);
     } catch (error) {
-      throw this.emitResumeConflict(
-        "resume.store_failed",
-        "The resume store could not delete the completed record.",
-        record.id,
+      this.emit({
+        type: "resume:cleanup-failed",
+        recordId: record.id,
+        code: "resume.store_failed",
+        operation: "delete",
         error
-      );
+      });
     }
   }
 
@@ -872,7 +888,7 @@ export class LargeImageIngestSession {
     }
 
     this.currentSnapshot = cloneSnapshot(snapshot);
-    this.options.onSnapshot?.(cloneSnapshot(snapshot));
+    this.observeSnapshot(cloneSnapshot(snapshot));
     this.emit({ type: "snapshot", snapshot: redactSnapshot(snapshot) });
     return cloneSnapshot(snapshot);
   }
@@ -1155,7 +1171,31 @@ export class LargeImageIngestSession {
   }
 
   private emit(event: IngestEvent): void {
-    this.options.onEvent?.(event);
+    try {
+      this.options.onEvent?.(event);
+    } catch (error) {
+      this.reportObserverFailure({
+        observer: "event",
+        eventType: event.type,
+        error
+      });
+    }
+  }
+
+  private observeSnapshot(snapshot: UploadSessionSnapshot): void {
+    try {
+      this.options.onSnapshot?.(snapshot);
+    } catch (error) {
+      this.reportObserverFailure({ observer: "snapshot", error });
+    }
+  }
+
+  private reportObserverFailure(failure: IngestObserverFailure): void {
+    try {
+      this.options.onObserverError?.(failure);
+    } catch {
+      // Observer error reporting is isolated from upload control flow too.
+    }
   }
 }
 

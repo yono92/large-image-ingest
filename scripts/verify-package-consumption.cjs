@@ -6,11 +6,15 @@ async function main() {
   const esmTus = await import("large-image-ingest/transport-tus");
   const esmS3 = await import("large-image-ingest/transport-s3");
   const esmNode = await import("large-image-ingest/node");
+  const esmReact = await import("large-image-ingest/react");
+  const esmTiff = await import("large-image-ingest/tiff");
   const cjs = require("large-image-ingest");
   const cjsCore = require("large-image-ingest/core");
   const cjsTus = require("large-image-ingest/transport-tus");
   const cjsS3 = require("large-image-ingest/transport-s3");
   const cjsNode = require("large-image-ingest/node");
+  const cjsReact = require("large-image-ingest/react");
+  const cjsTiff = require("large-image-ingest/tiff");
 
   assert.equal(typeof esm.planChunks, "function");
   assert.equal(typeof esm.createIngestSession, "function");
@@ -29,6 +33,11 @@ async function main() {
   assert.equal(typeof esmNode.calculateNodeFileChecksum, "function");
   assert.equal(typeof esmNode.createMetadataDerivative, "function");
   assert.equal(typeof esmNode.createTilePyramidDerivative, "function");
+  assert.equal(typeof esmReact.createIngestController, "function");
+  assert.equal(typeof esmReact.IngestProvider, "function");
+  assert.equal(typeof esmReact.useIngestSession, "function");
+  assert.equal(typeof esmTiff.probeTiffMetadata, "function");
+  assert.equal(typeof esmTiff.toTiffImageMetadata, "function");
   assert.equal(typeof cjs.planChunks, "function");
   assert.equal(typeof cjs.createIngestSession, "function");
   assert.equal(typeof cjs.parseResumeRecord, "function");
@@ -46,6 +55,11 @@ async function main() {
   assert.equal(typeof cjsNode.calculateNodeFileChecksum, "function");
   assert.equal(typeof cjsNode.createMetadataDerivative, "function");
   assert.equal(typeof cjsNode.createTilePyramidDerivative, "function");
+  assert.equal(typeof cjsReact.createIngestController, "function");
+  assert.equal(typeof cjsReact.IngestProvider, "function");
+  assert.equal(typeof cjsReact.useIngestSession, "function");
+  assert.equal(typeof cjsTiff.probeTiffMetadata, "function");
+  assert.equal(typeof cjsTiff.toTiffImageMetadata, "function");
   assert.deepEqual(esm.planChunks(10, { chunkSize: 256 * 1024 }).chunks, [
     { index: 0, start: 0, end: 10, size: 10 }
   ]);

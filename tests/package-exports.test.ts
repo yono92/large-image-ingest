@@ -9,6 +9,8 @@ describe("package exports", () => {
       devDependencies: Record<string, string>;
       exports: Record<string, unknown>;
       files: string[];
+      peerDependencies?: Record<string, string>;
+      peerDependenciesMeta?: Record<string, { optional?: boolean }>;
     };
 
     expect(packageJson.exports).toMatchObject({
@@ -36,11 +38,24 @@ describe("package exports", () => {
         types: "./dist/esm/node.d.ts",
         import: "./dist/esm/node.js",
         require: "./dist/cjs/node.js"
+      },
+      "./react": {
+        types: "./dist/esm/react.d.ts",
+        import: "./dist/esm/react.js",
+        require: "./dist/cjs/react.js"
+      },
+      "./tiff": {
+        types: "./dist/esm/tiff.d.ts",
+        import: "./dist/esm/tiff.js",
+        require: "./dist/cjs/tiff.js"
       }
     });
     expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "docs", "examples"]));
     expect(packageJson.exports).not.toHaveProperty("./preview");
-    expect(packageJson.exports).not.toHaveProperty("./react");
+    expect(packageJson.peerDependencies?.react).toBe(">=18 <20");
+    expect(packageJson.peerDependenciesMeta?.react?.optional).toBe(true);
+    expect(packageJson.peerDependencies?.geotiff).toBe("^3.0.5");
+    expect(packageJson.peerDependenciesMeta?.geotiff?.optional).toBe(true);
     expect(packageJson.exports).not.toHaveProperty("./metadata");
     expect(packageJson.exports).not.toHaveProperty("./derivatives");
   });
@@ -52,10 +67,12 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.2.0");
+    expect(packageJson.version).toBe("1.3.0");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./node");
+    expect(packageJson.exports).toHaveProperty("./react");
+    expect(packageJson.exports).toHaveProperty("./tiff");
     expect(packageJson.dependencies ?? {}).toEqual({});
   });
 });
