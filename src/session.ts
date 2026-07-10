@@ -14,7 +14,8 @@ import {
   isChunkCompleted,
   isResumeRecordExpired,
   mergeCompletedChunkRange,
-  mergeTransportState
+  mergeTransportState,
+  parseResumeRecord
 } from "./resume.js";
 import type {
   ChunkDescriptor,
@@ -41,7 +42,7 @@ import type {
   UploadSessionStatus
 } from "./types.js";
 
-const SUPPORTED_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.1";
+const CURRENT_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.2";
 
 interface NormalizedUploadChunkResult {
   receipt: UploadChunkReceipt;
@@ -119,6 +120,7 @@ export class LargeImageIngestSession {
 
       chunkPlan = planChunks(this.file.size, this.options.chunking);
       validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
+      this.validateRequestedResumeCapability();
       this.hydrateResumeSnapshot(manifest, chunkPlan);
 
       const session = await this.createOrResumeSnapshotSession(manifest, chunkPlan);
@@ -193,6 +195,13 @@ export class LargeImageIngestSession {
           record.transport
         );
       } catch (error) {
+        if (
+          isIngestError(error) &&
+          (error.code === "resume.receipt_missing" || error.code === "resume.receipt_invalid")
+        ) {
+          throw this.emitResumeConflict(error.code, error.message, record.id, error);
+        }
+
         throw this.emitResumeConflict(
           "resume.transport_mismatch",
           "The transport could not validate the remote resume session.",
@@ -327,7 +336,7 @@ export class LargeImageIngestSession {
     const now = nowIso();
 
     return {
-      schemaVersion: SUPPORTED_RESUME_SCHEMA_VERSION,
+      schemaVersion: CURRENT_RESUME_SCHEMA_VERSION,
       id: `snapshot_${snapshot.manifestId}`,
       manifest,
       file: await createResumeFileIdentity(this.file),
@@ -340,6 +349,7 @@ export class LargeImageIngestSession {
       transport: snapshot.transportSession
         ? this.createTransportState(snapshot.transportSession)
         : { uploadId: `snapshot_${snapshot.manifestId}` },
+      receipts: snapshot.completedChunks.map(cloneReceipt),
       progress: {
         status: "active",
         uploadedBytes: snapshot.uploadedBytes,
@@ -352,14 +362,6 @@ export class LargeImageIngestSession {
   }
 
   private async validateResumeRecord(record: ResumeRecord, store: ResumeStore): Promise<void> {
-    if (record.schemaVersion !== SUPPORTED_RESUME_SCHEMA_VERSION) {
-      throw this.emitResumeConflict(
-        "resume.schema_unsupported",
-        "The resume record schema version is not supported.",
-        record.id
-      );
-    }
-
     if (isResumeRecordExpired(record)) {
       const expired = await this.putResumeRecord(this.withStatus(record, "expired", "resume.expired"));
       this.emit({ type: "resume:expired", recordId: expired.id });
@@ -384,6 +386,27 @@ export class LargeImageIngestSession {
       throw this.emitResumeConflict(
         "resume.chunking_mismatch",
         "The active chunking options do not match the stored resume record.",
+        record.id
+      );
+    }
+
+    if (this.options.transport.capabilities?.supportsPersistentResume === false) {
+      throw this.emitResumeConflict(
+        "resume.transport_unsupported",
+        "The configured upload transport does not support persistent resume.",
+        record.id
+      );
+    }
+
+    const activeTransportName = this.options.transport.capabilities?.name;
+    if (
+      activeTransportName &&
+      record.transport.name &&
+      activeTransportName !== record.transport.name
+    ) {
+      throw this.emitResumeConflict(
+        "resume.transport_mismatch",
+        "The stored resume transport does not match the configured transport.",
         record.id
       );
     }
@@ -468,12 +491,22 @@ export class LargeImageIngestSession {
     };
 
     const transport = result ? mergeTransportState(record.transport, result) : record.transport;
-    const next = await this.putResumeRecord({
-      ...record,
-      transport,
-      progress,
-      updatedAt: nowIso()
-    });
+    const updatedAt = nowIso();
+    const nextRecord: ResumeRecord = record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION
+      ? {
+          ...record,
+          transport,
+          receipts: this.sortedReceipts().map(cloneReceipt),
+          progress,
+          updatedAt
+        }
+      : {
+          ...record,
+          transport,
+          progress,
+          updatedAt
+        };
+    const next = await this.putResumeRecord(nextRecord);
 
     this.emit({
       type: "resume:checkpoint",
@@ -675,6 +708,23 @@ export class LargeImageIngestSession {
     chunkPlan: ChunkPlan,
     session: TransportSession
   ): void {
+    if (record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION) {
+      for (const receipt of record.receipts) {
+        const chunk = chunkPlan.chunks[receipt.chunkIndex];
+        if (!chunk) {
+          throw createIngestError(
+            "resume.receipt_invalid",
+            "Persisted receipt references a chunk outside the active plan.",
+            false,
+            { chunkIndex: receipt.chunkIndex }
+          );
+        }
+
+        this.storeReceipt(chunk, receipt);
+      }
+      return;
+    }
+
     for (const range of record.progress.completedChunkRanges) {
       for (let index = range.startIndex; index <= range.endIndexInclusive; index += 1) {
         const chunk = chunkPlan.chunks[index];
@@ -830,8 +880,13 @@ export class LargeImageIngestSession {
   private async getResumeRecord(store: ResumeStore, recordId: string): Promise<ResumeRecord> {
     let record: ResumeRecord | undefined;
     try {
-      record = await store.get(recordId);
+      const stored = await store.get(recordId);
+      record = stored ? parseResumeRecord(stored) : undefined;
     } catch (error) {
+      if (error instanceof ResumeConflictError) {
+        throw this.emitResumeConflict(error.code, error.message, recordId, error);
+      }
+
       throw this.emitResumeConflict(
         "resume.store_failed",
         "The resume store could not read the record.",
@@ -947,6 +1002,29 @@ export class LargeImageIngestSession {
     }
 
     return state;
+  }
+
+  private validateRequestedResumeCapability(): void {
+    if (
+      this.options.resume &&
+      this.options.transport.capabilities?.supportsPersistentResume === false
+    ) {
+      throw this.emitResumeConflict(
+        "resume.transport_unsupported",
+        "The configured upload transport does not support persistent resume."
+      );
+    }
+
+    if (
+      this.options.resumeFrom &&
+      this.options.transport.capabilities?.supportsSnapshotResume === false
+    ) {
+      throw createIngestError(
+        "transport.resume_failed",
+        "The configured upload transport does not support snapshot resume.",
+        false
+      );
+    }
   }
 
   private sumCompletedBytes(
@@ -1346,6 +1424,11 @@ function redactSnapshot(snapshot: UploadSessionSnapshot): UploadSessionSnapshot 
 
   redacted.completedChunks = redacted.completedChunks.map((receipt) => {
     const transport = { ...receipt.transport };
+
+    if (transport.etag !== undefined) {
+      delete transport.etag;
+      receiptRedactions.push("transport.etag");
+    }
 
     if (transport.location !== undefined) {
       delete transport.location;

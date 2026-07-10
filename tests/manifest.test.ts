@@ -122,4 +122,19 @@ describe("createManifest", () => {
     expect(manifest.validation.ok).toBe(false);
     expect(manifest.validation.issues.map((issue) => issue.code)).toContain("checksum.mismatch");
   });
+
+  it("honors deterministic manifest identity and explicit checksum omission", async () => {
+    const file = new File(["inspection"], "wafer.tif", { type: "image/tiff" });
+    const manifest = await createManifest(file, {
+      checksum: false,
+      manifestIdentity: {
+        id: "manifest-fixed",
+        createdAt: "2026-07-10T00:00:00.000Z"
+      }
+    });
+
+    expect(manifest.id).toBe("manifest-fixed");
+    expect(manifest.createdAt).toBe("2026-07-10T00:00:00.000Z");
+    expect(manifest.original.checksum).toBeUndefined();
+  });
 });

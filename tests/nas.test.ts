@@ -70,6 +70,31 @@ describe("createNasGateway", () => {
     });
   });
 
+  it("rejects duplicate session IDs without replacing staged state", async () => {
+    const { gateway } = await createTempGateway();
+    await gateway.createSession({
+      sessionId: "session-duplicate",
+      targetRelativePath: "inspection/original.bin",
+      totalBytes: 1,
+      expectedChunks: 1,
+      metadata: { lotId: "LOT-ORIGINAL" }
+    });
+
+    await expect(gateway.createSession({
+      sessionId: "session-duplicate",
+      targetRelativePath: "inspection/replacement.bin",
+      totalBytes: 2,
+      expectedChunks: 1,
+      metadata: { lotId: "LOT-REPLACEMENT" }
+    })).rejects.toMatchObject({ code: "nas.invalid_session" });
+
+    await expect(gateway.getSession("session-duplicate")).resolves.toMatchObject({
+      targetRelativePath: "inspection/original.bin",
+      totalBytes: 1,
+      metadata: { lotId: "LOT-ORIGINAL" }
+    });
+  });
+
   it("rejects finalize when a staged chunk is missing", async () => {
     const { gateway } = await createTempGateway();
     const session = await gateway.createSession({
@@ -112,6 +137,31 @@ describe("createNasGateway", () => {
     ).rejects.toMatchObject({
       code: "nas.checksum_mismatch"
     });
+  });
+
+  it("does not overwrite an existing finalized target by default", async () => {
+    const { gateway, targetRoot } = await createTempGateway();
+    const first = await gateway.createSession({
+      sessionId: "session-target-first",
+      targetRelativePath: "inspection/existing.bin",
+      totalBytes: 1,
+      expectedChunks: 1
+    });
+    await gateway.stageChunk({ sessionId: first.sessionId, index: 0, body: new Uint8Array([1]) });
+    await gateway.finalizeSession({ sessionId: first.sessionId });
+
+    const second = await gateway.createSession({
+      sessionId: "session-target-second",
+      targetRelativePath: "inspection/existing.bin",
+      totalBytes: 1,
+      expectedChunks: 1
+    });
+    await gateway.stageChunk({ sessionId: second.sessionId, index: 0, body: new Uint8Array([2]) });
+
+    await expect(gateway.finalizeSession({ sessionId: second.sessionId })).rejects.toMatchObject({
+      code: "nas.target_exists"
+    });
+    expect(await readFile(join(targetRoot, "inspection", "existing.bin"))).toEqual(Buffer.from([1]));
   });
 
   it("uses shared file locks so another gateway cannot finalize the same session", async () => {

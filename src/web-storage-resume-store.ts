@@ -1,4 +1,5 @@
 import type { ResumeRecord, ResumeStore } from "./types.js";
+import { ResumeConflictError, parseResumeRecord } from "./resume.js";
 
 export interface ResumeStorageLike {
   readonly length: number;
@@ -16,11 +17,12 @@ export class WebStorageResumeStore implements ResumeStore {
 
   async get(recordId: string): Promise<ResumeRecord | undefined> {
     const raw = this.storage.getItem(this.toKey(recordId));
-    return raw ? JSON.parse(raw) as ResumeRecord : undefined;
+    return raw ? parseStoredRecord(raw, recordId) : undefined;
   }
 
   async put(record: ResumeRecord): Promise<void> {
-    this.storage.setItem(this.toKey(record.id), JSON.stringify(record));
+    const normalized = parseResumeRecord(record);
+    this.storage.setItem(this.toKey(normalized.id), JSON.stringify(normalized));
   }
 
   async list(): Promise<ResumeRecord[]> {
@@ -35,7 +37,7 @@ export class WebStorageResumeStore implements ResumeStore {
 
       const raw = this.storage.getItem(key);
       if (raw) {
-        records.push(JSON.parse(raw) as ResumeRecord);
+        records.push(parseStoredRecord(raw, key.slice(this.keyPrefix.length)));
       }
     }
 
@@ -49,4 +51,19 @@ export class WebStorageResumeStore implements ResumeStore {
   private toKey(recordId: string): string {
     return `${this.keyPrefix}${recordId}`;
   }
+}
+
+function parseStoredRecord(raw: string, recordId: string): ResumeRecord {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new ResumeConflictError(
+      "resume.record_invalid",
+      "Stored resume record is not valid JSON.",
+      recordId
+    );
+  }
+
+  return parseResumeRecord(value);
 }

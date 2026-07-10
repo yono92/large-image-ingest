@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Added versioned resume record integrity hardening for durable multipart recovery.
+- Added persistent provider receipt storage and safe legacy resume handling.
+- Added bounded runtime validation for untrusted resume records.
+
 ## 1.1.1
 
 - Polished README, changelog, and roadmap wording after the 1.1.0 release.

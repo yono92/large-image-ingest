@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
+import {
+  createResumeChunkingIdentity,
+  createResumeFileIdentity,
+  createResumeRecord
+} from "../src/resume";
 import { createIngestSession } from "../src/session";
 import { createS3MultipartTransport } from "../src/s3";
 import type {
@@ -10,6 +15,7 @@ import type {
   UploadChunkReceipt,
   UploadSessionSnapshot
 } from "../src";
+import { MemoryResumeStore, toLegacyResumeRecord } from "./resume-fixtures";
 
 const MiB = 1024 * 1024;
 const chunkSize = 5 * MiB;
@@ -23,11 +29,25 @@ interface S3Request {
 }
 
 interface FakeS3FetchOptions {
+  failPartNumbers?: readonly number[];
   missingEtag?: boolean;
   onUploadPart?: (partNumber: number) => void;
 }
 
 describe("createS3MultipartTransport", () => {
+  it("advertises snapshot and persistent resume separately", () => {
+    const transport = createS3MultipartTransport({
+      broker: createFakeBroker(),
+      fetch: createFakeS3Fetch().fetch
+    });
+
+    expect(transport.capabilities).toMatchObject({
+      resumable: true,
+      supportsSnapshotResume: true,
+      supportsPersistentResume: true
+    });
+  });
+
   it("uploads multipart chunks with presigned part URLs and completes with ordered ETag receipts", async () => {
     const fetch = createFakeS3Fetch();
     const partContexts: S3MultipartPartContext[] = [];
@@ -194,6 +214,138 @@ describe("createS3MultipartTransport", () => {
     expect(completedParts[0].map((part) => part.partNumber)).toEqual([1, 2, 3]);
   });
 
+  it("resumes a persisted multipart upload after in-memory state is discarded", async () => {
+    const file = createLargeFile(objectSize);
+    const store = new MemoryResumeStore();
+    const firstFetch = createFakeS3Fetch({ failPartNumbers: [2] });
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        retries: 0,
+        resume: { store },
+        transport: createS3MultipartTransport({
+          broker: createFakeBroker(),
+          fetch: firstFetch.fetch
+        })
+      }).start()
+    ).rejects.toMatchObject({ code: "transport.part_rejected" });
+
+    const [record] = await store.list();
+    expect(record).toMatchObject({
+      schemaVersion: "large-image-ingest.resume.v0.2",
+      receipts: [{
+        chunkIndex: 0,
+        transport: { partNumber: 1, etag: "\"etag-1\"" }
+      }]
+    });
+
+    const resumedParts: number[] = [];
+    const completedParts: S3CompletedPart[][] = [];
+    const resumeFetch = createFakeS3Fetch();
+    const resumeBroker = createFakeBroker({
+      onCreate() {
+        throw new Error("createMultipartUpload should not run while resuming.");
+      },
+      onPart(context) {
+        resumedParts.push(context.partNumber);
+      },
+      onComplete(parts) {
+        completedParts.push([...parts]);
+      }
+    });
+
+    if (!record) {
+      throw new Error("Expected a persisted resume record.");
+    }
+
+    await createIngestSession(file, {
+      chunking: { chunkSize },
+      resume: { store },
+      transport: createS3MultipartTransport({ broker: resumeBroker, fetch: resumeFetch.fetch })
+    }).resume(record.id);
+
+    expect(resumedParts).toEqual([2, 3]);
+    expect(completedParts[0]?.map((part) => part.partNumber)).toEqual([1, 2, 3]);
+    expect(completedParts[0]?.map((part) => part.etag)).toEqual([
+      "\"etag-1\"",
+      "\"etag-2\"",
+      "\"etag-3\""
+    ]);
+  });
+
+  it("rejects progressed legacy S3 records without fabricating ETags", async () => {
+    const file = createLargeFile(objectSize);
+    const manifest = await createManifest(file, { chunking: { chunkSize } });
+    const current = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
+      transport: {
+        name: "s3-multipart",
+        uploadId: "legacy-upload",
+        data: { bucket: "inspection-bucket", key: "trusted/legacy.tif" }
+      }
+    });
+    current.progress = {
+      ...current.progress,
+      uploadedBytes: chunkSize,
+      completedChunkRanges: [{ startIndex: 0, endIndexInclusive: 0 }],
+      nextChunkIndex: 1
+    };
+    const legacy = toLegacyResumeRecord(current);
+    const store = new MemoryResumeStore();
+    await store.put(legacy);
+    const fetch = createFakeS3Fetch();
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        resume: { store },
+        transport: createS3MultipartTransport({ broker: createFakeBroker(), fetch: fetch.fetch })
+      }).resume(legacy.id)
+    ).rejects.toMatchObject({ code: "resume.receipt_missing" });
+
+    expect(fetch.requests).toHaveLength(0);
+  });
+
+  it("allows zero-progress legacy S3 records to resume safely", async () => {
+    const file = createLargeFile(chunkSize);
+    const manifest = await createManifest(file, { chunking: { chunkSize } });
+    const current = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize }),
+      transport: {
+        name: "s3-multipart",
+        uploadId: "legacy-empty-upload",
+        data: { bucket: "inspection-bucket", key: "trusted/legacy-empty.tif" }
+      }
+    });
+    const legacy = toLegacyResumeRecord(current);
+    const store = new MemoryResumeStore();
+    await store.put(legacy);
+    const completed: S3CompletedPart[][] = [];
+
+    await createIngestSession(file, {
+      chunking: { chunkSize },
+      resume: { store },
+      transport: createS3MultipartTransport({
+        broker: createFakeBroker({
+          onCreate() {
+            throw new Error("createMultipartUpload should not run while resuming.");
+          },
+          onComplete(parts) {
+            completed.push([...parts]);
+          }
+        }),
+        fetch: createFakeS3Fetch().fetch
+      })
+    }).resume(legacy.id);
+
+    expect(completed[0]?.map((part) => part.partNumber)).toEqual([1]);
+  });
+
   it("aborts multipart upload through the broker when canceled", async () => {
     const file = createLargeFile(objectSize);
     let session: ReturnType<typeof createIngestSession> | undefined;
@@ -304,6 +456,10 @@ function createFakeS3Fetch(options: FakeS3FetchOptions = {}): {
       expect(method).toBe("PUT");
       expect(headers.get("x-presigned-header")).toBe(`part-${partNumber}`);
       options.onUploadPart?.(partNumber);
+
+      if (options.failPartNumbers?.includes(partNumber)) {
+        return new Response(null, { status: 503 });
+      }
 
       return new Response(null, {
         status: 200,

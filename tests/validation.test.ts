@@ -81,4 +81,19 @@ describe("validateFile", () => {
       "image.height_too_large"
     ]);
   });
+
+  it("reports empty, minimum-size, and MIME failures together", () => {
+    const file = new File([], "empty.tif", { type: "application/octet-stream" });
+    const result = validateFile(file, {
+      minBytes: 1,
+      acceptedMimeTypes: ["image/tiff"]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toEqual([
+      "file.empty",
+      "file.too_small",
+      "file.mime_not_allowed"
+    ]);
+  });
 });
