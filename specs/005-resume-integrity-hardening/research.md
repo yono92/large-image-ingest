@@ -60,7 +60,7 @@
 
 ## Decision: Keep Concurrency And Content Proof Separate
 
-**Decision**: Resume claims/CAS and checksum-backed file identity will receive separate 1.2.0 specifications.
+**Decision**: Resume claims/CAS and checksum-backed file identity will receive separate future specifications.
 
 **Rationale**: They affect store transactions and large-file compute policy independently from the receipt persistence defect. Separating them keeps this first implementation reviewable and matches the request to address findings one at a time.
 

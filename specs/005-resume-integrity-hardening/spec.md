@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-10
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Address the architecture review findings one at a time and include the work in the 1.2.0 release, beginning with persistent resume integrity."
 
@@ -110,6 +110,6 @@ As an application developer, I can persist the minimum provider state needed for
 - Version 1.2.0 is an additive minor release; existing import paths and common custom transport implementations remain source-compatible.
 - Legacy records that lack transport-required receipts cannot be made safe by inventing provider fields; typed rejection is preferable to unsafe recovery.
 - Applications remain responsible for selecting an appropriately protected persistence layer for full resume records.
-- Provider-side completion and local cleanup reconciliation will be specified as a separate 1.2.0 hardening feature after resume record integrity is complete.
-- Content-level file identity verification and concurrent resume claims will be specified as separate 1.2.0 hardening features.
+- Provider-side completion and local cleanup reconciliation are deferred to a future hardening feature.
+- Content-level file identity verification and concurrent resume claims are deferred to future hardening features.
 - Parallel chunk upload remains outside this feature, but the record design must not prevent a later parallel-upload specification.

@@ -5,6 +5,8 @@
 - Added versioned resume record integrity hardening for durable multipart recovery.
 - Added persistent provider receipt storage and safe legacy resume handling.
 - Added bounded runtime validation for untrusted resume records.
+- Added granular transport capability reporting for snapshot and persistent resume support.
+- Hardened NAS session creation and target handling against collisions and unsafe replacement.
 
 ## 1.1.1
 

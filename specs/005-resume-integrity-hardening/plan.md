@@ -26,7 +26,7 @@ Complete durable multipart recovery for the 1.2.0 release by evolving the resume
 
 **Constraints**: Preserve existing import paths and common custom transport implementations; never invent S3 ETags or part numbers; never expose full records or sensitive transport fields through default events; keep provider rules out of core.
 
-**Scale/Scope**: Sequential multi-GB uploads with up to provider-advertised chunk limits, including S3 multipart's 10,000-part ceiling. Content-level file identity, concurrent resume claims, remote-completion reconciliation, parallel upload, and worker checksum execution are separate 1.2.0 features.
+**Scale/Scope**: Sequential multi-GB uploads with up to provider-advertised chunk limits, including S3 multipart's 10,000-part ceiling. Content-level file identity, concurrent resume claims, remote-completion reconciliation, parallel upload, and worker checksum execution are deferred to future features.
 
 ## Constitution Check
 

@@ -31,4 +31,4 @@
 
 ## Notes
 
-- The feature has completed planning, implementation, and release-candidate verification.
+- The feature has completed planning, implementation, and release verification.
