@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- Polished README, changelog, and roadmap wording after the 1.1.0 release.
+- Added project guidance requiring documentation/version alignment checks before npm publish.
+
 ## 1.1.0
 
 - Added operational safety documentation and roadmap updates.

@@ -93,6 +93,8 @@ Do not require real cloud credentials in default tests. Any cloud or network int
 - Store formal Spec Kit artifacts under `specs/<feature>/` and `.specify/` once initialized.
 - Document architectural tradeoffs in `specs/<feature>/research.md` when using Spec Kit.
 - Update examples whenever public API behavior changes.
+- Before any npm publish or release tag, verify `README.md`, `CHANGELOG.md`, `docs/`, relevant `specs/<feature>/` artifacts, package version metadata, and public API examples describe the exact version and behavior being released.
+- Before publish, search for stale release wording such as old version numbers, "release candidate", "planning" for already implemented work, and outdated roadmap TODOs. Fix documentation drift before tagging or publishing.
 
 ## Local Skills
 
