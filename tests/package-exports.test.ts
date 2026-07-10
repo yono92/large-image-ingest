@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 describe("package exports", () => {
   it("publishes stable subpaths for core, transports, and Node gateway", async () => {
     const packageJson = JSON.parse(await readFile(join(process.cwd(), "package.json"), "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies: Record<string, string>;
       exports: Record<string, unknown>;
       files: string[];
     };
@@ -37,5 +39,23 @@ describe("package exports", () => {
       }
     });
     expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "docs", "examples"]));
+    expect(packageJson.exports).not.toHaveProperty("./preview");
+    expect(packageJson.exports).not.toHaveProperty("./react");
+    expect(packageJson.exports).not.toHaveProperty("./metadata");
+    expect(packageJson.exports).not.toHaveProperty("./derivatives");
+  });
+
+  it("keeps derivative helpers inside existing package boundaries without runtime processing dependencies", async () => {
+    const packageJson = JSON.parse(await readFile(join(process.cwd(), "package.json"), "utf8")) as {
+      dependencies?: Record<string, string>;
+      exports: Record<string, unknown>;
+      version: string;
+    };
+
+    expect(packageJson.version).toBe("1.1.0");
+    expect(packageJson.exports).toHaveProperty(".");
+    expect(packageJson.exports).toHaveProperty("./core");
+    expect(packageJson.exports).toHaveProperty("./node");
+    expect(packageJson.dependencies ?? {}).toEqual({});
   });
 });

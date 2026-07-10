@@ -1,4 +1,4 @@
-# Specification Quality Checklist: 1.2.0 Derivatives And Preview Foundations
+# Specification Quality Checklist: 1.1.0 Derivatives And Preview Foundations
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-07-10

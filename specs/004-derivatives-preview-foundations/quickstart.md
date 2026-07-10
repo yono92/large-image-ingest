@@ -1,6 +1,6 @@
-# Quickstart: 1.2.0 Derivatives And Preview Foundations
+# Quickstart: 1.1.0 Derivatives And Preview Foundations
 
-Use this guide to validate the 1.2.0 planning scope once tasks and implementation exist.
+Use this guide to validate the 1.1.0 planning scope once tasks and implementation exist.
 
 ## Default Verification
 
@@ -70,7 +70,7 @@ Expected outcome:
 Run focused metadata tests if server-side helpers are added:
 
 ```bash
-npm test -- metadata
+npm test -- node-metadata
 ```
 
 Expected outcome:

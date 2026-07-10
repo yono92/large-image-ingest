@@ -1,4 +1,4 @@
-# Implementation Plan: 1.2.0 Derivatives And Preview Foundations
+# Implementation Plan: 1.1.0 Derivatives And Preview Foundations
 
 **Branch**: `004-derivatives-preview-foundations` | **Date**: 2026-07-10 | **Spec**: [spec.md](./spec.md)
 
@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add derivative and preview foundations for the 1.2.0 minor release: evolve the existing manifest derivative placeholder into a validated derivative reference contract, add helper boundaries for previews, thumbnails, tile metadata, and metadata enrichment, and document how derivatives remain separate from the original source artifact. The release should stay additive for 1.1.x consumers, avoid image processing dependencies in core, and preserve the current single-package subpath export model.
+Add derivative and preview foundations for the 1.1.0 minor release: evolve the existing manifest derivative placeholder into a validated derivative reference contract, add helper boundaries for previews, thumbnails, tile metadata, and metadata enrichment, and document how derivatives remain separate from the original source artifact. The release should stay additive for 1.1.x consumers, avoid image processing dependencies in core, and preserve the current single-package subpath export model.
 
 ## Technical Context
 
@@ -26,7 +26,7 @@ Add derivative and preview foundations for the 1.2.0 minor release: evolve the e
 
 **Constraints**: Preserve original bytes and identity, keep derivative binaries outside manifests, avoid logging credentials or presigned URLs, keep core provider-neutral, keep default tests credential-free, and avoid breaking existing 1.1.x public API shapes.
 
-**Scale/Scope**: Foundation for derivative references and metadata for multi-GB inspection images. Actual image decoding, thumbnail rendering, tile generation, React adapters, parallel upload, and scoped package migration remain out of scope for 1.2.0 unless separately specified.
+**Scale/Scope**: Foundation for derivative references and metadata for multi-GB inspection images. Actual image decoding, thumbnail rendering, tile generation, React adapters, parallel upload, and scoped package migration remain out of scope for 1.1.0 unless separately specified.
 
 ## Constitution Check
 
@@ -80,7 +80,7 @@ docs/
 `-- derivatives.md           # planned derivative usage guide if README becomes too large
 ```
 
-**Structure Decision**: Keep 1.2.0 inside the current package. Add derivative foundations as small core helpers and optional subpath exports only when the implementation needs an environment-specific boundary. Do not introduce a workspace or scoped-package migration for this feature.
+**Structure Decision**: Keep this release inside the current package. Add derivative foundations as small core helpers and optional subpath exports only when the implementation needs an environment-specific boundary. Do not introduce a workspace or scoped-package migration for this feature.
 
 ## Complexity Tracking
 

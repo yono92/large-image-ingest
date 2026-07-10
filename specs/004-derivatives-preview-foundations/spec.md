@@ -1,4 +1,4 @@
-# Feature Specification: 1.2.0 Derivatives And Preview Foundations
+# Feature Specification: 1.1.0 Derivatives And Preview Foundations
 
 **Feature Branch**: `004-derivatives-preview-foundations`
 
@@ -6,7 +6,7 @@
 
 **Status**: Draft
 
-**Input**: User description: "Proceed with the next minor release planning for 1.2.0 Derivatives And Preview Foundations from the roadmap TODOs."
+**Input**: User description: "Proceed with the next minor release planning for 1.1.0 Derivatives And Preview Foundations from the roadmap TODOs."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -69,7 +69,7 @@ As a maintainer, I can plan preview, thumbnail, tile, and metadata helper bounda
 **Acceptance Scenarios**:
 
 1. **Given** a planned derivative helper, **When** its responsibilities are described, **Then** image processing and storage upload remain caller-owned or adapter-owned.
-2. **Given** future user interface bindings, **When** the 1.2.0 scope is reviewed, **Then** those bindings remain out of scope except for compatibility notes.
+2. **Given** future user interface bindings, **When** the 1.1.0 scope is reviewed, **Then** those bindings remain out of scope except for compatibility notes.
 
 ### Edge Cases
 
@@ -124,7 +124,7 @@ As a maintainer, I can plan preview, thumbnail, tile, and metadata helper bounda
 
 ## Assumptions
 
-- Version 1.2.0 is an additive minor release that builds on the 1.1.0 single-package subpath model.
+- Version 1.1.0 is an additive minor release that builds on the 1.0.0 single-package subpath model.
 - Existing manifest derivative placeholders can be evolved without requiring existing consumers to migrate immediately.
 - Actual image decoding, thumbnail generation, tile generation, and image format readers are adapter or caller responsibilities unless a later plan narrows an implementation dependency.
 - React bindings, parallel upload, per-chunk provider checksum policy, and scoped package migration remain deferred to a later minor release.

@@ -1,4 +1,4 @@
-# Tasks: 1.2.0 Derivatives And Preview Foundations
+# Tasks: 1.1.0 Derivatives And Preview Foundations
 
 **Input**: Design documents from `/specs/004-derivatives-preview-foundations/`
 
@@ -16,11 +16,11 @@
 
 ## Phase 1: Setup
 
-**Purpose**: Prepare release metadata and the feature documentation surface for 1.2.0.
+**Purpose**: Prepare release metadata and the feature documentation surface for 1.1.0.
 
-- [ ] T001 [P] Add a 1.2.0 derivatives and preview foundations entry to `CHANGELOG.md`
-- [ ] T002 [P] Update package version metadata for 1.2.0 in `package.json` and `package-lock.json`
-- [ ] T003 [P] Create the derivative usage guide shell in `docs/derivatives.md`
+- [X] T001 [P] Add a 1.1.0 derivatives and preview foundations entry to `CHANGELOG.md`
+- [X] T002 [P] Update package version metadata for 1.1.0 in `package.json` and `package-lock.json`
+- [X] T003 [P] Create the derivative usage guide shell in `docs/derivatives.md`
 
 ---
 
@@ -30,11 +30,11 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 Expand additive derivative public types in `src/types.ts`
-- [ ] T005 Add derivative validation issue/result option types to `src/types.ts`
-- [ ] T006 Add source identity, storage reference, provenance, failure, and tile descriptor types to `src/types.ts`
-- [ ] T007 Export new derivative public types from `src/core.ts`
-- [ ] T008 Export new derivative public types from `src/index.ts`
+- [X] T004 Expand additive derivative public types in `src/types.ts`
+- [X] T005 Add derivative validation issue/result option types to `src/types.ts`
+- [X] T006 Add source identity, storage reference, provenance, failure, and tile descriptor types to `src/types.ts`
+- [X] T007 Export new derivative public types from `src/core.ts`
+- [X] T008 Export new derivative public types from `src/index.ts`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 
@@ -48,18 +48,18 @@
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Add derivative attachment immutability tests in `tests/derivatives.test.ts`
-- [ ] T010 [P] [US1] Add duplicate derivative ID and replacement behavior tests in `tests/derivatives.test.ts`
-- [ ] T011 [P] [US1] Add derivative validation tests for missing source, stale source, unsupported kind, invalid status, unsafe storage, embedded payload, and required derivative cases in `tests/derivatives.test.ts`
+- [X] T009 [P] [US1] Add derivative attachment immutability tests in `tests/derivatives.test.ts`
+- [X] T010 [P] [US1] Add duplicate derivative ID and replacement behavior tests in `tests/derivatives.test.ts`
+- [X] T011 [P] [US1] Add derivative validation tests for missing source, stale source, unsupported kind, invalid status, unsafe storage, embedded payload, and required derivative cases in `tests/derivatives.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement `createDerivativeReference()` and source identity capture in `src/derivatives.ts`
-- [ ] T013 [US1] Implement immutable `attachDerivative()` duplicate and replacement behavior in `src/derivatives.ts`
-- [ ] T014 [US1] Implement `validateDerivativeReference()` in `src/derivatives.ts`
-- [ ] T015 [US1] Implement `validateManifestDerivatives()` and required derivative checks in `src/derivatives.ts`
-- [ ] T016 [US1] Export derivative helper functions from `src/core.ts`
-- [ ] T017 [US1] Export derivative helper functions from `src/index.ts`
+- [X] T012 [US1] Implement `createDerivativeReference()` and source identity capture in `src/derivatives.ts`
+- [X] T013 [US1] Implement immutable `attachDerivative()` duplicate and replacement behavior in `src/derivatives.ts`
+- [X] T014 [US1] Implement `validateDerivativeReference()` in `src/derivatives.ts`
+- [X] T015 [US1] Implement `validateManifestDerivatives()` and required derivative checks in `src/derivatives.ts`
+- [X] T016 [US1] Export derivative helper functions from `src/core.ts`
+- [X] T017 [US1] Export derivative helper functions from `src/index.ts`
 
 **Checkpoint**: User Story 1 is independently testable with `npm test -- derivatives`.
 
@@ -73,15 +73,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Add planned, created, and failed preview derivative tests in `tests/preview.test.ts`
-- [ ] T019 [P] [US2] Add synthetic large-file safety tests proving preview helpers do not read, decode, rewrite, or embed bytes in `tests/preview.test.ts`
+- [X] T018 [P] [US2] Add planned, created, and failed preview derivative tests in `tests/preview.test.ts`
+- [X] T019 [P] [US2] Add synthetic large-file safety tests proving preview helpers do not read, decode, rewrite, or embed bytes in `tests/preview.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Implement `createPreviewDerivative()` for preview and thumbnail descriptors in `src/preview.ts`
-- [ ] T021 [US2] Add preview descriptor sensitive payload guards in `src/preview.ts`
-- [ ] T022 [US2] Export preview helper functions from `src/core.ts`
-- [ ] T023 [US2] Export preview helper functions from `src/index.ts`
+- [X] T020 [US2] Implement `createPreviewDerivative()` for preview and thumbnail descriptors in `src/preview.ts`
+- [X] T021 [US2] Add preview descriptor sensitive payload guards in `src/preview.ts`
+- [X] T022 [US2] Export preview helper functions from `src/core.ts`
+- [X] T023 [US2] Export preview helper functions from `src/index.ts`
 
 **Checkpoint**: User Story 2 is independently testable with `npm test -- preview`.
 
@@ -95,16 +95,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add metadata enrichment derivative tests in `tests/node-metadata.test.ts`
-- [ ] T025 [P] [US3] Add tile pyramid descriptor validation tests in `tests/node-metadata.test.ts`
-- [ ] T026 [P] [US3] Add stale source identity tests for metadata enrichment in `tests/node-metadata.test.ts`
+- [X] T024 [P] [US3] Add metadata enrichment derivative tests in `tests/node-metadata.test.ts`
+- [X] T025 [P] [US3] Add tile pyramid descriptor validation tests in `tests/node-metadata.test.ts`
+- [X] T026 [P] [US3] Add stale source identity tests for metadata enrichment in `tests/node-metadata.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Implement `createMetadataDerivative()` in `src/node-metadata.ts`
-- [ ] T028 [US3] Implement `createTilePyramidDerivative()` and tile level validation in `src/node-metadata.ts`
-- [ ] T029 [US3] Reuse derivative source identity and validation behavior from `src/derivatives.ts` in `src/node-metadata.ts`
-- [ ] T030 [US3] Export metadata and tile helper functions from `src/node.ts`
+- [X] T027 [US3] Implement `createMetadataDerivative()` in `src/node-metadata.ts`
+- [X] T028 [US3] Implement `createTilePyramidDerivative()` and tile level validation in `src/node-metadata.ts`
+- [X] T029 [US3] Reuse derivative source identity and validation behavior from `src/derivatives.ts` in `src/node-metadata.ts`
+- [X] T030 [US3] Export metadata and tile helper functions from `src/node.ts`
 
 **Checkpoint**: User Story 3 is independently testable with `npm test -- metadata` or `npm test -- node-metadata`.
 
@@ -112,21 +112,21 @@
 
 ## Phase 6: User Story 4 - Preserve Adapter Boundaries (Priority: P4)
 
-**Goal**: Maintainers can verify that 1.2.0 keeps image processing, storage upload, UI bindings, and provider behavior outside the core ingest contract.
+**Goal**: Maintainers can verify that 1.1.0 keeps image processing, storage upload, UI bindings, and provider behavior outside the core ingest contract.
 
 **Independent Test**: Review contracts, docs, package exports, and dependency metadata to confirm core owns references, validation, manifest attachment, and state representation only.
 
 ### Tests for User Story 4
 
-- [ ] T031 [P] [US4] Add package export boundary assertions for derivative, preview, and Node metadata helpers in `tests/package-exports.test.ts`
-- [ ] T032 [P] [US4] Add dependency boundary assertions that no runtime decoder, cloud SDK, or UI framework is introduced in `tests/package-exports.test.ts`
+- [X] T031 [P] [US4] Add package export boundary assertions for derivative, preview, and Node metadata helpers in `tests/package-exports.test.ts`
+- [X] T032 [P] [US4] Add dependency boundary assertions that no runtime decoder, cloud SDK, or UI framework is introduced in `tests/package-exports.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T033 [US4] Document derivative, preview, metadata, tile, storage, and UI adapter boundaries in `docs/derivatives.md`
-- [ ] T034 [US4] Add original-plus-derivatives manifest example and planned/created/failed status guidance to `README.md`
-- [ ] T035 [US4] Link `docs/derivatives.md` from `README.md`
-- [ ] T036 [US4] Update `docs/roadmap.md` to mark completed 1.2.0 implementation TODOs and keep 1.3.0 deferred items separate
+- [X] T033 [US4] Document derivative, preview, metadata, tile, storage, and UI adapter boundaries in `docs/derivatives.md`
+- [X] T034 [US4] Add original-plus-derivatives manifest example and planned/created/failed status guidance to `README.md`
+- [X] T035 [US4] Link `docs/derivatives.md` from `README.md`
+- [X] T036 [US4] Update `docs/roadmap.md` to mark completed 1.1.0 implementation TODOs and keep 1.3.0 deferred items separate
 
 **Checkpoint**: User Story 4 is independently reviewable through docs and package boundary tests.
 
@@ -136,14 +136,14 @@
 
 **Purpose**: Release validation, docs alignment, and Spec Kit cleanup.
 
-- [ ] T037 [P] Update `specs/004-derivatives-preview-foundations/contracts/derivatives-preview-contracts.md` if final exported names differ from the draft contract
-- [ ] T038 [P] Update `specs/004-derivatives-preview-foundations/quickstart.md` if final focused test commands differ
-- [ ] T039 Run `npm run typecheck`
-- [ ] T040 Run `npm run typecheck:examples`
-- [ ] T041 Run `npm test`
-- [ ] T042 Run `npm run test:integration`
-- [ ] T043 Run `npm run build`
-- [ ] T044 Run `npm pack --dry-run`
+- [X] T037 [P] Update `specs/004-derivatives-preview-foundations/contracts/derivatives-preview-contracts.md` if final exported names differ from the draft contract
+- [X] T038 [P] Update `specs/004-derivatives-preview-foundations/quickstart.md` if final focused test commands differ
+- [X] T039 Run `npm run typecheck`
+- [X] T040 Run `npm run typecheck:examples`
+- [X] T041 Run `npm test`
+- [X] T042 Run `npm run test:integration`
+- [X] T043 Run `npm run build`
+- [X] T044 Run `npm pack --dry-run`
 
 ---
 
