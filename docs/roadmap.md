@@ -19,6 +19,22 @@ Spec Kit artifacts:
 - [x] Add tests proving derivatives are separately referenced and never replace original manifest identity.
 - [x] Update README examples for derivative references once the public contract is specified.
 
+## 1.2.0 In Progress - Ingest Integrity Hardening
+
+Spec Kit artifacts:
+
+- [Resume integrity hardening](../specs/005-resume-integrity-hardening/spec.md)
+
+- [x] Persist authoritative chunk receipts in versioned resume records.
+- [x] Resume S3 multipart uploads after restart without caller-managed snapshots.
+- [x] Validate untrusted resume records before chunk skipping or transport calls.
+- [ ] Harden source-file content identity for persistent resume.
+- [ ] Reconcile remote completion with local cleanup and observer failures.
+- [ ] Make NAS staging metadata updates atomic and concurrency-safe.
+- [ ] Add cancelable worker-based browser checksum execution.
+- [ ] Replace provider preflight checks with complete opt-in integration scenarios.
+- [ ] Align manifest producer version and transport capability reporting.
+
 ## 1.3.0 TODO - UI Adapters And Advanced Upload Modes
 
 - [ ] Specify React hooks and lightweight UI bindings as optional adapters over the core session contract.

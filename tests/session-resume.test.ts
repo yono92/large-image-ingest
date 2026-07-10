@@ -46,6 +46,34 @@ function createOptions(
 }
 
 describe("persistent session resume", () => {
+  it("rejects explicitly unsupported persistent resume before remote session creation", async () => {
+    const file = createLargeTestFile();
+    const store = new MemoryResumeStore();
+    let createCalls = 0;
+    const transport: UploadTransport = {
+      capabilities: {
+        name: "non-persistent",
+        resumable: false,
+        abortable: false,
+        expires: false,
+        supportsParallelChunks: false,
+        supportsChunkChecksum: false,
+        supportsPersistentResume: false
+      },
+      async createSession(): Promise<UploadSessionResult> {
+        createCalls += 1;
+        return { uploadId: "unused" };
+      },
+      async uploadChunk(): Promise<void> {},
+      async completeSession(): Promise<void> {}
+    };
+
+    await expect(
+      createIngestSession(file, createOptions(transport, store)).start()
+    ).rejects.toMatchObject({ code: "resume.transport_unsupported" });
+    expect(createCalls).toBe(0);
+  });
+
   it("resumes an interrupted upload from the first incomplete chunk", async () => {
     const file = createLargeTestFile();
     const store = new MemoryResumeStore();
@@ -61,6 +89,13 @@ describe("persistent session resume", () => {
       { startIndex: 0, endIndexInclusive: 1 }
     ]);
     expect(interrupted.progress.nextChunkIndex).toBe(2);
+    expect(interrupted).toMatchObject({
+      schemaVersion: "large-image-ingest.resume.v0.2",
+      receipts: [
+        expect.objectContaining({ chunkIndex: 0 }),
+        expect.objectContaining({ chunkIndex: 1 })
+      ]
+    });
 
     const resumeTransport = new FakeTransport();
     await createIngestSession(file, createOptions(resumeTransport, store)).resume(interrupted.id);
@@ -295,5 +330,31 @@ describe("persistent session resume", () => {
         code: "resume.record_not_found"
       })
     );
+  });
+
+  it("rejects invalid custom-store state before transport resume", async () => {
+    const file = createLargeTestFile();
+    const store = new MemoryResumeStore();
+    const transport = new FakeTransport();
+    const manifest = await createIngestSession(
+      file,
+      createOptions(new FakeTransport(), store, [], {
+        resume: { store, cleanup: "mark-complete" }
+      })
+    ).start();
+    const completed = await firstRecord(store);
+    completed.progress.status = "failed";
+    completed.progress.completedChunkRanges = [
+      { startIndex: 0, endIndexInclusive: Number.MAX_SAFE_INTEGER }
+    ];
+    store.records.set(completed.id, completed);
+
+    await expect(
+      createIngestSession(file, createOptions(transport, store)).resume(completed.id)
+    ).rejects.toMatchObject({ code: "resume.record_invalid" });
+
+    expect(manifest.id).toBe(completed.manifest.id);
+    expect(transport.resumed).toHaveLength(0);
+    expect(transport.uploadedChunks).toHaveLength(0);
   });
 });

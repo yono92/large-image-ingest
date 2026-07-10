@@ -49,7 +49,9 @@ export function createTusTransport(options: TusTransportOptions): UploadTranspor
       abortable: Boolean(options.terminateOnAbort),
       expires: true,
       supportsParallelChunks: false,
-      supportsChunkChecksum: false
+      supportsChunkChecksum: false,
+      supportsSnapshotResume: true,
+      supportsPersistentResume: true
     },
     async createSession(context) {
       await detectServerCapabilities(fetchImpl, endpoint, options);

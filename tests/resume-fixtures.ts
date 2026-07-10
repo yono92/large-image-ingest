@@ -1,5 +1,6 @@
 import type {
   ResumeRecord,
+  ResumeRecordV0_1,
   ResumeStore,
   ResumeTransportState,
   UploadChunkContext,
@@ -28,6 +29,20 @@ export class MemoryResumeStore implements ResumeStore {
   async delete(recordId: string): Promise<void> {
     this.records.delete(recordId);
   }
+}
+
+export function toLegacyResumeRecord(record: ResumeRecord): ResumeRecordV0_1 {
+  const cloned = structuredClone(record);
+
+  if (cloned.schemaVersion === "large-image-ingest.resume.v0.1") {
+    return cloned;
+  }
+
+  const { receipts: _receipts, ...base } = cloned;
+  return {
+    ...base,
+    schemaVersion: "large-image-ingest.resume.v0.1"
+  };
 }
 
 export interface FakeTransportOptions {

@@ -124,12 +124,14 @@ describe("diagnostics helpers", () => {
     expect(result.snapshot.transportSession?.resumeToken).toBeUndefined();
     expect(result.snapshot.transportSession?.secretsRef).toBeUndefined();
     expect(result.snapshot.transportSession?.remote).toBeUndefined();
+    expect(result.snapshot.completedChunks[0]?.transport.etag).toBeUndefined();
     expect(result.snapshot.completedChunks[0]?.transport.location).toBeUndefined();
     expect(result.snapshot.completedChunks[0]?.transport.opaque).toBeUndefined();
     expect(result.redactions?.fields).toEqual([
       "snapshot.transportSession.resumeToken",
       "snapshot.transportSession.secretsRef",
       "snapshot.transportSession.remote",
+      "snapshot.completedChunks.transport.etag",
       "snapshot.completedChunks.transport.location",
       "snapshot.completedChunks.transport.opaque"
     ]);
@@ -145,7 +147,7 @@ describe("diagnostics helpers", () => {
       }
     });
     const record: ResumeRecord = {
-      schemaVersion: "large-image-ingest.resume.v0.1",
+      schemaVersion: "large-image-ingest.resume.v0.2",
       id: "record-1",
       manifest,
       file: {
@@ -169,6 +171,17 @@ describe("diagnostics helpers", () => {
           opaque: "secret"
         }
       },
+      receipts: [{
+        chunkIndex: 0,
+        sizeBytes: 64,
+        completedAt: "2026-01-01T00:00:30.000Z",
+        transport: {
+          name: "tus",
+          etag: "secret-etag",
+          location: "https://secret.example/part/1",
+          opaque: { providerSecret: "secret" }
+        }
+      }],
       progress: {
         status: "active",
         uploadedBytes: 64,
@@ -198,10 +211,12 @@ describe("diagnostics helpers", () => {
       "resume.manifest",
       "resume.transport.uploadId",
       "resume.transport.resumeToken",
-      "resume.transport.data"
+      "resume.transport.data",
+      "resume.receipts"
     ]);
     expect(JSON.stringify(redacted)).not.toContain("LOT-SECRET");
     expect(JSON.stringify(redacted)).not.toContain("https://secret.example");
+    expect(JSON.stringify(redacted)).not.toContain("secret-etag");
   });
 
   it("summarizes verification results without copying issue details", () => {
@@ -275,6 +290,7 @@ function createSnapshot(): UploadSessionSnapshot {
         completedAt: "2026-01-01T00:00:01.000Z",
         transport: {
           name: "tus",
+          etag: "secret-etag",
           location: "https://secret.example/part/1",
           opaque: {
             authorization: "secret"
