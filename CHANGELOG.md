@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- Preserve successful remote completion when local resume cleanup fails.
+- Isolate caller event and snapshot observer failures from upload control flow.
+- Add typed non-fatal cleanup warnings and observer failure reporting.
+- Add an optional React headless controller, provider, progress hook, and upload control hook.
+- Add optional bounded TIFF and BigTIFF structural metadata probing without raster decoding.
+
 ## 1.2.0
 
 - Added versioned resume record integrity hardening for durable multipart recovery.

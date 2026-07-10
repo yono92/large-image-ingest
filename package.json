@@ -1,7 +1,7 @@
 {
   "name": "large-image-ingest",
-  "version": "1.2.0",
-  "description": "TypeScript-first ingestion toolkit for very large inspection images.",
+  "version": "1.3.0",
+  "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
   "packageManager": "npm@10.8.2",
@@ -57,6 +57,18 @@
       "import": "./dist/esm/node.js",
       "require": "./dist/cjs/node.js",
       "default": "./dist/esm/node.js"
+    },
+    "./react": {
+      "types": "./dist/esm/react.d.ts",
+      "import": "./dist/esm/react.js",
+      "require": "./dist/cjs/react.js",
+      "default": "./dist/esm/react.js"
+    },
+    "./tiff": {
+      "types": "./dist/esm/tiff.d.ts",
+      "import": "./dist/esm/tiff.js",
+      "require": "./dist/cjs/tiff.js",
+      "default": "./dist/esm/tiff.js"
     }
   },
   "types": "./dist/esm/index.d.ts",
@@ -82,8 +94,27 @@
   "publishConfig": {
     "access": "public"
   },
+  "peerDependencies": {
+    "geotiff": "^3.0.5",
+    "react": ">=18 <20"
+  },
+  "peerDependenciesMeta": {
+    "geotiff": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-test-renderer": "^19.1.0",
+    "geotiff": "^3.0.5",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-test-renderer": "^19.2.7",
     "typescript": "^5.0.0",
     "vitest": "^4.1.9"
   }

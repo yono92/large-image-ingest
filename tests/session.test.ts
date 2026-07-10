@@ -3,6 +3,7 @@ import { createManifest } from "../src/manifest";
 import { createIngestSession } from "../src/session";
 import type {
   IngestEvent,
+  IngestObserverFailure,
   TransportCapabilities,
   TransportSession,
   UploadChunkReceipt,
@@ -587,5 +588,64 @@ describe("LargeImageIngestSession", () => {
     expect(session.getSnapshot()?.completedChunks.map((receipt) => receipt.chunkIndex)).toEqual([0]);
     expect(events.some((event) => event.type === "canceled")).toBe(true);
     expect(events.some((event) => event.type === "failed")).toBe(false);
+  });
+
+  it("isolates event, snapshot, and observer-error callback failures", async () => {
+    const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
+      type: "image/tiff"
+    });
+    const uploadedChunks: number[] = [];
+    const observerFailures: IngestObserverFailure[] = [];
+    let completionCalls = 0;
+    const transport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession(): Promise<TransportSession> {
+        return {
+          uploadId: "upload-observer-failures",
+          transportName: fakeCapabilities.name,
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk({ chunk, body }): Promise<UploadChunkReceipt> {
+        uploadedChunks.push(chunk.index);
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: { name: fakeCapabilities.name }
+        };
+      },
+      async completeSession(): Promise<void> {
+        completionCalls += 1;
+      }
+    };
+    const session = createIngestSession(file, {
+      chunking: { chunkSize },
+      onEvent() {
+        throw new Error("Event observer failed.");
+      },
+      onSnapshot(snapshot) {
+        snapshot.status = "failed";
+        throw new Error("Snapshot observer failed.");
+      },
+      onObserverError(failure) {
+        observerFailures.push(failure);
+        throw new Error("Observer error reporter failed.");
+      },
+      transport
+    });
+
+    await expect(session.start()).resolves.toMatchObject({
+      schemaVersion: "large-image-ingest.manifest.v1"
+    });
+
+    expect(uploadedChunks).toEqual([0, 1, 2]);
+    expect(completionCalls).toBe(1);
+    expect(session.getSnapshot()?.status).toBe("completed");
+    expect(observerFailures.some((failure) => (
+      failure.observer === "event" && failure.eventType === "completed"
+    ))).toBe(true);
+    expect(observerFailures.some((failure) => failure.observer === "snapshot")).toBe(true);
+    expect(observerFailures.every((failure) => !("event" in failure) && !("snapshot" in failure))).toBe(true);
   });
 });

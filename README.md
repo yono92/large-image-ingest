@@ -1,10 +1,10 @@
 # large-image-ingest
 
-TypeScript-first SDK for safely ingesting very large inspection images.
+TypeScript SDK for verifiable, resumable ingestion of very large inspection images while preserving the original file as the source of truth.
 
 The package is built for semiconductor inspection, microscopy, industrial vision, wafer inspection, medical imaging, satellite imaging, and other workflows where the uploaded original is a source-of-truth artifact that must remain verifiable.
 
-It is not a generic drag-and-drop uploader. The core focuses on original preservation, validation, checksums, manifest generation, chunk planning, resumable session state, safe diagnostics, derivative references, and adapter-based upload orchestration.
+The package orchestrates validation, checksums, manifest generation, chunk planning, resumable session state, safe diagnostics, derivative references, and adapter-based storage transfer. It does not decode, resize, compress, tile, or otherwise transform images.
 
 ## Install
 
@@ -107,13 +107,106 @@ large-image-ingest/core
 large-image-ingest/transport-tus
 large-image-ingest/transport-s3
 large-image-ingest/node
+large-image-ingest/react
+large-image-ingest/tiff
 ```
 
 - Use `large-image-ingest/core` for framework-agnostic browser-safe core APIs.
 - Use `large-image-ingest/transport-tus` for the raw `fetch` tus transport.
 - Use `large-image-ingest/transport-s3` for broker-backed S3 multipart uploads.
 - Use `large-image-ingest/node` for server-only NAS gateway, metadata derivative, tile descriptor, and stored-file verification APIs.
+- Use `large-image-ingest/react` for optional headless React state and upload controls.
+- Use `large-image-ingest/tiff` for optional bounded TIFF and BigTIFF structural metadata probing.
 - Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.
+
+## React Headless Adapter
+
+Install React alongside the SDK only when the optional React subpath is used.
+
+```bash
+npm install large-image-ingest react
+```
+
+The adapter provides state and controls without rendering a dropzone, dashboard, buttons, or CSS.
+
+```tsx
+import { useState } from "react";
+import type { CreateIngestSessionOptions, IngestFileLike } from "large-image-ingest";
+import {
+  IngestProvider,
+  createIngestController,
+  useIngestSession,
+  useUploadControls,
+  useUploadProgress
+} from "large-image-ingest/react";
+
+function UploadStatus() {
+  const { status, error } = useIngestSession();
+  const { progress } = useUploadProgress();
+  const { start, pause, cancel, canStart, canPause, canCancel } = useUploadControls();
+
+  return (
+    <section>
+      <progress value={progress} max={1} />
+      <output>{status}</output>
+      <button onClick={() => void start()} disabled={!canStart}>Upload</button>
+      <button onClick={() => pause()} disabled={!canPause}>Pause</button>
+      <button onClick={() => void cancel()} disabled={!canCancel}>Cancel</button>
+      {error ? <output>Upload failed</output> : null}
+    </section>
+  );
+}
+
+function UploadPanel({
+  file,
+  options
+}: {
+  file: IngestFileLike;
+  options: CreateIngestSessionOptions;
+}) {
+  const [controller] = useState(() => createIngestController(file, options));
+  return (
+    <IngestProvider controller={controller}>
+      <UploadStatus />
+    </IngestProvider>
+  );
+}
+```
+
+Keep the controller mounted above route changes when uploads must continue while individual UI components unmount.
+
+## TIFF And BigTIFF Metadata
+
+Install the optional parser peer only when TIFF metadata probing is needed.
+
+```bash
+npm install large-image-ingest geotiff
+```
+
+The TIFF subpath validates binary headers, bounds image file directory traversal, and reports structural metadata without decoding raster pixels.
+
+```ts
+import {
+  probeTiffMetadata,
+  toTiffImageMetadata
+} from "large-image-ingest/tiff";
+
+const probe = await probeTiffMetadata(file, {
+  maxDirectories: 64,
+  signal: abortController.signal
+});
+
+const primary = probe.directories[0];
+console.log(probe.container, probe.directoryCount, primary?.layout);
+
+const image = toTiffImageMetadata(probe);
+const session = createIngestSession(file, {
+  ...options,
+  image
+});
+```
+
+The probe reports width, height, bit depth, samples, compression, photometric interpretation, orientation, planar configuration, and tile or strip layout when available. GeoTIFF.js documents limited BigTIFF support; unsupported 64-bit offsets or parser-specific BigTIFF structures fail with typed errors. This subpath does not render TIFF, read raster pixels, generate thumbnails, resize images, or create tile pyramids.
 
 ## Derivatives
 
@@ -158,6 +251,24 @@ The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a fi
 Persistent resume records created by 1.2.0 use schema `large-image-ingest.resume.v0.2` and retain acknowledged chunk receipts. This allows S3 multipart uploads to resume after a page or process restart without relying on an in-memory snapshot. Legacy v0.1 records remain readable when the transport can recover safely; progressed S3 v0.1 records are rejected because their ETags cannot be reconstructed safely.
 
 Full resume records can contain upload identifiers, tus upload URLs, customer metadata, object keys, and provider receipt evidence. Store them according to application security policy and use the diagnostic redaction helpers for logs and support output.
+
+Starting in 1.3.0, successful transport completion remains authoritative even when local resume-record cleanup fails. The session still resolves with a completed snapshot and emits a non-fatal `resume:cleanup-failed` event so applications can inspect or remove stale local state without retrying remote completion.
+
+Event and snapshot observers are isolated from upload control flow. Use `onObserverError` when UI or telemetry callback failures need separate reporting; exceptions from observers or from the reporter itself never change session state.
+
+```ts
+const session = createIngestSession(file, {
+  ...options,
+  onEvent(event) {
+    if (event.type === "resume:cleanup-failed") {
+      reportLocalCleanupWarning(createSafeEventSummary(event));
+    }
+  },
+  onObserverError({ observer, eventType, error }) {
+    reportUiObserverFailure({ observer, eventType, error });
+  }
+});
+```
 
 Server-owned credential, object key, NAS path, cleanup, and final verification responsibilities are documented in [docs/server-operational-guide.md](docs/server-operational-guide.md).
 

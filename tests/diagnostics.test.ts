@@ -116,6 +116,27 @@ describe("diagnostics helpers", () => {
     expect(JSON.stringify([retry, conflict, failed])).not.toContain("https://secret.example");
   });
 
+  it("summarizes completion cleanup failures without sensitive store details", () => {
+    const summary = createSafeEventSummary({
+      type: "resume:cleanup-failed",
+      recordId: "record-1",
+      code: "resume.store_failed",
+      operation: "delete",
+      error: new Error("Could not delete https://secret.example/resume/token")
+    });
+
+    expect(summary).toMatchObject({
+      type: "resume:cleanup-failed",
+      recordId: "record-1",
+      cleanupOperation: "delete",
+      error: {
+        code: "resume.store_failed",
+        message: "Error details redacted."
+      }
+    });
+    expect(JSON.stringify(summary)).not.toContain("secret.example");
+  });
+
   it("redacts snapshots without mutating the caller-owned full snapshot", () => {
     const snapshot = createSnapshot();
 

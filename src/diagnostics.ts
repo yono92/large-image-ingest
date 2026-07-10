@@ -3,6 +3,7 @@ import type {
   IngestIssueCode,
   IngestIssueSeverity,
   ResumeChunkingIdentity,
+  ResumeCleanupOperation,
   ResumeFileIdentity,
   ResumeProgress,
   ResumeRecord,
@@ -38,6 +39,7 @@ export interface SafeEventSummary {
   progress?: SafeProgressSummary | undefined;
   chunkIndex?: number | undefined;
   attempt?: number | undefined;
+  cleanupOperation?: ResumeCleanupOperation | undefined;
   error?: SafeErrorSummary | undefined;
   redactions?: RedactionSummary | undefined;
 }
@@ -167,6 +169,14 @@ export function createSafeEventSummary(event: IngestEvent): SafeEventSummary {
       return {
         type: event.type,
         recordId: event.recordId,
+        error: toSafeErrorSummary(event.error, event.code)
+      };
+
+    case "resume:cleanup-failed":
+      return {
+        type: event.type,
+        recordId: event.recordId,
+        cleanupOperation: event.operation,
         error: toSafeErrorSummary(event.error, event.code)
       };
 
