@@ -6,12 +6,15 @@ Default test commands must stay local and credential-free:
 npm run typecheck
 npm run typecheck:examples
 npm test
-npm run test:integration
 npm run build
+npm run test:reference
+npm run test:integration
 npm run smoke:exports
 ```
 
-The default test suite should use in-memory fakes, mocked `fetch`, and temporary directories only. It must not require a real tus server, cloud credentials, object storage buckets, or mounted NAS paths. `npm run test:integration` also stays safe by default: without target-specific environment variables it prints skip messages and performs no real network or filesystem writes.
+The default unit suite uses in-memory fakes, mocked `fetch`, and temporary directories. The credential-free `npm run test:reference` gate additionally uses a real loopback HTTP server, durable JSON resume state, and temporary filesystem storage to prove an interrupted upload can resume and verify its stored checksum. It must not require a real tus server, cloud credentials, object storage buckets, or mounted NAS paths. `npm run test:integration` stays safe by default: without target-specific environment variables it prints skip messages and performs no target preflight.
+
+The reference methodology and recorded result are documented in [benchmarks.md](benchmarks.md). Executable harness code lives under `benchmarks/` in the repository and is intentionally excluded from the npm tarball.
 
 ## Opt-In Targets
 

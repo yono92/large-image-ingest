@@ -520,6 +520,7 @@ export type ResumeRecordStatus =
   | "expired";
 
 export type ResumeCleanupPolicy = "delete-on-complete" | "mark-complete";
+export type ResumeCleanupOperation = "mark-complete" | "delete";
 
 export interface CompletedChunkRange {
   startIndex: number;
@@ -643,6 +644,7 @@ export type IngestEvent =
   | { type: "resume:started"; recordId: string; manifestId: string }
   | { type: "resume:checkpoint"; recordId: string; completedChunkRanges: CompletedChunkRange[] }
   | { type: "resume:conflict"; recordId?: string; code: ResumeConflictCode; error: unknown }
+  | { type: "resume:cleanup-failed"; recordId: string; code: "resume.store_failed"; operation: ResumeCleanupOperation; error: unknown }
   | { type: "resume:expired"; recordId: string }
   | { type: "upload:paused"; recordId?: string }
   | { type: "upload:canceled"; recordId?: string }
@@ -650,6 +652,12 @@ export type IngestEvent =
   | { type: "canceled"; snapshot: UploadSessionSnapshot }
   | { type: "completed"; manifest: IngestManifest; uploadId: string }
   | { type: "failed"; manifestId?: string; error: unknown };
+
+export interface IngestObserverFailure {
+  observer: "event" | "snapshot";
+  eventType?: IngestEvent["type"];
+  error: unknown;
+}
 
 export interface UploadSessionContext {
   manifest: IngestManifest;
@@ -716,6 +724,7 @@ export interface CreateIngestSessionOptions {
   manifestIdentity?: ManifestIdentityOverride;
   metadata?: Record<string, unknown>;
   onEvent?: (event: IngestEvent) => void;
+  onObserverError?: (failure: IngestObserverFailure) => void;
   onSnapshot?: (snapshot: UploadSessionSnapshot) => void;
   retries?: number;
   retryPolicy?: RetryPolicy | undefined;
