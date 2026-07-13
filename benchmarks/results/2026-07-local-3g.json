@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "large-image-ingest.benchmark.v1",
+  "createdAt": "2026-07-13T08:22:55.980Z",
+  "packageVersion": "1.3.0",
+  "sourceCommit": "9918815f3719+working-tree",
+  "environment": {
+    "platform": "win32",
+    "release": "10.0.26200",
+    "architecture": "x64",
+    "nodeVersion": "v24.17.0",
+    "cpuModel": "Intel(R) Core(TM) Ultra 5 115U",
+    "logicalCpuCount": 10,
+    "totalMemoryBytes": 16705871872
+  },
+  "configuration": {
+    "sizeBytes": 3221225472,
+    "sizeMiB": 3072,
+    "chunkSizeBytes": 67108864,
+    "chunkSizeMiB": 64,
+    "checksumChunkSizeBytes": 4194304,
+    "failAfterChunks": 2
+  },
+  "timingsMs": {
+    "fixtureGeneration": 23611.36,
+    "checksumAndManifest": 55250.04,
+    "interruptedUpload": 1629.18,
+    "resumedUpload": 57550.03,
+    "transferTotal": 59179.2,
+    "total": 141540.39
+  },
+  "throughputMiBPerSecond": {
+    "checksumAndManifest": 55.6,
+    "transfer": 51.91,
+    "endToEnd": 21.7
+  },
+  "memoryPeakBytes": {
+    "rss": 194654208,
+    "heapUsed": 13584064,
+    "external": 142468562,
+    "arrayBuffers": 135070951
+  },
+  "recovery": {
+    "interruptionObserved": true,
+    "durableRecordStatusAfterFailure": "failed",
+    "acknowledgedBytesBeforeResume": 134217728,
+    "acknowledgedChunksBeforeResume": 2,
+    "totalReceivedBytes": 3221225472,
+    "duplicateReceivedBytes": 0,
+    "completeCalls": 1,
+    "finalRecordStatus": "completed"
+  },
+  "integrity": {
+    "generatedChecksumMatchedManifest": true,
+    "targetVerifiedBeforePromotion": true,
+    "targetVerifiedAfterPromotion": true,
+    "sourceAndTargetSizeMatched": true
+  },
+  "reproduction": "npm run benchmark:local -- --size-mib 3072 --chunk-mib 64",
+  "limitations": [
+    "Measurements use a local loopback HTTP target and local filesystem, not a remote provider.",
+    "Process memory includes the benchmark client and reference server in one Node.js process.",
+    "The local Node file-backed Blob harness rejects sizes of 4 GiB or larger because current runtime sizes and offsets are truncated.",
+    "Throughput varies by CPU, filesystem, runtime, power policy, and other system load."
+  ]
+}

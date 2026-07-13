@@ -136,6 +136,27 @@ Browser resume still requires the application to ask the user for the same origi
 
 Records created by 1.2.0 use `large-image-ingest.resume.v0.2`. Each acknowledged chunk stores its validated receipt together with derived progress, so a new S3 multipart session object can restore the original part numbers and ETags after all in-memory state is gone.
 
+## React Headless State
+
+The optional `large-image-ingest/react` subpath maps one core session to immutable React state. Create one controller per selected file and retain it above any components that may mount or unmount during upload.
+
+The adapter exposes:
+
+- `IngestProvider` for context composition
+- `useIngestSession` for lifecycle, manifest, error, and recovery state
+- `useUploadProgress` for normalized and byte progress
+- `useUploadControls` for start, resume, pause, and cancel actions
+
+It intentionally provides no visible upload UI or CSS. Application components remain responsible for file selection, layout, labels, accessibility, and design-system controls.
+
+## TIFF And BigTIFF Metadata Probe
+
+Install `geotiff` beside the SDK and import `probeTiffMetadata` from `large-image-ingest/tiff`. The probe reads the binary header and bounded image file directory metadata through Blob ranges.
+
+Use `toTiffImageMetadata` to map one directory to the existing `image` option. Directory count, samples, compression, orientation, and tile or strip layout remain in the probe result for application UI and later derivative planning.
+
+The probe does not decode raster pixels or generate display assets. BigTIFF identification is complete, but parsing support remains limited by GeoTIFF.js and unsafe 64-bit offsets are rejected.
+
 The reader also recognizes legacy `large-image-ingest.resume.v0.1` records. tus and zero-progress S3 records can continue after remote validation. A progressed S3 v0.1 record fails with `resume.receipt_missing` because inventing or reconstructing authoritative ETags would be unsafe.
 
 `WebStorageResumeStore` validates stored JSON on read, list, and write. Custom stores are validated again by `resume(recordId)` before range hydration or transport calls. Invalid records fail with typed `resume.record_invalid`, `resume.receipt_invalid`, or `resume.schema_unsupported` conflicts without including raw record contents in default events.

@@ -140,6 +140,81 @@ describe("persistent session resume", () => {
     await expect(store.list()).resolves.toEqual([]);
   });
 
+  it("preserves remote completion when completed record deletion fails", async () => {
+    const file = createLargeTestFile();
+    const store = new FaultingCompletionStore({ failDelete: true });
+    const transport = new FakeTransport();
+    const events: IngestEvent[] = [];
+    const session = createIngestSession(file, createOptions(transport, store, events));
+
+    await expect(session.start()).resolves.toMatchObject({ schemaVersion: "large-image-ingest.manifest.v1" });
+
+    const [record] = await store.list();
+    expect(transport.completed).toHaveLength(1);
+    expect(session.getSnapshot()?.status).toBe("completed");
+    expect(record?.progress.status).toBe("completed");
+    expect(events).toContainEqual(expect.objectContaining({
+      type: "resume:cleanup-failed",
+      operation: "delete",
+      code: "resume.store_failed"
+    }));
+  });
+
+  it("preserves remote completion when completion marking and deletion both fail", async () => {
+    const file = createLargeTestFile();
+    const store = new FaultingCompletionStore({ failCompletedPut: true, failDelete: true });
+    const transport = new FakeTransport();
+    const events: IngestEvent[] = [];
+    const session = createIngestSession(file, createOptions(transport, store, events));
+
+    await expect(session.start()).resolves.toMatchObject({ schemaVersion: "large-image-ingest.manifest.v1" });
+
+    expect(transport.completed).toHaveLength(1);
+    expect(session.getSnapshot()?.status).toBe("completed");
+    expect(events.filter((event) => event.type === "resume:cleanup-failed")).toEqual([
+      expect.objectContaining({ operation: "mark-complete" }),
+      expect.objectContaining({ operation: "delete" })
+    ]);
+  });
+
+  it("still deletes the resume record when completion marking fails", async () => {
+    const file = createLargeTestFile();
+    const store = new FaultingCompletionStore({ failCompletedPut: true });
+    const transport = new FakeTransport();
+    const events: IngestEvent[] = [];
+
+    await createIngestSession(file, createOptions(transport, store, events)).start();
+
+    await expect(store.list()).resolves.toEqual([]);
+    expect(transport.completed).toHaveLength(1);
+    expect(events).toContainEqual(expect.objectContaining({
+      type: "resume:cleanup-failed",
+      operation: "mark-complete"
+    }));
+  });
+
+  it("keeps transport completion failures fatal and skips completion cleanup", async () => {
+    const file = createLargeTestFile();
+    const store = new FaultingCompletionStore();
+    const events: IngestEvent[] = [];
+    class FailingCompletionTransport extends FakeTransport {
+      override async completeSession(context: UploadSessionContext & { uploadId: string }): Promise<void> {
+        await super.completeSession(context);
+        throw new Error("Remote completion failed.");
+      }
+    }
+    const transport = new FailingCompletionTransport();
+
+    await expect(
+      createIngestSession(file, createOptions(transport, store, events)).start()
+    ).rejects.toThrow("Remote completion failed.");
+
+    const [record] = await store.list();
+    expect(transport.completed).toHaveLength(1);
+    expect(record?.progress.status).toBe("failed");
+    expect(events.some((event) => event.type === "resume:cleanup-failed")).toBe(false);
+  });
+
   it("persists successful checkpoints after acknowledged chunks", async () => {
     const file = createLargeTestFile();
     const store = new MemoryResumeStore();
@@ -358,3 +433,26 @@ describe("persistent session resume", () => {
     expect(transport.uploadedChunks).toHaveLength(0);
   });
 });
+
+class FaultingCompletionStore extends MemoryResumeStore {
+  constructor(private readonly failures: {
+    failCompletedPut?: boolean;
+    failDelete?: boolean;
+  } = {}) {
+    super();
+  }
+
+  override async put(record: ResumeRecord): Promise<void> {
+    if (this.failures.failCompletedPut && record.progress.status === "completed") {
+      throw new Error("Completion marker write failed.");
+    }
+    await super.put(record);
+  }
+
+  override async delete(recordId: string): Promise<void> {
+    if (this.failures.failDelete) {
+      throw new Error("Completed record delete failed.");
+    }
+    await super.delete(recordId);
+  }
+}

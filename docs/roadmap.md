@@ -31,23 +31,37 @@ Spec Kit artifacts:
 - [x] Report snapshot and persistent resume capabilities separately for official transports.
 - [x] Reject unsafe NAS session collisions and existing finalize targets.
 
+## 1.3.0 Included - Integrity, React, And TIFF Foundations
+
+Spec Kit artifacts:
+
+- [Completion integrity](../specs/006-completion-integrity/spec.md)
+- [React headless adapter](../specs/007-react-headless/spec.md)
+- [TIFF and BigTIFF metadata probe](../specs/008-tiff-metadata-probe/spec.md)
+- [Reference integration and benchmarks](../specs/009-reference-integration-benchmarks/spec.md)
+
+- [x] Preserve successful remote completion across local resume cleanup failures.
+- [x] Isolate event and snapshot observer failures from upload control flow.
+- [x] Expose typed non-fatal cleanup and observer failure signals.
+- [x] Add optional React headless hooks over the framework-agnostic session contract.
+- [x] Add TIFF and BigTIFF metadata probing without decoding image pixels.
+- [x] Add a credential-free HTTP interruption, durable resume, and stored-file verification release gate.
+- [x] Publish reproducible 1 GiB and 3 GiB timing, memory, retransmission, and integrity evidence.
+
 ## Future TODO - Remaining Ingest Integrity
 
 - [ ] Harden source-file content identity for persistent resume.
-- [ ] Reconcile remote completion with local cleanup and observer failures.
 - [ ] Make NAS staging metadata updates atomic and concurrency-safe.
 - [ ] Add cancelable worker-based browser checksum execution.
 - [ ] Replace provider preflight checks with complete opt-in integration scenarios.
 - [ ] Align manifest producer version and transport capability reporting.
 
-## 1.3.0 TODO - UI Adapters And Advanced Upload Modes
+## Future TODO - Advanced Upload Modes
 
-- [ ] Specify React hooks and lightweight UI bindings as optional adapters over the core session contract.
 - [ ] Evaluate parallel upload support and its impact on chunk planning, receipt ordering, resume checkpoints, and transport capabilities.
 - [ ] Define per-chunk checksum policy for transports that require provider-specific integrity records.
 - [ ] Assess whether scoped packages are needed after 1.1 API growth.
-- [ ] Add focused tests for UI adapter state mapping without requiring browser UI frameworks in core tests.
-- [ ] Update examples for application progress UI, retry controls, pause/resume, and recovery lists.
+- [ ] Add styled upload components only after headless adapter usage stabilizes.
 
 ## Parking Lot
 
