@@ -74,11 +74,13 @@
   "types": "./dist/esm/index.d.ts",
   "scripts": {
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
+    "benchmark:local": "npm run build && node benchmarks/run-local.cjs",
     "clean": "node scripts/clean-dist.cjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm test && npm run build && npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm test && npm run build && npm run test:reference && npm audit --audit-level=moderate",
     "smoke:exports": "node scripts/verify-package-consumption.cjs",
     "test:integration": "node scripts/run-integration-tests.cjs",
+    "test:reference": "node benchmarks/run-local.cjs --size-mib 64",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.cjs.json --noEmit",
     "typecheck:examples": "tsc -p tsconfig.examples.json",
     "test": "vitest run"

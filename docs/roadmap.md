@@ -38,12 +38,15 @@ Spec Kit artifacts:
 - [Completion integrity](../specs/006-completion-integrity/spec.md)
 - [React headless adapter](../specs/007-react-headless/spec.md)
 - [TIFF and BigTIFF metadata probe](../specs/008-tiff-metadata-probe/spec.md)
+- [Reference integration and benchmarks](../specs/009-reference-integration-benchmarks/spec.md)
 
 - [x] Preserve successful remote completion across local resume cleanup failures.
 - [x] Isolate event and snapshot observer failures from upload control flow.
 - [x] Expose typed non-fatal cleanup and observer failure signals.
 - [x] Add optional React headless hooks over the framework-agnostic session contract.
 - [x] Add TIFF and BigTIFF metadata probing without decoding image pixels.
+- [x] Add a credential-free HTTP interruption, durable resume, and stored-file verification release gate.
+- [x] Publish reproducible 1 GiB and 3 GiB timing, memory, retransmission, and integrity evidence.
 
 ## Future TODO - Remaining Ingest Integrity
 
