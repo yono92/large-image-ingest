@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yono92/large-image-ingest/specs/009-reference-integration-benchmarks/contracts/benchmark-result.schema.json",
+  "title": "large-image-ingest benchmark result v1",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "createdAt",
+    "packageVersion",
+    "environment",
+    "configuration",
+    "timingsMs",
+    "throughputMiBPerSecond",
+    "memoryPeakBytes",
+    "recovery",
+    "integrity",
+    "reproduction"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.benchmark.v1" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "packageVersion": { "type": "string" },
+    "sourceCommit": { "type": "string" },
+    "environment": { "type": "object" },
+    "configuration": { "type": "object" },
+    "timingsMs": { "type": "object" },
+    "throughputMiBPerSecond": { "type": "object" },
+    "memoryPeakBytes": { "type": "object" },
+    "recovery": { "type": "object" },
+    "integrity": { "type": "object" },
+    "reproduction": { "type": "string" },
+    "limitations": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

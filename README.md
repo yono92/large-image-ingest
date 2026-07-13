@@ -12,6 +12,22 @@ The package orchestrates validation, checksums, manifest generation, chunk plann
 npm install large-image-ingest
 ```
 
+## Verified Reference Run
+
+The repository reference harness exercises the built package through real loopback HTTP, forces an interruption after durable progress, resumes with a replacement session, and verifies the stored file against its manifest.
+
+| Scenario | Result |
+| --- | ---: |
+| Source size | 3 GiB |
+| SHA-256 and manifest | 55.60 MiB/s |
+| HTTP transfer including resume | 51.91 MiB/s |
+| Peak JavaScript heap / RSS | 12.95 MiB / 185.64 MiB |
+| Acknowledged bytes retransmitted | 0 |
+| Remote completion calls | 1 |
+| Stored-file SHA-256 | Verified |
+
+This July 13, 2026 measurement used Node.js 24.17.0 on Windows with a 64 MiB upload chunk. The client and local reference server shared one process; loopback throughput is not a remote-provider guarantee. See the [methodology, full memory metrics, limitations, and reproduction commands](docs/benchmarks.md).
+
 ## Quick Start
 
 ```ts
@@ -97,7 +113,7 @@ More examples are in [docs/quickstart.md](docs/quickstart.md).
 - Server-side NAS gateway and stored-file verification helpers under the Node subpath
 - ESM, CommonJS, and TypeScript declaration entrypoints
 
-The package does not include React, image decoding, thumbnail rendering, tile generation, cloud SDKs, or UI implementations. Those remain caller-owned adapters or companion packages.
+The optional React subpath contains headless state and control hooks only. The package does not include styled React components, image decoding, raster or thumbnail rendering, resize, tile generation, image viewing, or cloud SDKs. The optional TIFF subpath probes structural metadata without decoding pixels. Processing, presentation, and provider SDKs remain caller-owned adapters or companion packages.
 
 ## Package Map
 
@@ -276,6 +292,7 @@ Server-owned credential, object key, NAS path, cleanup, and final verification r
 
 - [Quickstart and API examples](docs/quickstart.md)
 - [Derivative and preview foundations](docs/derivatives.md)
+- [Reference integration and benchmarks](docs/benchmarks.md)
 - [Opt-in integration test policy](docs/integration-tests.md)
 - [Server operational guide](docs/server-operational-guide.md)
 - [Roadmap](docs/roadmap.md)
@@ -289,10 +306,11 @@ npm run typecheck
 npm run typecheck:examples
 npm test
 npm run build
+npm run test:reference
 npm pack --dry-run
 ```
 
-Default verification is local and credential-free. Real tus servers, S3-compatible buckets, and mounted NAS paths are covered only by explicit opt-in integration checks.
+Default verification is local and credential-free. The reference gate performs a 64 MiB HTTP interruption-and-resume scenario with stored-file verification. Real tus servers, S3-compatible buckets, and mounted NAS paths remain explicit opt-in integration checks.
 
 ## Design Principles
 
