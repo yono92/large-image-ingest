@@ -29,6 +29,17 @@ Follow this order for non-trivial product or architecture work:
 
 Do not implement broad features before the relevant spec and plan exist. Small documentation corrections and narrow housekeeping edits can be made directly.
 
+## Agent Work Discipline
+
+Adapt the four principles from [Karpathy Guidelines](https://github.com/multica-ai/andrej-karpathy-skills) to all coding, review, and refactoring work in this repository:
+
+1. Think before coding. State material assumptions, ambiguity, and tradeoffs before implementation. When different interpretations would materially change the result, ask rather than silently choosing one.
+2. Prefer the simplest sufficient solution. Do not add speculative features, one-use abstractions, unrequested configurability, or defensive handling for impossible states. Reduce an implementation when a substantially smaller one satisfies the same verified requirements.
+3. Make surgical changes. Every changed line should trace to the active request, specification, or a direct consequence of the change. Preserve surrounding style, avoid unrelated refactors, and remove only dead code introduced by the current work unless broader cleanup is explicitly requested.
+4. Execute against verifiable goals. Translate non-trivial work into concise success criteria, reproduce defects with tests where practical, and loop until the relevant checks pass. Use rigor proportional to the task; trivial and obvious edits do not require ceremonial planning.
+
+These behavioral guidelines supplement the project-specific Spec Kit, security, API, and verification rules below. When they conflict, the more specific project requirement or active specification takes precedence.
+
 ## Product Principles
 
 - Preserve the original file by default. Never resize, recompress, strip EXIF, or mutate the source artifact unless a spec explicitly allows it.
