@@ -62,9 +62,15 @@ The gateway should own:
 - staging root and target root configuration
 - target path generation from trusted IDs
 - chunk checksum checks before finalize
-- finalize locking
+- shared same-session mutation locking
 - abandoned staging cleanup
 - stored-file manifest verification
+
+All gateway instances that can mutate the same session must share the same staging root and coordination configuration. The default file lock provider stores coordination under the staging root, so separate `createNasGateway` instances using that root serialize staging, finalization, cancellation, and expired-session removal for one session while independent sessions can proceed concurrently.
+
+NAS session metadata is committed from a unique candidate beside `metadata.json` and promoted with a same-directory rename. Configure the staging directory on a filesystem that provides atomic rename visibility within one directory. Do not relocate metadata candidates to another mount or delete `metadata.json` before promotion, because either change would remove the last committed recovery point.
+
+If a process terminates while holding a lock, configure and test the existing stale-lock policy for the deployment environment. A later coordinated mutation removes recognized abandoned metadata and chunk candidates; read-only session inspection ignores candidates and reads only committed `metadata.json`. Expired cleanup skips sessions with a live mutation lock rather than deleting active work.
 
 ## Logging
 

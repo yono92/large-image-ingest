@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, type Dirent } from "node:fs";
 import {
   mkdir,
   readFile,
@@ -11,6 +11,7 @@ import {
 } from "node:fs/promises";
 import { dirname, isAbsolute, join, normalize, relative, resolve, sep } from "node:path";
 import { pipeline } from "node:stream/promises";
+import { setImmediate as yieldToEventLoop } from "node:timers/promises";
 
 export type NasGatewaySessionStatus = "staging" | "finalized" | "canceled" | "expired";
 
@@ -144,11 +145,16 @@ export interface NasGateway {
 }
 
 const metadataFileName = "metadata.json";
+const metadataCandidatePrefix = `${metadataFileName}.candidate-`;
+const metadataCandidateSuffix = ".tmp";
 const chunksDirectoryName = "chunks";
 const defaultLockRootDirectoryName = ".locks";
 const lockMetadataFileName = "owner.json";
 const sessionIdPattern = /^[A-Za-z0-9_-]+$/;
 const lockMetadataSchemaVersion = "large-image-ingest.nas-lock.v0.1";
+const sessionLockWaitTimeoutMs = 30_000;
+
+type SessionLockContentionMode = "fail" | "skip" | "wait";
 
 interface NasFileLockMetadata {
   schemaVersion: typeof lockMetadataSchemaVersion;
@@ -210,29 +216,32 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
 
     async getSession(sessionId) {
       const safeSessionId = validateSessionId(sessionId);
-      return readSnapshot(stagingRoot, targetRoot, safeSessionId);
+      const lock = await acquireSessionMutationLock(lockProvider, safeSessionId, clock, "skip");
+
+      if (!lock) {
+        return readSnapshot(stagingRoot, targetRoot, safeSessionId);
+      }
+
+      let operationError: unknown;
+
+      try {
+        await cleanupMetadataCandidates(sessionPath(stagingRoot, safeSessionId));
+        return await readSnapshot(stagingRoot, targetRoot, safeSessionId);
+      } catch (error) {
+        operationError = error;
+        throw error;
+      } finally {
+        await releaseSessionMutationLock(lock, safeSessionId, operationError);
+      }
     },
 
     async stageChunk(stageOptions) {
       const safeSessionId = validateSessionId(stageOptions.sessionId);
-      const stagingPath = sessionPath(stagingRoot, safeSessionId);
-      const snapshot = await readSnapshot(stagingRoot, targetRoot, safeSessionId);
-      ensureSessionOpen(snapshot);
-      ensureNotExpired(snapshot, clock());
-
       if (!Number.isSafeInteger(stageOptions.index) || stageOptions.index < 0) {
         throw createNasError("nas.invalid_chunk", "Chunk index must be a non-negative safe integer.", {
           index: stageOptions.index
         });
       }
-
-      if (stageOptions.index >= snapshot.expectedChunks) {
-        throw createNasError("nas.invalid_chunk", "Chunk index exceeds expected chunk count.", {
-          index: stageOptions.index,
-          expectedChunks: snapshot.expectedChunks
-        });
-      }
-
       const body = await toUint8Array(stageOptions.body);
       const checksum = createSha256(body);
 
@@ -241,35 +250,79 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
           index: stageOptions.index
         });
       }
+      const lock = await acquireSessionMutationLock(lockProvider, safeSessionId, clock, "wait");
+      if (!lock) {
+        throw createNasError("nas.lock_failed", "NAS session lock was not acquired.", {
+          sessionId: safeSessionId
+        });
+      }
+      let operationError: unknown;
 
-      const chunkFileName = chunkFileNameForIndex(stageOptions.index);
-      const chunkPath = join(stagingPath, chunksDirectoryName, chunkFileName);
-      const tempChunkPath = `${chunkPath}.tmp`;
+      try {
+        const stagingPath = sessionPath(stagingRoot, safeSessionId);
+        await cleanupMetadataCandidates(stagingPath);
+        const snapshot = await readSnapshot(stagingRoot, targetRoot, safeSessionId);
+        ensureSessionOpen(snapshot);
+        ensureNotExpired(snapshot, clock());
 
-      await writeFile(tempChunkPath, body);
-      await rename(tempChunkPath, chunkPath);
+        if (stageOptions.index >= snapshot.expectedChunks) {
+          throw createNasError("nas.invalid_chunk", "Chunk index exceeds expected chunk count.", {
+            index: stageOptions.index,
+            expectedChunks: snapshot.expectedChunks
+          });
+        }
 
-      const existing = new Map(snapshot.chunks.map((chunk) => [chunk.index, chunk]));
-      existing.set(stageOptions.index, {
-        checksum,
-        index: stageOptions.index,
-        path: join(chunksDirectoryName, chunkFileName),
-        sizeBytes: body.byteLength,
-        stagedAt: clock().toISOString()
-      });
+        await cleanupUnreferencedChunkArtifacts(stagingPath, snapshot.chunks);
 
-      const metadata = toMetadata(snapshot, {
-        chunks: Array.from(existing.values()).sort((left, right) => left.index - right.index),
-        updatedAt: clock().toISOString()
-      });
+        const chunkFileName = chunkFileNameForIndex(stageOptions.index, randomUUID());
+        const relativeChunkPath = join(chunksDirectoryName, chunkFileName);
+        const chunkPath = join(stagingPath, relativeChunkPath);
+        const tempChunkPath = `${chunkPath}.${randomUUID()}.tmp`;
+        const previousChunk = snapshot.chunks.find((chunk) => chunk.index === stageOptions.index);
 
-      await writeMetadata(stagingPath, metadata);
+        try {
+          await writeFile(tempChunkPath, body);
+          await rename(tempChunkPath, chunkPath);
+        } finally {
+          await rm(tempChunkPath, { force: true }).catch(() => {});
+        }
 
-      return {
-        ...metadata,
-        stagingPath,
-        targetPath: resolveTargetPath(targetRoot, metadata.targetRelativePath)
-      };
+        const existing = new Map(snapshot.chunks.map((chunk) => [chunk.index, chunk]));
+        existing.set(stageOptions.index, {
+          checksum,
+          index: stageOptions.index,
+          path: relativeChunkPath,
+          sizeBytes: body.byteLength,
+          stagedAt: clock().toISOString()
+        });
+
+        const metadata = toMetadata(snapshot, {
+          chunks: Array.from(existing.values()).sort((left, right) => left.index - right.index),
+          updatedAt: clock().toISOString()
+        });
+
+        try {
+          await writeMetadata(stagingPath, metadata);
+        } catch (error) {
+          await rm(chunkPath, { force: true }).catch(() => {});
+          throw error;
+        }
+
+        if (previousChunk && previousChunk.path !== relativeChunkPath) {
+          await rm(resolveWithinRoot(stagingPath, previousChunk.path), { force: true }).catch(() => {});
+        }
+
+        return {
+          ...metadata,
+          stagingPath,
+          targetPath: resolveTargetPath(targetRoot, metadata.targetRelativePath)
+        };
+      } catch (error) {
+        operationError = error;
+        throw error;
+      } finally {
+        await releaseSessionMutationLock(lock, safeSessionId, operationError);
+      }
     },
 
     async finalizeSession(finalizeOptions) {
@@ -279,9 +332,11 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
 
       try {
         const stagingPath = sessionPath(stagingRoot, safeSessionId);
+        await cleanupMetadataCandidates(stagingPath);
         const snapshot = await readSnapshot(stagingRoot, targetRoot, safeSessionId);
         ensureSessionOpen(snapshot);
         ensureNotExpired(snapshot, clock());
+        await cleanupUnreferencedChunkArtifacts(stagingPath, snapshot.chunks);
         await verifyAllChunks(stagingPath, snapshot);
 
         const targetPath = resolveTargetPath(targetRoot, snapshot.targetRelativePath);
@@ -335,17 +390,34 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
 
     async cancelSession(cancelOptions) {
       const safeSessionId = validateSessionId(cancelOptions.sessionId);
-      const stagingPath = sessionPath(stagingRoot, safeSessionId);
-      const snapshot = await readSnapshot(stagingRoot, targetRoot, safeSessionId);
-      const canceledAt = clock().toISOString();
-      const metadata = toMetadata(snapshot, {
-        canceledAt,
-        status: "canceled",
-        updatedAt: canceledAt
-      });
+      const lock = await acquireSessionMutationLock(lockProvider, safeSessionId, clock, "wait");
+      if (!lock) {
+        throw createNasError("nas.lock_failed", "NAS session lock was not acquired.", {
+          sessionId: safeSessionId
+        });
+      }
+      let operationError: unknown;
 
-      await writeMetadata(stagingPath, metadata);
-      await rm(stagingPath, { force: true, recursive: true });
+      try {
+        const stagingPath = sessionPath(stagingRoot, safeSessionId);
+        await cleanupMetadataCandidates(stagingPath);
+        const snapshot = await readSnapshot(stagingRoot, targetRoot, safeSessionId);
+        ensureSessionOpen(snapshot);
+        const canceledAt = clock().toISOString();
+        const metadata = toMetadata(snapshot, {
+          canceledAt,
+          status: "canceled",
+          updatedAt: canceledAt
+        });
+
+        await writeMetadata(stagingPath, metadata);
+        await rm(stagingPath, { force: true, recursive: true });
+      } catch (error) {
+        operationError = error;
+        throw error;
+      } finally {
+        await releaseSessionMutationLock(lock, safeSessionId, operationError);
+      }
     },
 
     async cleanupExpiredSessions(cleanupOptions = {}) {
@@ -368,13 +440,27 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
         }
 
         if (metadata.status === "canceled" || isExpired(metadata, now)) {
+          const lock = await acquireSessionMutationLock(lockProvider, entry.name, clock, "skip");
+          if (!lock) {
+            continue;
+          }
+
+          let cleanupError: unknown;
           try {
-            await rm(stagingPath, { force: true, recursive: true });
-            removedSessionIds.push(entry.name);
+            await cleanupMetadataCandidates(stagingPath);
+            const currentMetadata = await readMetadataOrUndefined(stagingPath);
+
+            if (currentMetadata && (currentMetadata.status === "canceled" || isExpired(currentMetadata, now))) {
+              await rm(stagingPath, { force: true, recursive: true });
+              removedSessionIds.push(entry.name);
+            }
           } catch (error) {
+            cleanupError = error;
             throw createNasError("nas.cleanup_failed", toErrorMessage(error, "NAS cleanup failed."), {
               sessionId: entry.name
             });
+          } finally {
+            await releaseSessionMutationLock(lock, entry.name, cleanupError);
           }
         }
       }
@@ -403,6 +489,10 @@ export function createNasFileLockProvider(options: NasFileLockProviderOptions): 
         try {
           await mkdir(lockPath);
         } catch (error) {
+          if (isNodeError(error, "EPERM") || isNodeError(error, "ENOTEMPTY")) {
+            return undefined;
+          }
+
           if (!isNodeError(error, "EEXIST")) {
             throw createNasError("nas.lock_failed", toErrorMessage(error, "NAS lock acquire failed."), {
               sessionId,
@@ -459,23 +549,7 @@ async function acquireFinalizeLock(
   sessionId: string,
   now: Date
 ): Promise<NasGatewayLock> {
-  let lock: NasGatewayLock | undefined;
-
-  try {
-    lock = await lockProvider.acquireLock({
-      now,
-      scope: "finalize",
-      sessionId
-    });
-  } catch (error) {
-    if (isNasGatewayError(error)) {
-      throw error;
-    }
-
-    throw createNasError("nas.lock_failed", toErrorMessage(error, "NAS finalize lock acquire failed."), {
-      sessionId
-    });
-  }
+  const lock = await acquireSessionMutationLock(lockProvider, sessionId, () => now, "fail");
 
   if (!lock) {
     throw createNasError("nas.finalize_locked", "NAS session is already finalizing.", {
@@ -484,6 +558,73 @@ async function acquireFinalizeLock(
   }
 
   return lock;
+}
+
+async function acquireSessionMutationLock(
+  lockProvider: NasGatewayLockProvider,
+  sessionId: string,
+  clock: () => Date,
+  contentionMode: SessionLockContentionMode
+): Promise<NasGatewayLock | undefined> {
+  const startedAt = Date.now();
+
+  while (true) {
+    let lock: NasGatewayLock | undefined;
+
+    try {
+      lock = await lockProvider.acquireLock({
+        now: clock(),
+        scope: "finalize",
+        sessionId
+      });
+    } catch (error) {
+      if (isNasGatewayError(error)) {
+        throw error;
+      }
+
+      throw createNasError("nas.lock_failed", toErrorMessage(error, "NAS session lock acquire failed."), {
+        sessionId
+      });
+    }
+
+    if (lock) {
+      return lock;
+    }
+
+    if (contentionMode === "skip") {
+      return undefined;
+    }
+
+    if (contentionMode === "fail") {
+      throw createNasError("nas.finalize_locked", "NAS session is already finalizing.", {
+        sessionId
+      });
+    }
+
+    if (Date.now() - startedAt >= sessionLockWaitTimeoutMs) {
+      throw createNasError("nas.lock_failed", "Timed out waiting for the NAS session lock.", {
+        sessionId
+      });
+    }
+
+    await yieldToEventLoop();
+  }
+}
+
+async function releaseSessionMutationLock(
+  lock: NasGatewayLock,
+  sessionId: string,
+  operationError: unknown
+): Promise<void> {
+  try {
+    await lock.release();
+  } catch (releaseError) {
+    if (!operationError) {
+      throw createNasError("nas.lock_failed", toErrorMessage(releaseError, "NAS session lock release failed."), {
+        sessionId
+      });
+    }
+  }
 }
 
 async function verifyAllChunks(stagingPath: string, snapshot: NasGatewaySessionSnapshot): Promise<void> {
@@ -543,21 +684,16 @@ async function concatenateChunks(
   snapshot: NasGatewaySessionSnapshot,
   tempTargetPath: string
 ): Promise<void> {
-  const output = createWriteStream(tempTargetPath, { flags: "w" });
-
-  try {
+  async function* readChunks(): AsyncGenerator<Buffer> {
     for (const chunk of snapshot.chunks) {
       const chunkPath = resolveWithinRoot(stagingPath, chunk.path);
-      await pipeline(createReadStream(chunkPath), output, { end: false });
+      for await (const bytes of createReadStream(chunkPath)) {
+        yield bytes as Buffer;
+      }
     }
-  } finally {
-    output.end();
   }
 
-  await new Promise<void>((resolvePromise, rejectPromise) => {
-    output.on("finish", resolvePromise);
-    output.on("error", rejectPromise);
-  });
+  await pipeline(readChunks(), createWriteStream(tempTargetPath, { flags: "w" }));
 }
 
 function validateSessionShape(options: CreateNasSessionOptions): void {
@@ -659,8 +795,8 @@ function sessionPath(stagingRoot: string, sessionId: string): string {
   return join(stagingRoot, validateSessionId(sessionId));
 }
 
-function chunkFileNameForIndex(index: number): string {
-  return `${index.toString().padStart(8, "0")}.part`;
+function chunkFileNameForIndex(index: number, generation: string): string {
+  return `${index.toString().padStart(8, "0")}-${generation}.part`;
 }
 
 function metadataPath(stagingPath: string): string {
@@ -830,7 +966,73 @@ async function writeMetadata(
   metadata: NasGatewaySessionMetadata
 ): Promise<void> {
   await mkdir(stagingPath, { recursive: true });
-  await writeFile(metadataPath(stagingPath), `${JSON.stringify(metadata, null, 2)}\n`);
+  const candidatePath = join(
+    stagingPath,
+    `${metadataCandidatePrefix}${randomUUID()}${metadataCandidateSuffix}`
+  );
+
+  try {
+    await writeFile(candidatePath, `${JSON.stringify(metadata, null, 2)}\n`, {
+      encoding: "utf8",
+      flag: "wx"
+    });
+    await rename(candidatePath, metadataPath(stagingPath));
+  } finally {
+    await rm(candidatePath, { force: true }).catch(() => {});
+  }
+}
+
+async function cleanupMetadataCandidates(stagingPath: string): Promise<void> {
+  let entries: Dirent[];
+
+  try {
+    entries = await readdir(stagingPath, { withFileTypes: true });
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) {
+      return;
+    }
+
+    throw error;
+  }
+
+  await Promise.all(entries
+    .filter((entry) => entry.isFile() && isMetadataCandidateFileName(entry.name))
+    .map((entry) => rm(join(stagingPath, entry.name), { force: true })));
+}
+
+async function cleanupUnreferencedChunkArtifacts(
+  stagingPath: string,
+  chunks: readonly NasGatewayChunkRecord[]
+): Promise<void> {
+  const chunksPath = join(stagingPath, chunksDirectoryName);
+  let entries: Dirent[];
+
+  try {
+    entries = await readdir(chunksPath, { withFileTypes: true });
+  } catch (error) {
+    if (isNodeError(error, "ENOENT")) {
+      return;
+    }
+
+    throw error;
+  }
+
+  const referencedPaths = new Set(chunks.map((chunk) => resolveWithinRoot(stagingPath, chunk.path)));
+
+  await Promise.all(entries
+    .filter((entry) => entry.isFile() && isManagedChunkArtifactFileName(entry.name))
+    .map((entry) => join(chunksPath, entry.name))
+    .filter((path) => !referencedPaths.has(resolve(path)))
+    .map((path) => rm(path, { force: true })));
+}
+
+function isMetadataCandidateFileName(fileName: string): boolean {
+  return fileName.startsWith(metadataCandidatePrefix) && fileName.endsWith(metadataCandidateSuffix);
+}
+
+function isManagedChunkArtifactFileName(fileName: string): boolean {
+  return /^\d{8}(?:-[A-Za-z0-9-]+)?\.part(?:\.[A-Za-z0-9-]+)?\.tmp$/.test(fileName) ||
+    /^\d{8}(?:-[A-Za-z0-9-]+)?\.part$/.test(fileName);
 }
 
 function toMetadata(

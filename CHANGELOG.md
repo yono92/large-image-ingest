@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1
+
+- Prevent concurrent NAS chunk staging from losing acknowledged chunk records across gateway instances.
+- Serialize same-session staging, finalization, cancellation, and expired cleanup through the existing shared lock contract without changing public types or error codes.
+- Persist NAS session metadata through collision-resistant same-directory candidates and atomic promotion so failed updates preserve the previous committed state.
+- Keep same-index replacement bytes and checksum metadata consistent and clean abandoned metadata and chunk candidates during later coordinated mutations.
+- Preserve `large-image-ingest.nas-session.v0.1`, `large-image-ingest.nas-lock.v0.1`, and all existing NAS API signatures.
+
 ## 1.3.0
 
 - Preserve successful remote completion when local resume cleanup fails.
