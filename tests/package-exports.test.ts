@@ -67,7 +67,7 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.3.0");
+    expect(packageJson.version).toBe("1.3.1");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./node");

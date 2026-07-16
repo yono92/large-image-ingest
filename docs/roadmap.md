@@ -2,6 +2,17 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.3.1 Included - NAS Concurrency Integrity
+
+Spec Kit artifacts:
+
+- [NAS concurrency integrity](../specs/010-nas-concurrency-integrity/spec.md)
+
+- [x] Serialize same-session NAS staging, finalization, cancellation, and expired cleanup across gateway instances.
+- [x] Atomically promote collision-resistant metadata candidates while preserving the last committed session state.
+- [x] Keep same-index replacement bytes and metadata consistent and clean abandoned candidates safely.
+- [x] Preserve existing NAS public APIs, error codes, and v0.1 session and lock schemas.
+
 ## 1.1.0 Included - Operational Safety And Derivative Foundations
 
 Spec Kit artifacts:
@@ -51,7 +62,6 @@ Spec Kit artifacts:
 ## Future TODO - Remaining Ingest Integrity
 
 - [ ] Harden source-file content identity for persistent resume.
-- [ ] Make NAS staging metadata updates atomic and concurrency-safe.
 - [ ] Add cancelable worker-based browser checksum execution.
 - [ ] Replace provider preflight checks with complete opt-in integration scenarios.
 - [ ] Align manifest producer version and transport capability reporting.
