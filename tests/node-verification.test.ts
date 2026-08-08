@@ -5,8 +5,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
 import {
   calculateNodeFileChecksum,
+  createNodeFileCompletionResult,
   verifyNodeFileManifest
 } from "../src/node-verification";
+import { createCompletionEvidence } from "../src/completion-evidence";
 
 const tempRoots: string[] = [];
 
@@ -45,6 +47,31 @@ describe("node verification helpers", () => {
       ok: true,
       issues: []
     });
+  });
+
+  it("creates normalized stored-file completion facts for core classification", async () => {
+    const root = await createTempRoot();
+    const filePath = join(root, "completed-wafer.bin");
+    const file = new File(["inspection"], "completed-wafer.bin", { type: "application/octet-stream" });
+    const manifest = await createManifest(file, { chunking: { chunkSize: 256 * 1024 } });
+    await writeFile(filePath, "inspection");
+
+    const completionResult = await createNodeFileCompletionResult(filePath, {
+      completedAt: "2026-08-07T00:00:00.000Z",
+      storage: { kind: "nas", label: "inspection-originals" }
+    });
+    const evidence = await createCompletionEvidence({
+      manifest,
+      transportName: "nas-gateway",
+      receipts: [],
+      completionResult
+    });
+
+    expect(completionResult).toMatchObject({
+      storedObject: { sizeBytes: file.size, checksum: { algorithm: "sha256" } },
+      storage: { kind: "nas" }
+    });
+    expect(evidence.status).toBe("verified");
   });
 
   it("reports stored-file checksum and size failures with typed codes", async () => {

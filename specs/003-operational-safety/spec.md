@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-09
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "1.2 1.3 은 TODO로 정리해 놓고 1.1.0 기획하자"
 

@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-10
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Proceed with the next minor release planning for 1.1.0 Derivatives And Preview Foundations from the roadmap TODOs."
 

@@ -75,3 +75,38 @@ If a process terminates while holding a lock, configure and test the existing st
 ## Logging
 
 Log stable IDs, status, progress counters, and typed error codes. Do not log full manifests, raw metadata, resume records, presigned URLs, bearer tokens, credentials, or mounted storage paths.
+
+Completion evidence is intentionally application-owned. Persist or sign the full `large-image-ingest.completion.v1` record only in an access-controlled audit store with an explicit retention policy. It can contain checksum values and a storage reference even though provider-specific payloads are excluded.
+
+For routine logs, metrics, and support tooling, use `createSafeCompletionSummary(evidence)`. The summary allowlists evidence and manifest IDs, status, producer version, transport name, byte/chunk counts, checksum algorithms, and timestamps. It omits checksum values, filenames, customer metadata, upload IDs, resume handles, storage locations, and opaque provider data.
+
+Treat `completed-unverified` as a successful transport outcome that still needs application policy. Do not promote it to evidence-grade storage merely because multipart completion, a tus final offset, or a NAS rename succeeded. Promote automatically only when `status === "verified"`, or route unverified outcomes to a separately documented verification job.
+
+## Parallel Execution Capacity
+
+Parallel chunks are an explicit transport capability, not a universal optimization. Before advertising `supportsParallelChunks: true`, ensure the broker or gateway can accept out-of-order independent chunks and complete from ordered receipts. Set server-side limits for requests per upload, tenant, and process; the SDK's client maximum of 32 is a safety ceiling rather than a recommendation.
+
+Start with two to four active chunks and measure browser memory, proxy buffering, broker CPU, provider throttling, retry amplification, and completion latency. Official tus and S3 helpers remain sequential because their current implementations validate remote offset or broker receipt state one operation at a time.
+
+## Multi-File Queue Capacity
+
+The queue adds an outer admission boundary over independent sessions:
+
+- `maxActiveItems` defaults to 2 and is capped at 32.
+- `maxActiveBytes` defaults to 8 GiB and represents admitted source size, not exact resident memory.
+- `maxQueuedItems` defaults to 1,000 and counts records until terminal removal.
+- One oversized source may run only when the active set is empty.
+
+Estimate peak request concurrency as active queue items multiplied by each session's `execution.maxParallelChunks`. Custom parallel transports can otherwise multiply broker, storage, and socket load quickly.
+
+Treat `WebStorageQueueStore` as local durable intent, not background execution. It does not persist source bytes or browser file handles, coordinate tabs, or continue work after the page exits. On restart, reattach the exact source through `resolveSource` or `attachSource`; unresolved items cause no transport call.
+
+Use safe queue summaries for logs and metrics. Raw queue records contain untrusted filenames for local metadata matching and must not be logged. A queue-store failure after remote completion is operationally significant but does not reverse the completed remote fact.
+
+## Policy And Evidence Signing Operations
+
+Run inspection policy evaluation after completion evidence is available. A failed policy report is not a transport failure; route it to the application's quarantine, manual review, or server re-verification workflow. Keep profile and policy IDs/versioned definitions in change control so historical reports remain interpretable.
+
+Store raw evidence bundles and signed envelopes only in access-controlled audit storage. They contain the full manifest, customer metadata, filenames, checksum values, storage references, policy results, signatures, and key identifiers. Routine telemetry should use the safe evidence summary helpers.
+
+Signing/verifier callbacks must connect to application-approved key custody and trust policy. Enforce algorithm allowlists, key status/rotation, certificate or public-key lookup, revocation, and tenant boundaries before returning true. The SDK checks canonical structure and SHA-256 payload linkage, but does not validate certificates, contact timestamp authorities, or assign legal/regulatory meaning.

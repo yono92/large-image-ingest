@@ -36,8 +36,12 @@ describe("React ingest controller", () => {
   it("maps upload progress and deduplicates concurrent starts", async () => {
     const uploadedChunks: number[] = [];
     let completionCalls = 0;
+    let eventEvidence: unknown;
     const controller = createIngestController(createFile(), {
       chunking: { chunkSize },
+      onEvent(event) {
+        if (event.type === "completed") eventEvidence = event.evidence;
+      },
       transport: createTransport(uploadedChunks, () => {
         completionCalls += 1;
       })
@@ -56,8 +60,15 @@ describe("React ingest controller", () => {
       uploadedBytes: createFile().size,
       totalBytes: createFile().size,
       progress: 1,
-      manifest: { id: manifest.id }
+      manifest: { id: manifest.id },
+      completionEvidence: {
+        schemaVersion: "large-image-ingest.completion.v1",
+        status: "completed-unverified"
+      }
     });
+    const evidence = controller.getState().completionEvidence;
+    expect(evidence).toBeDefined();
+    expect(evidence).not.toBe(eventEvidence);
   });
 
   it("maps operation failures without losing the typed error", async () => {
@@ -111,7 +122,8 @@ describe("React ingest controller", () => {
     expect(controller.getState()).toMatchObject({
       status: "completed",
       progress: 1,
-      recordId: record.id
+      recordId: record.id,
+      completionEvidence: { status: "completed-unverified" }
     });
   });
 

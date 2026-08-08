@@ -43,4 +43,26 @@ describe("calculateChecksum", () => {
     );
     await expect(calculateChecksum(file, { chunkSize: 1024 })).rejects.toThrow(RangeError);
   });
+
+  it("aborts the default bounded path before and between slices", async () => {
+    const file = new File([new Uint8Array(192 * 1024)], "abort.bin");
+    const alreadyAborted = new AbortController();
+    alreadyAborted.abort();
+    await expect(calculateChecksum(file, { signal: alreadyAborted.signal })).rejects.toMatchObject({
+      code: "checksum.aborted",
+      retryable: false
+    });
+
+    const controller = new AbortController();
+    const progress: number[] = [];
+    await expect(calculateChecksum(file, {
+      chunkSize: 64 * 1024,
+      signal: controller.signal,
+      onProgress(event) {
+        progress.push(event.loadedBytes);
+        controller.abort();
+      }
+    })).rejects.toMatchObject({ code: "checksum.aborted" });
+    expect(progress).toEqual([64 * 1024]);
+  });
 });

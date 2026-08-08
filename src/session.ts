@@ -1,4 +1,9 @@
 ﻿import { planChunks } from "./chunks.js";
+import { calculateChecksum } from "./checksum.js";
+import {
+  cloneCompletionEvidence,
+  createCompletionEvidence
+} from "./completion-evidence.js";
 import { createManifest } from "./manifest.js";
 import {
   ResumeConflictError,
@@ -11,6 +16,7 @@ import {
   createResumeRecord,
   fileIdentityMatches,
   getNextIncompleteChunkIndex,
+  getResumeContentIdentity,
   isChunkCompleted,
   isResumeRecordExpired,
   mergeCompletedChunkRange,
@@ -23,6 +29,7 @@ import type {
   CompletedChunkRange,
   CreateIngestSessionOptions,
   IngestError,
+  IngestCompletionEvidence,
   IngestEvent,
   IngestFileLike,
   IngestIssueCode,
@@ -43,7 +50,7 @@ import type {
   UploadSessionStatus
 } from "./types.js";
 
-const CURRENT_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.2";
+const SNAPSHOT_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.2";
 
 interface NormalizedUploadChunkResult {
   receipt: UploadChunkReceipt;
@@ -63,6 +70,7 @@ export class LargeImageIngestSession {
   private readonly abortController = new AbortController();
   private cancelEmitted = false;
   private currentRecord: ResumeRecord | undefined;
+  private completionEvidence: IngestCompletionEvidence | undefined;
   private currentSnapshot: UploadSessionSnapshot | undefined;
   private currentTransportSession: TransportSession | undefined;
   private lifecycleAction: "pause" | "cancel" | undefined;
@@ -101,6 +109,12 @@ export class LargeImageIngestSession {
     return this.currentSnapshot ? cloneSnapshot(this.currentSnapshot) : undefined;
   }
 
+  getCompletionEvidence(): IngestCompletionEvidence | undefined {
+    return this.completionEvidence
+      ? cloneCompletionEvidence(this.completionEvidence)
+      : undefined;
+  }
+
   async start(): Promise<IngestManifest> {
     let manifest: IngestManifest | undefined;
     let chunkPlan: ChunkPlan | undefined;
@@ -121,7 +135,12 @@ export class LargeImageIngestSession {
 
       chunkPlan = planChunks(this.file.size, this.options.chunking);
       validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
+      const maxParallelChunks = validateExecutionPolicy(
+        this.options.execution?.maxParallelChunks,
+        this.options.transport.capabilities
+      );
       this.validateRequestedResumeCapability();
+      this.validateRequestedResumeContentIdentity(manifest);
       this.hydrateResumeSnapshot(manifest, chunkPlan);
 
       const session = await this.createOrResumeSnapshotSession(manifest, chunkPlan);
@@ -151,7 +170,14 @@ export class LargeImageIngestSession {
         });
       }
 
-      record = await this.uploadRemainingChunks(manifest, session, chunkPlan, record, snapshotCreatedAt);
+      record = await this.uploadRemainingChunks(
+        manifest,
+        session,
+        chunkPlan,
+        record,
+        snapshotCreatedAt,
+        maxParallelChunks
+      );
       await this.completeUpload(manifest, session, record, chunkPlan, snapshotCreatedAt);
 
       return manifest;
@@ -174,6 +200,13 @@ export class LargeImageIngestSession {
       this.throwIfStopped();
 
       await this.validateResumeRecord(record, store);
+
+      chunkPlan = planChunks(this.file.size, this.options.chunking);
+      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
+      const maxParallelChunks = validateExecutionPolicy(
+        this.options.execution?.maxParallelChunks,
+        this.options.transport.capabilities
+      );
 
       if (!this.options.transport.resumeSession) {
         throw this.emitResumeConflict(
@@ -230,8 +263,6 @@ export class LargeImageIngestSession {
 
       this.emit({ type: "resume:started", recordId: activeRecord.id, manifestId: manifest.id });
 
-      chunkPlan = planChunks(this.file.size, this.options.chunking);
-      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
       this.hydrateResumeRecord(activeRecord, chunkPlan, session);
       this.updateSnapshot({
         manifest,
@@ -246,7 +277,8 @@ export class LargeImageIngestSession {
         session,
         chunkPlan,
         activeRecord,
-        snapshotCreatedAt
+        snapshotCreatedAt,
+        maxParallelChunks
       );
       await this.completeUpload(manifest, session, nextRecord, chunkPlan, snapshotCreatedAt);
 
@@ -337,7 +369,7 @@ export class LargeImageIngestSession {
     const now = nowIso();
 
     return {
-      schemaVersion: CURRENT_RESUME_SCHEMA_VERSION,
+      schemaVersion: SNAPSHOT_RESUME_SCHEMA_VERSION,
       id: `snapshot_${snapshot.manifestId}`,
       manifest,
       file: await createResumeFileIdentity(this.file),
@@ -378,6 +410,26 @@ export class LargeImageIngestSession {
       throw this.emitResumeConflict(
         "resume.file_mismatch",
         "The selected file does not match the stored resume record.",
+        record.id
+      );
+    }
+
+    const contentIdentity = getResumeContentIdentity(record);
+    if (!contentIdentity) {
+      throw this.emitResumeConflict(
+        "resume.content_identity_missing",
+        "The resume record does not contain a trustworthy whole-file content identity.",
+        record.id
+      );
+    }
+
+    const selectedChecksum = await calculateChecksum(this.file, {
+      algorithm: contentIdentity.algorithm
+    });
+    if (selectedChecksum.value.toLowerCase() !== contentIdentity.value.toLowerCase()) {
+      throw this.emitResumeConflict(
+        "resume.content_mismatch",
+        "The selected file bytes do not match the stored resume content identity.",
         record.id
       );
     }
@@ -429,40 +481,70 @@ export class LargeImageIngestSession {
     session: TransportSession,
     chunkPlan: ChunkPlan,
     record: ResumeRecord | undefined,
-    snapshotCreatedAt: string
+    snapshotCreatedAt: string,
+    maxParallelChunks: number
   ): Promise<ResumeRecord | undefined> {
     let activeRecord = record;
+    const incompleteChunks = chunkPlan.chunks.filter(
+      (chunk) => !this.completedReceipts.has(chunk.index)
+    );
 
-    for (const chunk of chunkPlan.chunks) {
-      if (this.completedReceipts.has(chunk.index)) {
-        continue;
-      }
-
+    for (let batchStart = 0; batchStart < incompleteChunks.length; batchStart += maxParallelChunks) {
       this.throwIfStopped();
-      this.emit({ type: "chunk:started", manifestId: manifest.id, chunk });
-
-      const result = await this.uploadChunkWithRetry(manifest, session, chunk);
-      this.storeReceipt(chunk, result.receipt);
-
-      if (activeRecord) {
-        activeRecord = await this.checkpointChunk(activeRecord, chunk, chunkPlan, result.transportResult);
+      const batch = incompleteChunks.slice(batchStart, batchStart + maxParallelChunks);
+      for (const chunk of batch) {
+        this.emit({ type: "chunk:started", manifestId: manifest.id, chunk });
       }
 
-      const uploadedBytes = calculateUploadedBytes(this.sortedReceipts());
-      this.emit({
-        type: "chunk:completed",
-        manifestId: manifest.id,
-        chunk,
-        uploadedBytes,
-        totalBytes: this.file.size
-      });
-      this.updateSnapshot({
-        manifest,
-        chunkPlan,
-        session,
-        status: "uploading",
-        createdAt: snapshotCreatedAt
-      });
+      const outcomes = await Promise.allSettled(
+        batch.map((chunk) => this.uploadChunkWithRetry(manifest, session, chunk))
+      );
+      let firstError: unknown;
+
+      for (let position = 0; position < batch.length; position += 1) {
+        const chunk = batch[position];
+        const outcome = outcomes[position];
+        if (!chunk || !outcome) continue;
+        if (outcome.status === "rejected") {
+          firstError ??= outcome.reason;
+          continue;
+        }
+
+        try {
+          this.storeReceipt(chunk, outcome.value.receipt);
+
+          if (activeRecord) {
+            activeRecord = await this.checkpointChunk(
+              activeRecord,
+              chunk,
+              chunkPlan,
+              outcome.value.transportResult
+            );
+          }
+
+          const uploadedBytes = calculateUploadedBytes(this.sortedReceipts());
+          this.emit({
+            type: "chunk:completed",
+            manifestId: manifest.id,
+            chunk,
+            uploadedBytes,
+            totalBytes: this.file.size
+          });
+          this.updateSnapshot({
+            manifest,
+            chunkPlan,
+            session,
+            status: "uploading",
+            createdAt: snapshotCreatedAt
+          });
+        } catch (error) {
+          firstError ??= error;
+        }
+      }
+
+      if (firstError !== undefined) {
+        throw firstError;
+      }
 
       this.throwIfStopped();
     }
@@ -493,7 +575,7 @@ export class LargeImageIngestSession {
 
     const transport = result ? mergeTransportState(record.transport, result) : record.transport;
     const updatedAt = nowIso();
-    const nextRecord: ResumeRecord = record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION
+    const nextRecord: ResumeRecord = record.schemaVersion !== "large-image-ingest.resume.v0.1"
       ? {
           ...record,
           transport,
@@ -622,7 +704,7 @@ export class LargeImageIngestSession {
       createdAt: snapshotCreatedAt
     });
 
-    await this.options.transport.completeSession({
+    const completionResult = await this.options.transport.completeSession({
       manifest,
       file: this.file,
       signal: this.abortController.signal,
@@ -630,6 +712,14 @@ export class LargeImageIngestSession {
       session,
       receipts: this.sortedReceipts()
     });
+
+    const evidence = await createCompletionEvidence({
+      manifest,
+      transportName: session.transportName,
+      receipts: this.sortedReceipts(),
+      completionResult: completionResult ?? undefined
+    });
+    this.completionEvidence = evidence;
 
     if (record) {
       await this.completeResumeRecord(record);
@@ -642,7 +732,12 @@ export class LargeImageIngestSession {
       status: "completed",
       createdAt: snapshotCreatedAt
     });
-    this.emit({ type: "completed", manifest, uploadId: session.uploadId });
+    this.emit({
+      type: "completed",
+      manifest,
+      uploadId: session.uploadId,
+      evidence: cloneCompletionEvidence(evidence)
+    });
   }
 
   private async completeResumeRecord(record: ResumeRecord): Promise<void> {
@@ -724,7 +819,7 @@ export class LargeImageIngestSession {
     chunkPlan: ChunkPlan,
     session: TransportSession
   ): void {
-    if (record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION) {
+    if (record.schemaVersion !== "large-image-ingest.resume.v0.1") {
       for (const receipt of record.receipts) {
         const chunk = chunkPlan.chunks[receipt.chunkIndex];
         if (!chunk) {
@@ -1043,6 +1138,25 @@ export class LargeImageIngestSession {
     }
   }
 
+  private validateRequestedResumeContentIdentity(manifest: IngestManifest): void {
+    if (!this.options.resume) {
+      return;
+    }
+
+    const checksum = manifest.original.checksum;
+    if (
+      !checksum ||
+      checksum.algorithm !== "sha256" ||
+      checksum.scope !== "whole-file" ||
+      !/^[a-f0-9]{64}$/i.test(checksum.value)
+    ) {
+      throw this.emitResumeConflict(
+        "resume.content_identity_missing",
+        "Persistent resume requires a trustworthy whole-file source checksum."
+      );
+    }
+  }
+
   private sumCompletedBytes(
     ranges: ResumeRecord["progress"]["completedChunkRanges"],
     chunks: readonly ChunkDescriptor[]
@@ -1197,6 +1311,34 @@ export class LargeImageIngestSession {
       // Observer error reporting is isolated from upload control flow too.
     }
   }
+}
+
+function validateExecutionPolicy(
+  configured: number | undefined,
+  capabilities: TransportCapabilities | undefined
+): number {
+  const maxParallelChunks = configured ?? 1;
+  if (
+    !Number.isSafeInteger(maxParallelChunks) ||
+    maxParallelChunks < 1 ||
+    maxParallelChunks > 32
+  ) {
+    throw createIngestError(
+      "execution.invalid_concurrency",
+      "maxParallelChunks must be a safe integer between 1 and 32.",
+      false
+    );
+  }
+
+  if (maxParallelChunks > 1 && capabilities?.supportsParallelChunks !== true) {
+    throw createIngestError(
+      "execution.parallel_unsupported",
+      "The configured upload transport does not support parallel chunks.",
+      false
+    );
+  }
+
+  return maxParallelChunks;
 }
 
 export function createIngestSession(

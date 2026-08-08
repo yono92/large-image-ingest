@@ -49,6 +49,10 @@ describe("React headless hooks", () => {
     });
 
     expect(state?.status).toBe("completed");
+    expect(state?.completionEvidence).toMatchObject({
+      schemaVersion: "large-image-ingest.completion.v1",
+      status: "completed-unverified"
+    });
     expect(progress).toMatchObject({ progress: 1 });
     expect(controls).toMatchObject({ canStart: true, canPause: false, canCancel: false });
     const rendersBeforeUnmount = renders;

@@ -1,6 +1,7 @@
 import type {
   ResumeRecord,
   ResumeRecordV0_1,
+  ResumeRecordV0_2,
   ResumeStore,
   ResumeTransportState,
   UploadChunkContext,
@@ -38,10 +39,37 @@ export function toLegacyResumeRecord(record: ResumeRecord): ResumeRecordV0_1 {
     return cloned;
   }
 
-  const { receipts: _receipts, ...base } = cloned;
+  const { receipts: _receipts, ...withPossibleProducer } = cloned;
+  const { producer: _producer, ...base } = withPossibleProducer;
+  const { contentIdentity: _contentIdentity, ...file } = base.file;
   return {
     ...base,
+    file,
     schemaVersion: "large-image-ingest.resume.v0.1"
+  };
+}
+
+export function toV0_2ResumeRecord(record: ResumeRecord): ResumeRecordV0_2 {
+  const cloned = structuredClone(record);
+
+  if (cloned.schemaVersion === "large-image-ingest.resume.v0.2") {
+    return cloned;
+  }
+
+  if (cloned.schemaVersion === "large-image-ingest.resume.v0.1") {
+    return {
+      ...cloned,
+      schemaVersion: "large-image-ingest.resume.v0.2",
+      receipts: []
+    };
+  }
+
+  const { producer: _producer, ...base } = cloned;
+  const { contentIdentity: _contentIdentity, ...file } = base.file;
+  return {
+    ...base,
+    file,
+    schemaVersion: "large-image-ingest.resume.v0.2"
   };
 }
 

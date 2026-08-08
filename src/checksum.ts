@@ -29,6 +29,15 @@ export async function calculateChecksum(
   file: IngestFileLike,
   options: ChecksumOptions = {}
 ): Promise<FileChecksum> {
+  if (options.executor) {
+    const executionOptions: import("./types.js").ChecksumExecutionOptions = {};
+    if (options.algorithm !== undefined) executionOptions.algorithm = options.algorithm;
+    if (options.chunkSize !== undefined) executionOptions.chunkSize = options.chunkSize;
+    if (options.onProgress !== undefined) executionOptions.onProgress = options.onProgress;
+    if (options.signal !== undefined) executionOptions.signal = options.signal;
+    return options.executor.calculate(file, executionOptions);
+  }
+
   const algorithm = options.algorithm ?? "sha256";
   if (algorithm !== "sha256") {
     throw new RangeError(`Unsupported checksum algorithm: ${algorithm}`);
@@ -43,9 +52,13 @@ export async function calculateChecksum(
   const hasher = new Sha256();
   let loadedBytes = 0;
 
+  throwIfChecksumAborted(options.signal);
+
   for (let start = 0, chunkIndex = 0; start < file.size; start += chunkSize, chunkIndex += 1) {
+    throwIfChecksumAborted(options.signal);
     const end = Math.min(start + chunkSize, file.size);
     const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
+    throwIfChecksumAborted(options.signal);
     hasher.update(bytes);
     loadedBytes += bytes.byteLength;
     options.onProgress?.({
@@ -54,6 +67,7 @@ export async function calculateChecksum(
       chunkIndex,
       totalChunks
     });
+    throwIfChecksumAborted(options.signal);
   }
 
   return {
@@ -63,6 +77,21 @@ export async function calculateChecksum(
     scope: "whole-file",
     value: toHex(hasher.digest())
   };
+}
+
+export class ChecksumExecutionError extends Error {
+  readonly retryable = false;
+
+  constructor(readonly code: "checksum.aborted" | "checksum.worker_failed", message: string) {
+    super(message);
+    this.name = "ChecksumExecutionError";
+  }
+}
+
+function throwIfChecksumAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new ChecksumExecutionError("checksum.aborted", "Checksum calculation was aborted.");
+  }
 }
 
 class Sha256 {

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://large-image-ingest.dev/schemas/signed-evidence.v1.schema.json",
+  "title": "Large Image Ingest Signed Evidence Envelope v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "bundle", "payloadDigest", "signature"],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.signed-evidence.v1" },
+    "bundle": { "$ref": "evidence-bundle.v1.schema.json" },
+    "payloadDigest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "value": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "keyId", "value", "signedAt"],
+      "properties": {
+        "algorithm": { "type": "string", "minLength": 1 },
+        "keyId": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+        "signedAt": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

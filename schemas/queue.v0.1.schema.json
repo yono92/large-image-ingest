@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://large-image-ingest.dev/schemas/queue.v0.1.schema.json",
+  "title": "Large Image Ingest Queue Record v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "sequence",
+    "status",
+    "source",
+    "uploadedBytes",
+    "totalBytes",
+    "attempt",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.queue.v0.1" },
+    "id": { "type": "string", "minLength": 1 },
+    "sequence": { "type": "integer", "minimum": 0 },
+    "status": {
+      "enum": ["pending", "needs-source", "running", "paused", "failed", "completed", "canceled"]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "size", "type"],
+      "properties": {
+        "name": { "type": "string" },
+        "size": { "type": "integer", "minimum": 0 },
+        "type": { "type": "string" },
+        "lastModified": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "uploadedBytes": { "type": "integer", "minimum": 0 },
+    "totalBytes": { "type": "integer", "minimum": 0 },
+    "attempt": { "type": "integer", "minimum": 0 },
+    "resumeRecordId": { "type": "string", "minLength": 1 },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "retryable"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[a-z]+(?:[.-][a-z_]+)+$" },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "properties": {
+        "uploadedBytes": { "type": "integer", "minimum": 0 },
+        "totalBytes": { "type": "integer", "minimum": 0 }
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
+import { LARGE_IMAGE_INGEST_VERSION } from "../src/version";
 
 describe("createManifest", () => {
   it("creates a versioned original-preserving manifest", async () => {
@@ -27,7 +28,7 @@ describe("createManifest", () => {
     });
 
     expect(manifest.schemaVersion).toBe("large-image-ingest.manifest.v1");
-    expect(manifest.library.version).toBe("1.0.0");
+    expect(manifest.library.version).toBe(LARGE_IMAGE_INGEST_VERSION);
     expect(manifest.original).toMatchObject({
       kind: "original",
       name: "wafer-aoi-001.tif",

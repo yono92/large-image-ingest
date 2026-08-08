@@ -8,6 +8,7 @@ import {
 import { createManifest } from "../src/manifest";
 import type { ResumeStorageLike } from "../src/web-storage-resume-store";
 import { createLargeTestFile } from "./resume-fixtures";
+import { LARGE_IMAGE_INGEST_VERSION } from "../src/version";
 
 class MemoryStorage implements ResumeStorageLike {
   private readonly values = new Map<string, string>();
@@ -53,7 +54,9 @@ describe("WebStorageResumeStore", () => {
 
     await expect(store.get("resume-1")).resolves.toMatchObject({
       id: "resume-1",
-      schemaVersion: "large-image-ingest.resume.v0.2",
+      schemaVersion: "large-image-ingest.resume.v0.3",
+      producer: { name: "large-image-ingest", version: LARGE_IMAGE_INGEST_VERSION },
+      file: { contentIdentity: expect.objectContaining({ algorithm: "sha256" }) },
       receipts: [],
       transport: { uploadId: "upload-1", resumeToken: "secret-token" }
     });
@@ -63,6 +66,28 @@ describe("WebStorageResumeStore", () => {
     await store.delete("resume-1");
     await expect(store.get("resume-1")).resolves.toBeUndefined();
     await expect(store.list()).resolves.toEqual([]);
+  });
+
+  it("rejects v0.3 records whose content identity is missing", async () => {
+    const storage = new MemoryStorage();
+    const store = new WebStorageResumeStore(storage);
+    const file = createLargeTestFile();
+    const manifest = await createManifest(file, { chunking: { chunkSize: 256 * 1024 } });
+    const record = createResumeRecord({
+      id: "missing-content-id",
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize: 256 * 1024 }),
+      transport: { uploadId: "upload-missing-content-id" }
+    });
+    const serialized = structuredClone(record) as unknown as Record<string, unknown>;
+    const serializedFile = serialized.file as Record<string, unknown>;
+    delete serializedFile.contentIdentity;
+    storage.setItem("large-image-ingest.resume.missing-content-id", JSON.stringify(serialized));
+
+    await expect(store.get("missing-content-id")).rejects.toMatchObject({
+      code: "resume.content_identity_missing"
+    });
   });
 
   it("rejects malformed and structurally invalid stored records", async () => {

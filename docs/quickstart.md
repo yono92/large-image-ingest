@@ -88,7 +88,28 @@ const checksum = await calculateChecksum(file, {
 });
 ```
 
-For specialized workflows where checksum calculation is handled elsewhere, pass `checksum: false` to `createManifest()` or `createIngestSession()`.
+For specialized non-resumable workflows where checksum calculation is handled elsewhere, pass `checksum: false` to `createManifest()` or `createIngestSession()`. Persistent resume requires the SDK's trustworthy whole-file checksum and rejects `checksum: false` with `resume.content_identity_missing` before creating a remote session.
+
+### Worker checksum execution
+
+For huge browser sources, inject a Worker-compatible executor. The SDK ships the protocol and runtime installer, while the application owns the module Worker URL and CSP/bundler setup:
+
+```ts
+const executor = createWorkerChecksumExecutor({
+  workerFactory: () => new Worker(
+    new URL("./worker-checksum-runtime.js", import.meta.url),
+    { type: "module" }
+  )
+});
+
+const checksum = await calculateChecksum(file, {
+  executor,
+  signal: abortController.signal,
+  onProgress: updateChecksumProgress
+});
+```
+
+The worker receives the Blob/File handle and performs the same bounded slicing. Abort terminates that worker and suppresses late progress/results. See `examples/worker-checksum-runtime.ts` for `installChecksumWorkerRuntime(self)`.
 
 ## Persistent Resume
 
@@ -132,9 +153,9 @@ if (record && (await classifyResumeRecordForFile(record, file)) === "compatible"
 }
 ```
 
-Browser resume still requires the application to ask the user for the same original file again. The SDK stores upload metadata, chunk checkpoints, manifest identity, and transport resume handles; it does not store original image bytes.
+Browser resume still requires the application to ask the user for the same original file again. New 1.4.0 records use `large-image-ingest.resume.v0.3` and bind every checkpoint to the original whole-file SHA-256 identity. The SDK recalculates the selected file's checksum before calling the transport's remote resume method. A metadata match with different bytes fails as `resume.content_mismatch`; a missing trustworthy identity fails as `resume.content_identity_missing`. Neither error includes checksum values.
 
-Records created by 1.2.0 use `large-image-ingest.resume.v0.2`. Each acknowledged chunk stores its validated receipt together with derived progress, so a new S3 multipart session object can restore the original part numbers and ETags after all in-memory state is gone.
+The SDK stores upload metadata, chunk checkpoints, manifest identity, and transport resume handles; it does not store original image bytes. Records created by 1.2.0 use `large-image-ingest.resume.v0.2`. They remain safely resumable only when the embedded manifest contains a trustworthy whole-file checksum. Each acknowledged chunk stores its validated receipt together with derived progress, so a new S3 multipart session object can restore the original part numbers and ETags after all in-memory state is gone.
 
 ## React Headless State
 
@@ -159,9 +180,48 @@ The probe does not decode raster pixels or generate display assets. BigTIFF iden
 
 The reader also recognizes legacy `large-image-ingest.resume.v0.1` records. tus and zero-progress S3 records can continue after remote validation. A progressed S3 v0.1 record fails with `resume.receipt_missing` because inventing or reconstructing authoritative ETags would be unsafe.
 
-`WebStorageResumeStore` validates stored JSON on read, list, and write. Custom stores are validated again by `resume(recordId)` before range hydration or transport calls. Invalid records fail with typed `resume.record_invalid`, `resume.receipt_invalid`, or `resume.schema_unsupported` conflicts without including raw record contents in default events.
+`WebStorageResumeStore` validates stored JSON on read, list, and write. Custom stores are validated again by `resume(recordId)` before range hydration or transport calls. Invalid or unsafe records fail with typed `resume.record_invalid`, `resume.receipt_invalid`, `resume.schema_unsupported`, `resume.content_identity_missing`, or `resume.content_mismatch` conflicts without including raw record contents or checksum values in default events.
 
 Full resume records are sensitive persistence objects. They may contain customer metadata, remote upload IDs, tus upload URLs, object keys, ETags, locations, or opaque provider evidence. Do not log them directly; use `redactResumeRecord()` or `createSafeEventSummary()`.
+
+### Legacy resume migration
+
+v0.1 and v0.2 records remain parseable. A legacy record can resume only when its embedded manifest has a valid whole-file SHA-256 checksum and its transport state contains the receipts required by that adapter. Do not rewrite an unsafe legacy record into v0.3 or fabricate `contentIdentity`; restart the upload from byte zero so the SDK can create new trustworthy state.
+
+## Completion Evidence
+
+The manifest describes source intent before upload and therefore keeps `upload.status: "pending"`. Successful transport completion creates a separate immutable evidence record:
+
+```ts
+await session.start();
+
+const evidence = session.getCompletionEvidence();
+if (!evidence) throw new Error("Upload did not complete.");
+
+if (evidence.status === "verified") {
+  await promoteInspectionOriginal(evidence);
+} else {
+  await queueStoredObjectVerification(evidence.manifest.id);
+}
+```
+
+A custom transport that returns `void` from `completeSession()` remains valid and produces `completed-unverified`. To produce verified evidence, return normalized whole stored-object facts:
+
+```ts
+async completeSession({ manifest, uploadId, receipts }) {
+  const result = await broker.completeAndVerify({ manifest, uploadId, receipts });
+  return {
+    completedAt: result.completedAt,
+    storage: { kind: "s3", label: "inspection-originals" },
+    storedObject: {
+      sizeBytes: result.sizeBytes,
+      checksum: { algorithm: "sha256", value: result.sha256 }
+    }
+  };
+}
+```
+
+Core rejects same-algorithm checksum or stored-size conflicts with `completion.integrity_mismatch` and exposes no successful evidence. Use `createSafeCompletionSummary()` for logs; full evidence can contain checksum and storage values.
 
 ## Verification
 
@@ -234,6 +294,80 @@ const session = createIngestSession(file, {
 
 `maxAttempts` is the total number of attempts for a chunk operation. Pause, cancel, aborted signals, validation failures, checksum mismatches, resume conflicts, remote offset mismatches, expired resume state, and non-retryable transport errors bypass retry.
 
+## Bounded Parallel Chunks
+
+```ts
+const session = createIngestSession(file, {
+  execution: { maxParallelChunks: 4 },
+  transport: parallelCapableTransport
+});
+```
+
+The default is one. Values above one require `transport.capabilities.supportsParallelChunks === true`; otherwise the session fails before remote creation with `execution.parallel_unsupported`. Limits outside 1..32 fail as `execution.invalid_concurrency`. Successful siblings from a failed batch are validated and checkpointed in index order before the failure is reported, so exact-source resume does not retransmit them.
+
+## Multi-File Queue Orchestration
+
+```ts
+import { createIngestQueue, WebStorageQueueStore } from "large-image-ingest/core";
+
+const queue = createIngestQueue({
+  maxActiveItems: 2,
+  maxActiveBytes: 8 * 1024 ** 3,
+  maxQueuedItems: 1_000,
+  store: new WebStorageQueueStore(localStorage),
+  createSessionOptions({ itemId }) {
+    return {
+      checksum: { required: true },
+      resume: { store: resumeStore },
+      transport: createTransportForItem(itemId)
+    };
+  },
+  resolveSource(identity, itemId) {
+    return sourcePicker.resolve(identity, itemId);
+  }
+});
+
+await queue.restore();
+await queue.enqueue(firstFile, { id: "inspection-001" });
+await queue.enqueue(secondFile, { id: "inspection-002" });
+const finalSnapshot = await queue.start();
+```
+
+FIFO admission never bypasses a head item blocked by the byte budget. A single source larger than the budget may run only when no other item is active, preventing deadlock. `maxQueuedItems` counts completed and canceled records until they are explicitly removed.
+
+Queue records do not serialize files, transports, secrets, manifests, receipts, or raw errors. After restart, unresolved work remains `needs-source`; `attachSource()` performs a metadata precheck and underlying v0.3 session resume verifies exact SHA-256 content before transport access.
+
+Use `createSafeQueueEventSummary()`, `createSafeQueueSnapshotSummary()`, and `redactIngestQueueRecord()` for operational output.
+
+## Inspection Policy And Evidence Export
+
+```ts
+import {
+  EVIDENCE_GRADE_INSPECTION_POLICY_V1,
+  createEvidenceBundle,
+  createSafeInspectionPolicySummary,
+  evaluateInspectionPolicy,
+  signEvidenceBundle
+} from "large-image-ingest/core";
+
+const policyReport = evaluateInspectionPolicy({
+  manifest,
+  completion: session.getCompletionEvidence(),
+  policy: EVIDENCE_GRADE_INSPECTION_POLICY_V1
+});
+
+if (!policyReport.ok) {
+  reportPolicyFailure(createSafeInspectionPolicySummary(policyReport));
+}
+
+const bundle = createEvidenceBundle({ manifest, completion, policyReport });
+const envelope = await signEvidenceBundle(bundle, applicationOwnedSigner);
+```
+
+Profiles validate scalar metadata fields without echoing rejected values. Policies evaluate manifest and completion facts but do not decide application quarantine/release workflow. Canonical bundle bytes are stable across object key insertion order; array order remains significant.
+
+`signEvidenceBundle()` does not manage keys or choose a trust policy. `verifySignedEvidenceEnvelope()` validates the bundle and SHA-256 digest before invoking the supplied verifier. A result is `trusted` only when both digest and callback verification pass.
+
 ## Transport Examples
 
 Focused examples live in the repository:
@@ -242,3 +376,6 @@ Focused examples live in the repository:
 - `examples/tus-transport.ts`: browser upload through a tus endpoint.
 - `examples/s3-multipart.ts`: browser upload through a broker-backed S3 multipart flow.
 - `examples/nas-gateway-route.ts`: server-side NAS staging and finalize route shape.
+- `examples/multi-file-queue.ts`: bounded durable multi-file orchestration.
+- `examples/inspection-policy.ts`: custom versioned profile and policy pack.
+- `examples/evidence-signing.ts`: application-owned WebCrypto sign/verify boundary.

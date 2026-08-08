@@ -16,6 +16,8 @@ import type {
   UploadTransport
 } from "../src/types";
 import { FakeTransport, MemoryResumeStore, createLargeTestFile } from "./resume-fixtures";
+import { createSameMetadataFiles } from "./evidence-fixtures";
+import { toV0_2ResumeRecord } from "./resume-fixtures";
 
 const chunking = { chunkSize: 256 * 1024 };
 
@@ -90,7 +92,7 @@ describe("persistent session resume", () => {
     ]);
     expect(interrupted.progress.nextChunkIndex).toBe(2);
     expect(interrupted).toMatchObject({
-      schemaVersion: "large-image-ingest.resume.v0.2",
+      schemaVersion: "large-image-ingest.resume.v0.3",
       receipts: [
         expect.objectContaining({ chunkIndex: 0 }),
         expect.objectContaining({ chunkIndex: 1 })
@@ -103,6 +105,81 @@ describe("persistent session resume", () => {
     expect(resumeTransport.resumed).toHaveLength(1);
     expect(resumeTransport.uploadedChunks).toEqual([2, 3]);
     await expect(store.get(interrupted.id)).resolves.toBeUndefined();
+  });
+
+  it("rejects persistent resume without a source checksum before transport creation", async () => {
+    const file = createLargeTestFile();
+    const store = new MemoryResumeStore();
+    const transport = new FakeTransport();
+
+    await expect(
+      createIngestSession(file, createOptions(transport, store, [], { checksum: false })).start()
+    ).rejects.toMatchObject({ code: "resume.content_identity_missing" });
+
+    expect(transport.created).toHaveLength(0);
+    expect(transport.uploadedChunks).toHaveLength(0);
+    expect(transport.completed).toHaveLength(0);
+  });
+
+  it("rejects same-metadata different bytes before transport resume or mutation", async () => {
+    const { original, replacement } = createSameMetadataFiles();
+    const store = new MemoryResumeStore();
+    const firstTransport = new FakeTransport({ failChunkIndexes: [0] });
+    const options = { chunking: { chunkSize: 256 * 1024 } };
+
+    await expect(
+      createIngestSession(original, createOptions(firstTransport, store, [], options)).start()
+    ).rejects.toThrow("Chunk 0 failed.");
+
+    const interrupted = await firstRecord(store);
+    const resumeTransport = new FakeTransport();
+    await expect(
+      createIngestSession(replacement, createOptions(resumeTransport, store, [], options)).resume(interrupted.id)
+    ).rejects.toMatchObject({ code: "resume.content_mismatch" });
+
+    expect(resumeTransport.resumed).toHaveLength(0);
+    expect(resumeTransport.uploadedChunks).toHaveLength(0);
+    expect(resumeTransport.completed).toHaveLength(0);
+  });
+
+  it("does not mutate the selected source while validating resume content", async () => {
+    const file = createLargeTestFile(undefined, 512 * 1024);
+    const before = new Uint8Array(await file.arrayBuffer());
+    const store = new MemoryResumeStore();
+
+    await expect(
+      createIngestSession(
+        file,
+        createOptions(new FakeTransport({ failChunkIndexes: [1] }), store)
+      ).start()
+    ).rejects.toThrow("Chunk 1 failed.");
+
+    const interrupted = await firstRecord(store);
+    await createIngestSession(file, createOptions(new FakeTransport(), store)).resume(interrupted.id);
+    expect(new Uint8Array(await file.arrayBuffer())).toEqual(before);
+  });
+
+  it("rejects legacy progress without a trustworthy manifest checksum", async () => {
+    const file = createLargeTestFile();
+    const store = new MemoryResumeStore();
+
+    await expect(
+      createIngestSession(
+        file,
+        createOptions(new FakeTransport({ failChunkIndexes: [1] }), store)
+      ).start()
+    ).rejects.toThrow("Chunk 1 failed.");
+
+    const current = await firstRecord(store);
+    const unsafe = toV0_2ResumeRecord(current);
+    delete unsafe.manifest.original.checksum;
+    store.records.set(unsafe.id, unsafe);
+    const transport = new FakeTransport();
+
+    await expect(
+      createIngestSession(file, createOptions(transport, store)).resume(unsafe.id)
+    ).rejects.toMatchObject({ code: "resume.content_identity_missing" });
+    expect(transport.resumed).toHaveLength(0);
   });
 
   it("preserves manifest identity when a stored upload is resumed", async () => {
@@ -152,6 +229,7 @@ describe("persistent session resume", () => {
     const [record] = await store.list();
     expect(transport.completed).toHaveLength(1);
     expect(session.getSnapshot()?.status).toBe("completed");
+    expect(session.getCompletionEvidence()?.status).toBe("completed-unverified");
     expect(record?.progress.status).toBe("completed");
     expect(events).toContainEqual(expect.objectContaining({
       type: "resume:cleanup-failed",

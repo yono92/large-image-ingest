@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.3.1",
+  "version": "1.7.0",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -25,7 +25,8 @@
     "docs",
     "examples",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "schemas"
   ],
   "exports": {
     ".": {
@@ -69,11 +70,19 @@
       "import": "./dist/esm/tiff.js",
       "require": "./dist/cjs/tiff.js",
       "default": "./dist/esm/tiff.js"
-    }
+    },
+    "./schemas/manifest.v1": "./schemas/manifest.v1.schema.json",
+    "./schemas/resume.v0.3": "./schemas/resume.v0.3.schema.json",
+    "./schemas/completion.v1": "./schemas/completion.v1.schema.json",
+    "./schemas/queue.v0.1": "./schemas/queue.v0.1.schema.json",
+    "./schemas/inspection-profile.v1": "./schemas/inspection-profile.v1.schema.json",
+    "./schemas/inspection-policy.v1": "./schemas/inspection-policy.v1.schema.json",
+    "./schemas/evidence-bundle.v1": "./schemas/evidence-bundle.v1.schema.json",
+    "./schemas/signed-evidence.v1": "./schemas/signed-evidence.v1.schema.json"
   },
   "types": "./dist/esm/index.d.ts",
   "scripts": {
-    "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
+    "build": "npm run verify:version && npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
     "benchmark:local": "npm run build && node benchmarks/run-local.cjs",
     "clean": "node scripts/clean-dist.cjs",
     "prepack": "npm run build",
@@ -81,9 +90,10 @@
     "smoke:exports": "node scripts/verify-package-consumption.cjs",
     "test:integration": "node scripts/run-integration-tests.cjs",
     "test:reference": "node benchmarks/run-local.cjs --size-mib 64",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.cjs.json --noEmit",
+    "typecheck": "npm run verify:version && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.cjs.json --noEmit",
     "typecheck:examples": "tsc -p tsconfig.examples.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:version": "node scripts/verify-version-sync.cjs"
   },
   "keywords": [
     "large-image",
@@ -113,6 +123,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/react-test-renderer": "^19.1.0",
+    "ajv": "^8.20.0",
     "geotiff": "^3.0.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

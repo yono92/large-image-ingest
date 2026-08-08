@@ -2,6 +2,7 @@ import { calculateChecksum } from "./checksum.js";
 import { planChunks } from "./chunks.js";
 import { createFastFingerprint } from "./fingerprint.js";
 import { validateFile } from "./validation.js";
+import { LARGE_IMAGE_INGEST_VERSION } from "./version.js";
 import type {
   ChecksumOptions,
   CreateIngestSessionOptions,
@@ -66,7 +67,7 @@ export async function createManifest(
     createdAt: options.manifestIdentity?.createdAt ?? new Date().toISOString(),
     library: {
       name: "large-image-ingest",
-      version: "1.0.0"
+      version: LARGE_IMAGE_INGEST_VERSION
     },
     original,
     image: createImageManifest(options.image),

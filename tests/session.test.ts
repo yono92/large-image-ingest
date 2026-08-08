@@ -28,6 +28,7 @@ describe("LargeImageIngestSession", () => {
       type: "image/tiff"
     });
     const completedReceipts: UploadChunkReceipt[][] = [];
+    const completedEvents: IngestEvent[] = [];
     const eventSnapshots: UploadSessionSnapshot[] = [];
     const fullSnapshots: UploadSessionSnapshot[] = [];
 
@@ -68,6 +69,9 @@ describe("LargeImageIngestSession", () => {
         if (event.type === "snapshot") {
           eventSnapshots.push(event.snapshot);
         }
+        if (event.type === "completed") {
+          completedEvents.push(event);
+        }
       },
       onSnapshot(snapshot) {
         fullSnapshots.push(snapshot);
@@ -82,6 +86,15 @@ describe("LargeImageIngestSession", () => {
     expect(completedReceipts[0].map((receipt) => receipt.transport.partNumber)).toEqual([1, 2, 3]);
     expect(session.getSnapshot()?.status).toBe("completed");
     expect(session.getSnapshot()?.completedChunks).toHaveLength(3);
+    const evidence = session.getCompletionEvidence();
+    expect(evidence).toMatchObject({
+      schemaVersion: "large-image-ingest.completion.v1",
+      status: "completed-unverified",
+      upload: { acknowledgedChunks: 3 }
+    });
+    expect(completedEvents).toHaveLength(1);
+    expect(completedEvents[0]).toMatchObject({ type: "completed", evidence });
+    expect(session.getCompletionEvidence()).not.toBe(evidence);
 
     const finalFullSnapshot = fullSnapshots.at(-1);
     const finalEventSnapshot = eventSnapshots.at(-1);
@@ -102,6 +115,102 @@ describe("LargeImageIngestSession", () => {
       transportSession: ["resumeToken", "remote"],
       receipts: ["transport.etag", "transport.location"]
     });
+  });
+
+  it("classifies matching transport completion facts as verified", async () => {
+    const file = new File([new Uint8Array(chunkSize)], "verified.tif", { type: "image/tiff" });
+    const events: IngestEvent[] = [];
+    const transport: UploadTransport = {
+      capabilities: fakeCapabilities,
+      async createSession() {
+        return { uploadId: "verified-upload", transportName: "fake", createdAt: "2026-01-01T00:00:00.000Z" };
+      },
+      async uploadChunk({ chunk, body }) {
+        return {
+          chunkIndex: chunk.index,
+          sizeBytes: body.size,
+          completedAt: "2026-01-01T00:00:00.000Z",
+          transport: { name: "fake" }
+        };
+      },
+      async completeSession({ manifest }) {
+        const checksum = manifest.original.checksum;
+        if (!checksum) throw new Error("Expected checksum.");
+        return {
+          completedAt: "2026-01-02T00:00:00.000Z",
+          storedObject: {
+            sizeBytes: manifest.original.sizeBytes,
+            checksum: { algorithm: "sha256", value: checksum.value }
+          }
+        };
+      }
+    };
+    const session = createIngestSession(file, { transport, onEvent: (event) => events.push(event) });
+
+    await session.start();
+
+    expect(session.getCompletionEvidence()).toMatchObject({
+      status: "verified",
+      completedAt: "2026-01-02T00:00:00.000Z"
+    });
+    expect(events.filter((event) => event.type === "completed")).toHaveLength(1);
+  });
+
+  it("emits no successful evidence when completion fails or integrity conflicts", async () => {
+    const file = new File([new Uint8Array(chunkSize)], "conflict.tif", { type: "image/tiff" });
+
+    for (const completion of ["transport-failure", "checksum-conflict"] as const) {
+      const completedEvents: IngestEvent[] = [];
+      const transport: UploadTransport = {
+        async createSession() {
+          return { uploadId: completion, transportName: "fake", createdAt: "2026-01-01T00:00:00.000Z" };
+        },
+        async uploadChunk() {},
+        async completeSession({ manifest }) {
+          if (completion === "transport-failure") throw new Error("Remote completion failed.");
+          return {
+            storedObject: {
+              sizeBytes: manifest.original.sizeBytes,
+              checksum: { algorithm: "sha256" as const, value: "f".repeat(64) }
+            }
+          };
+        }
+      };
+      const session = createIngestSession(file, {
+        transport,
+        onEvent(event) {
+          if (event.type === "completed") completedEvents.push(event);
+        }
+      });
+
+      const error = await session.start().catch((caught: unknown) => caught);
+      if (completion === "transport-failure") {
+        expect(error).toBeInstanceOf(Error);
+      } else {
+        expect(error).toMatchObject({ code: "completion.integrity_mismatch", retryable: false });
+      }
+      expect(session.getCompletionEvidence()).toBeUndefined();
+      expect(completedEvents).toHaveLength(0);
+    }
+  });
+
+  it("keeps checksum-disabled custom transport completion source-compatible and unverified", async () => {
+    const file = new File([new Uint8Array(chunkSize)], "unchecked.tif", { type: "image/tiff" });
+    const transport: UploadTransport = {
+      async createSession() {
+        return { uploadId: "unchecked", transportName: "custom", createdAt: "2026-01-01T00:00:00.000Z" };
+      },
+      async uploadChunk() {},
+      async completeSession() {}
+    };
+    const session = createIngestSession(file, { checksum: false, transport });
+
+    await expect(session.start()).resolves.toMatchObject({ schemaVersion: "large-image-ingest.manifest.v1" });
+    expect(session.getCompletionEvidence()).toMatchObject({
+      status: "completed-unverified",
+      source: { sizeBytes: file.size }
+    });
+    expect(session.getCompletionEvidence()?.source.checksum).toBeUndefined();
   });
 
   it("resumes from a snapshot and skips already completed chunks", async () => {
@@ -642,6 +751,7 @@ describe("LargeImageIngestSession", () => {
     expect(uploadedChunks).toEqual([0, 1, 2]);
     expect(completionCalls).toBe(1);
     expect(session.getSnapshot()?.status).toBe("completed");
+    expect(session.getCompletionEvidence()?.status).toBe("completed-unverified");
     expect(observerFailures.some((failure) => (
       failure.observer === "event" && failure.eventType === "completed"
     ))).toBe(true);

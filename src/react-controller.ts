@@ -1,7 +1,9 @@
 import { createIngestSession, type LargeImageIngestSession } from "./session.js";
+import { cloneCompletionEvidence } from "./completion-evidence.js";
 import type {
   CreateIngestSessionOptions,
   IngestEvent,
+  IngestCompletionEvidence,
   IngestFileLike,
   IngestManifest,
   IngestObserverFailure,
@@ -21,6 +23,7 @@ export interface IngestControllerState {
   readonly error?: unknown;
   readonly recordId?: string;
   readonly observerFailure?: IngestObserverFailure;
+  readonly completionEvidence?: IngestCompletionEvidence;
 }
 
 export interface IngestController {
@@ -144,6 +147,14 @@ class DefaultIngestController implements IngestController {
   }
 
   private handleEvent(event: IngestEvent): void {
+    if (event.type === "completed") {
+      this.publish({
+        ...this.state,
+        completionEvidence: cloneCompletionEvidence(event.evidence)
+      });
+      return;
+    }
+
     if (event.type === "resume:available" || event.type === "resume:started") {
       this.publish({ ...this.state, recordId: event.recordId });
     }

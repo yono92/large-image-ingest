@@ -9,6 +9,8 @@ import type {
   IngestIssue,
   IngestIssueCode,
   IngestManifest,
+  StorageTargetManifest,
+  UploadCompletionResult,
   VerificationChecksumPolicy,
   VerificationResult
 } from "./types.js";
@@ -25,6 +27,12 @@ export type NodeChecksumOptions = Pick<
 export interface VerifyNodeFileManifestOptions {
   checksum?: VerificationChecksumPolicy;
   checksumChunkSize?: number;
+}
+
+export interface CreateNodeFileCompletionResultOptions {
+  checksumChunkSize?: number;
+  completedAt?: string;
+  storage?: StorageTargetManifest;
 }
 
 export async function calculateNodeFileChecksum(
@@ -68,6 +76,39 @@ export async function calculateNodeFileChecksum(
     scope: "whole-file",
     value: hash.digest("hex")
   };
+}
+
+export async function createNodeFileCompletionResult(
+  filePath: PathLike,
+  options: CreateNodeFileCompletionResultOptions = {}
+): Promise<UploadCompletionResult> {
+  const info = await stat(filePath);
+  if (!info.isFile()) {
+    throw new TypeError("Completion target must be a regular file.");
+  }
+
+  const checksum = await calculateNodeFileChecksum(
+    filePath,
+    options.checksumChunkSize === undefined
+      ? { algorithm: "sha256" }
+      : { algorithm: "sha256", chunkSize: options.checksumChunkSize }
+  );
+  const result: UploadCompletionResult = {
+    completedAt: options.completedAt ?? new Date().toISOString(),
+    storedObject: {
+      sizeBytes: info.size,
+      checksum: {
+        algorithm: checksum.algorithm,
+        value: checksum.value
+      }
+    }
+  };
+
+  if (options.storage) {
+    result.storage = structuredClone(options.storage);
+  }
+
+  return result;
 }
 
 export async function verifyNodeFileManifest(
