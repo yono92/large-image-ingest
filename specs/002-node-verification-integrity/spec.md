@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft. This feature adds the first verification layer after official transports and NAS gateway support.
+Implemented. The verification layer ships through core receipt/manifest verification and the Node stored-file verification helpers.
 
 ## Goal
 

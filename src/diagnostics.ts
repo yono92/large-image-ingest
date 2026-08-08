@@ -1,5 +1,8 @@
 import type {
   IngestEvent,
+  IngestCompletionEvidence,
+  IngestCompletionEvidenceSchemaVersion,
+  IngestCompletionStatus,
   IngestIssueCode,
   IngestIssueSeverity,
   ResumeChunkingIdentity,
@@ -42,6 +45,25 @@ export interface SafeEventSummary {
   cleanupOperation?: ResumeCleanupOperation | undefined;
   error?: SafeErrorSummary | undefined;
   redactions?: RedactionSummary | undefined;
+  completion?: SafeCompletionSummary | undefined;
+}
+
+export interface SafeCompletionSummary {
+  schemaVersion: IngestCompletionEvidenceSchemaVersion;
+  id: string;
+  manifestId: string;
+  status: IngestCompletionStatus;
+  producerVersion: string;
+  transportName: string;
+  totalBytes: number;
+  totalChunks: number;
+  acknowledgedChunks: number;
+  receiptDigestAlgorithm: "sha256";
+  sourceChecksumAlgorithm?: string | undefined;
+  storedChecksumAlgorithm?: string | undefined;
+  createdAt: string;
+  completedAt: string;
+  verifiedAt?: string | undefined;
 }
 
 export interface RedactedSnapshotResult {
@@ -83,12 +105,18 @@ export function createSafeEventSummary(event: IngestEvent): SafeEventSummary {
       }, ["manifest"]);
 
     case "started":
-    case "completed":
       return withRedactions({
         type: event.type,
         manifestId: event.manifest.id,
         uploadId: event.uploadId
       }, ["manifest"]);
+
+    case "completed":
+      return withRedactions({
+        type: event.type,
+        manifestId: event.manifest.id,
+        completion: createSafeCompletionSummary(event.evidence)
+      }, ["manifest", "uploadId", "evidence.checksumValues", "evidence.storage"]);
 
     case "snapshot": {
       const redacted = redactUploadSessionSnapshot(event.snapshot);
@@ -314,18 +342,29 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
     redactions.push("resume.transport.data");
   }
 
-  if (record.schemaVersion === "large-image-ingest.resume.v0.2" && record.receipts.length > 0) {
+  if (record.schemaVersion !== "large-image-ingest.resume.v0.1") {
     redactions.push("resume.receipts");
+  }
+
+  if (record.schemaVersion === "large-image-ingest.resume.v0.3") {
+    redactions.push("resume.file.contentIdentity");
+  }
+
+  const file: ResumeFileIdentity = {
+    name: record.file.name,
+    sizeBytes: record.file.sizeBytes,
+    mediaType: record.file.mediaType,
+    fingerprint: { ...record.file.fingerprint }
+  };
+  if (record.file.lastModified !== undefined) {
+    file.lastModified = record.file.lastModified;
   }
 
   return {
     schemaVersion: record.schemaVersion,
     id: record.id,
     manifestId: record.manifest.id,
-    file: {
-      ...record.file,
-      fingerprint: { ...record.file.fingerprint }
-    },
+    file,
     chunking: { ...record.chunking },
     transport,
     progress: {
@@ -338,6 +377,35 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
       fields: unique(redactions)
     }
   };
+}
+
+export function createSafeCompletionSummary(
+  evidence: IngestCompletionEvidence
+): SafeCompletionSummary {
+  const summary: SafeCompletionSummary = {
+    schemaVersion: evidence.schemaVersion,
+    id: evidence.id,
+    manifestId: evidence.manifest.id,
+    status: evidence.status,
+    producerVersion: evidence.producer.version,
+    transportName: evidence.upload.transportName,
+    totalBytes: evidence.upload.totalBytes,
+    totalChunks: evidence.upload.totalChunks,
+    acknowledgedChunks: evidence.upload.acknowledgedChunks,
+    receiptDigestAlgorithm: evidence.upload.receiptDigest.algorithm,
+    createdAt: evidence.createdAt,
+    completedAt: evidence.completedAt
+  };
+
+  if (evidence.source.checksum) {
+    summary.sourceChecksumAlgorithm = evidence.source.checksum.algorithm;
+  }
+  if (evidence.verification) {
+    summary.storedChecksumAlgorithm = evidence.verification.storedChecksum.algorithm;
+    summary.verifiedAt = evidence.verification.verifiedAt;
+  }
+
+  return summary;
 }
 
 export function createSafeVerificationSummary(result: VerificationResult): SafeVerificationSummary {
@@ -389,7 +457,11 @@ function toSafeErrorSummary(error: unknown, fallbackCode = "unknown"): SafeError
 }
 
 function sanitizeErrorMessage(message: string): string {
-  if (/https?:\/\//i.test(message) || /credential|authorization|presigned|resume token/i.test(message)) {
+  if (
+    /(?:https?|s3|file):\/\//i.test(message) ||
+    /credential|authorization|presigned|resume token/i.test(message) ||
+    /\b[a-f0-9]{32,}\b/i.test(message)
+  ) {
     return "Error details redacted.";
   }
 

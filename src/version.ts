@@ -1,0 +1,1 @@
+export const LARGE_IMAGE_INGEST_VERSION = "1.7.0";

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://large-image-ingest.dev/schemas/evidence-bundle.v1.schema.json",
+  "title": "Large Image Ingest Evidence Bundle v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "producer", "id", "manifestId", "completionId", "createdAt", "manifest", "completion"],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.evidence-bundle.v1" },
+    "producer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "large-image-ingest" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "manifestId": { "type": "string", "minLength": 1 },
+    "completionId": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "manifest": {
+      "type": "object",
+      "required": ["schemaVersion", "id"],
+      "properties": {
+        "schemaVersion": { "const": "large-image-ingest.manifest.v1" },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "completion": {
+      "type": "object",
+      "required": ["schemaVersion", "id", "manifest"],
+      "properties": {
+        "schemaVersion": { "const": "large-image-ingest.completion.v1" },
+        "id": { "type": "string", "minLength": 1 },
+        "manifest": {
+          "type": "object",
+          "required": ["id"],
+          "properties": { "id": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "policyReport": {
+      "type": "object",
+      "required": ["schemaVersion", "policy", "manifestId", "ok", "issues", "evaluatedAt"],
+      "properties": {
+        "schemaVersion": { "const": "large-image-ingest.inspection-policy-report.v1" },
+        "policy": { "type": "object" },
+        "manifestId": { "type": "string", "minLength": 1 },
+        "completionId": { "type": "string", "minLength": 1 },
+        "ok": { "type": "boolean" },
+        "issues": { "type": "array" },
+        "evaluatedAt": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

@@ -4,6 +4,8 @@ import type {
   TransportSession,
   UploadChunkContext,
   UploadChunkReceipt,
+  UploadCompletionContext,
+  UploadCompletionResult,
   UploadSessionContext,
   UploadTransport
 } from "./types.js";
@@ -20,6 +22,14 @@ export type TusMetadataMapper = (
   context: UploadSessionContext
 ) => TusMetadataRecord | Promise<TusMetadataRecord>;
 
+export type TusUploadVerificationContext = UploadCompletionContext & {
+  uploadUrl: string;
+};
+
+export type TusUploadVerifier = (
+  context: TusUploadVerificationContext
+) => Promise<void | UploadCompletionResult>;
+
 export interface TusTransportOptions {
   endpoint: string | URL;
   detectExtensions?: boolean;
@@ -30,6 +40,7 @@ export interface TusTransportOptions {
   requiredExtensions?: readonly string[];
   terminateOnAbort?: boolean;
   uploadIdPrefix?: string;
+  verifyUpload?: TusUploadVerifier;
 }
 
 export function createTusTransport(options: TusTransportOptions): UploadTransport {
@@ -229,6 +240,10 @@ export function createTusTransport(options: TusTransportOptions): UploadTranspor
             expectedOffset: context.file.size
           }
         );
+      }
+
+      if (options.verifyUpload) {
+        return options.verifyUpload({ ...context, uploadUrl });
       }
     },
     async abortSession(context) {

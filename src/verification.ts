@@ -22,7 +22,7 @@ export async function verifyManifest(
   options: VerifyManifestOptions = {}
 ): Promise<VerificationResult> {
   const issues: IngestIssue[] = [];
-  const manifestIssues = verifyManifestStructure(manifest);
+  const manifestIssues = validateManifestStructure(manifest).issues;
   issues.push(...manifestIssues);
 
   if (!isRecord(manifest)) {
@@ -242,7 +242,7 @@ export async function verifyIngestIntegrity(
   return toResult(issues);
 }
 
-function verifyManifestStructure(manifest: IngestManifest): IngestIssue[] {
+export function validateManifestStructure(manifest: IngestManifest): VerificationResult {
   const issues: IngestIssue[] = [];
 
   if (!isRecord(manifest)) {
@@ -252,7 +252,7 @@ function verifyManifestStructure(manifest: IngestManifest): IngestIssue[] {
       "Manifest must be an object.",
       "manifest"
     );
-    return issues;
+    return toResult(issues);
   }
 
   if (manifest.schemaVersion !== SUPPORTED_MANIFEST_SCHEMA_VERSION) {
@@ -272,7 +272,7 @@ function verifyManifestStructure(manifest: IngestManifest): IngestIssue[] {
       "Manifest original entry is required.",
       "original"
     );
-    return issues;
+    return toResult(issues);
   }
 
   const original = manifest.original;
@@ -337,7 +337,7 @@ function verifyManifestStructure(manifest: IngestManifest): IngestIssue[] {
       "Manifest chunking entry is required.",
       "chunking"
     );
-    return issues;
+    return toResult(issues);
   }
 
   const chunking = manifest.chunking;
@@ -400,7 +400,7 @@ function verifyManifestStructure(manifest: IngestManifest): IngestIssue[] {
     );
   }
 
-  return issues;
+  return toResult(issues);
 }
 
 function verifyFileIdentity(

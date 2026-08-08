@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.7.0
+
+- Add strict, versioned inspection metadata profiles with frozen semiconductor-wafer and industrial-inspection defaults.
+- Add serializable policy packs and an evidence-grade semiconductor policy for preservation, source checksum, verified completion, stored checksum, size, media type, and metadata rules.
+- Add deterministic policy reports with field paths and typed issues that never copy rejected metadata values.
+- Add immutable evidence bundles with recursively key-sorted canonical UTF-8 JSON and SHA-256 payload identity.
+- Add application-owned signing and verification callbacks, strict base64url envelopes, digest-first tamper rejection, and no key/provider ownership in core.
+- Publish four new JSON Schemas, safe inspection/evidence summaries, custom policy and WebCrypto examples, and migration guidance.
+
+## 1.6.0
+
+- Add framework-neutral `createIngestQueue()` orchestration with deterministic FIFO admission and validated item, byte, and queue limits.
+- Add typed queue/item lifecycle, detached aggregate snapshots, observer isolation, and safe event/snapshot/record summaries.
+- Add versioned queue v0.1 records, a published JSON Schema, provider-neutral `IngestQueueStore`, and browser `WebStorageQueueStore`.
+- Restore durable intent through application-owned source resolution and session-options factories without serializing source bytes, credentials, transports, manifests, receipts, checksums, or raw errors.
+- Normalize restored running intent safely and ensure unresolved or mismatched sources cause no session or transport call.
+- Carry session resume record IDs into fresh queue retry sessions so v0.3 exact-content resume remains authoritative.
+- Preserve remote completion when the final queue-store write fails and emit a typed operational event.
+
+## 1.5.0
+
+- Add an injectable Web Worker-compatible checksum executor with a versioned validated protocol, bounded slicing, progress parity, and prompt abort termination.
+- Add `execution.maxParallelChunks` with a sequential default, a hard 1..32 limit, and explicit transport capability enforcement before remote creation.
+- Settle parallel chunks in bounded batches, validate and checkpoint successful siblings by index, and preserve them across mixed failure, pause, cancel, and exact-source resume.
+- Keep completion receipts and evidence digests deterministic across out-of-order network completion.
+- Keep official tus and S3 helpers sequential until their adapter-specific protocols explicitly support parallel work.
+
+## 1.4.0
+
+- Bind new persistent resume v0.3 records to whole-file SHA-256 content identity and reject same-metadata replacement files before transport access.
+- Preserve safe v0.1/v0.2 inspection and resume paths while rejecting legacy progress without trustworthy source identity.
+- Add immutable `large-image-ingest.completion.v1` evidence with truthful `verified` and `completed-unverified` outcomes.
+- Allow custom, S3 multipart, tus, and Node/NAS integrations to return normalized stored-object size and checksum facts without provider logic in core.
+- Add packaged JSON Schema Draft 2020-12 contracts for manifest v1, resume v0.3, and completion v1.
+- Centralize producer version attribution, add package-version drift gates, and expose safe allowlisted completion summaries.
+- Keep existing custom transports returning `void` source-compatible and keep checksum-disabled non-resumable uploads available as unverified completions.
+
 ## 1.3.1
 
 - Prevent concurrent NAS chunk staging from losing acknowledged chunk records across gateway instances.

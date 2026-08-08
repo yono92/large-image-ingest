@@ -2,10 +2,19 @@ import { describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
 import {
   createSafeEventSummary,
+  createSafeCompletionSummary,
   createSafeVerificationSummary,
   redactResumeRecord,
   redactUploadSessionSnapshot
 } from "../src/diagnostics";
+import { createCompletionEvidence } from "../src/completion-evidence";
+import {
+  createResumeChunkingIdentity,
+  createResumeFileIdentity,
+  createResumeRecord
+} from "../src/resume";
+import { sensitiveEvidenceValues } from "./evidence-fixtures";
+import { LARGE_IMAGE_INGEST_VERSION } from "../src/version";
 import type {
   IngestEvent,
   ResumeRecord,
@@ -27,10 +36,16 @@ describe("diagnostics helpers", () => {
       manifest,
       uploadId: "upload-1"
     });
+    const evidence = await createCompletionEvidence({
+      manifest,
+      transportName: "fake",
+      receipts: []
+    });
     const completed = createSafeEventSummary({
       type: "completed",
       manifest,
-      uploadId: "upload-1"
+      uploadId: "upload-1",
+      evidence
     });
     const progress = createSafeEventSummary({
       type: "chunk:completed",
@@ -53,8 +68,13 @@ describe("diagnostics helpers", () => {
     expect(completed).toMatchObject({
       type: "completed",
       manifestId: manifest.id,
-      uploadId: "upload-1"
+      completion: {
+        id: evidence.id,
+        status: "completed-unverified",
+        transportName: "fake"
+      }
     });
+    expect(completed.uploadId).toBeUndefined();
     expect(progress).toMatchObject({
       type: "chunk:completed",
       manifestId: manifest.id,
@@ -66,6 +86,102 @@ describe("diagnostics helpers", () => {
     });
     expect(JSON.stringify([validated, started, completed, progress])).not.toContain("LOT-SECRET");
     expect(JSON.stringify([validated, started, completed, progress])).not.toContain("waferId");
+  });
+
+  it("allowlists completion evidence fields without leaking sensitive values", async () => {
+    const manifest = await createManifest(createFile(), {
+      metadata: { lotId: sensitiveEvidenceValues.metadata },
+      storage: { kind: "s3", locationHint: sensitiveEvidenceValues.location }
+    });
+    const checksum = manifest.original.checksum;
+    if (!checksum) throw new Error("Expected checksum.");
+    const evidence = await createCompletionEvidence({
+      manifest,
+      transportName: "s3-multipart",
+      receipts: [],
+      completionResult: {
+        storedObject: {
+          sizeBytes: manifest.original.sizeBytes,
+          checksum: { algorithm: "sha256", value: checksum.value }
+        },
+        storage: { kind: "s3", locationHint: sensitiveEvidenceValues.location }
+      }
+    });
+
+    const summary = createSafeCompletionSummary(evidence);
+
+    expect(summary).toMatchObject({
+      schemaVersion: "large-image-ingest.completion.v1",
+      id: evidence.id,
+      manifestId: manifest.id,
+      status: "verified",
+      producerVersion: LARGE_IMAGE_INGEST_VERSION,
+      transportName: "s3-multipart",
+      sourceChecksumAlgorithm: "sha256",
+      storedChecksumAlgorithm: "sha256",
+      receiptDigestAlgorithm: "sha256"
+    });
+    const serialized = JSON.stringify(summary);
+    for (const sensitive of Object.values(sensitiveEvidenceValues)) {
+      expect(serialized).not.toContain(sensitive);
+    }
+    expect(serialized).not.toContain(checksum.value);
+    expect(serialized).not.toContain(manifest.original.name);
+  });
+
+  it("redacts checksum values from completion conflicts and v0.3 resume summaries", async () => {
+    const checksumValue = "a".repeat(64);
+    const failed = createSafeEventSummary({
+      type: "failed",
+      manifestId: "manifest-1",
+      error: {
+        code: "completion.integrity_mismatch",
+        message: `Stored checksum ${checksumValue} does not match.`,
+        retryable: false,
+        details: { checksum: checksumValue, storage: sensitiveEvidenceValues.location }
+      }
+    });
+    expect(failed).toMatchObject({
+      error: { code: "completion.integrity_mismatch", message: "Error details redacted." }
+    });
+    expect(JSON.stringify(failed)).not.toContain(checksumValue);
+
+    const file = createFile();
+    const manifest = await createManifest(file, { chunking: { chunkSize: 256 * 1024 } });
+    const record = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize: 256 * 1024 }),
+      transport: { uploadId: sensitiveEvidenceValues.uploadId }
+    });
+    const redacted = redactResumeRecord(record);
+    expect(JSON.stringify(redacted)).not.toContain(record.file.contentIdentity.value);
+    expect(redacted.redactions?.fields).toContain("resume.file.contentIdentity");
+    expect(redacted.redactions?.fields).toContain("resume.receipts");
+  });
+
+  it("keeps worker and execution failures free of source and worker payload values", () => {
+    for (const code of ["checksum.worker_failed", "execution.parallel_unsupported"] as const) {
+      const summary = createSafeEventSummary({
+        type: "failed",
+        error: {
+          code,
+          message: `Failure at https://worker.invalid/${sensitiveEvidenceValues.filename}`,
+          retryable: false,
+          details: {
+            checksum: sensitiveEvidenceValues.checksum,
+            workerPayload: sensitiveEvidenceValues.opaque
+          }
+        }
+      });
+      expect(summary).toMatchObject({
+        error: { code, message: "Error details redacted.", retryable: false }
+      });
+      const serialized = JSON.stringify(summary);
+      expect(serialized).not.toContain(sensitiveEvidenceValues.filename);
+      expect(serialized).not.toContain(sensitiveEvidenceValues.checksum);
+      expect(serialized).not.toContain(sensitiveEvidenceValues.opaque);
+    }
   });
 
   it("summarizes retry, conflict, and failed events with safe typed error details", () => {

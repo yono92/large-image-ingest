@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyResumeRecordForFile,
+  LARGE_IMAGE_INGEST_VERSION,
   createResumeChunkingIdentity,
   createResumeFileIdentity,
   createResumeRecord,
@@ -11,7 +12,8 @@ import {
 } from "../src/index";
 import { createManifest } from "../src/manifest";
 import type { ResumeRecord, ResumeRecordStatus } from "../src/types";
-import { createLargeTestFile } from "./resume-fixtures";
+import { createSameMetadataFiles } from "./evidence-fixtures";
+import { createLargeTestFile, toLegacyResumeRecord, toV0_2ResumeRecord } from "./resume-fixtures";
 
 async function createRecord(status: ResumeRecordStatus = "active"): Promise<ResumeRecord> {
   const file = createLargeTestFile();
@@ -102,18 +104,91 @@ describe("resume helpers", () => {
     ).resolves.toBe("chunking_mismatch");
   });
 
-  it("creates and validates detached v0.2 resume records", async () => {
+  it("creates and validates detached v0.3 resume records with byte identity", async () => {
     const record = await createRecord();
     const result = validateResumeRecord(record);
 
-    expect(record.schemaVersion).toBe("large-image-ingest.resume.v0.2");
-    expect(record).toMatchObject({ receipts: [] });
+    expect(record).toMatchObject({
+      schemaVersion: "large-image-ingest.resume.v0.3",
+      producer: { name: "large-image-ingest", version: LARGE_IMAGE_INGEST_VERSION },
+      file: {
+        contentIdentity: {
+          algorithm: "sha256",
+          scope: "whole-file",
+          value: record.manifest.original.checksum?.value
+        }
+      },
+      receipts: []
+    });
     expect(result).toMatchObject({ ok: true });
 
     const parsed = parseResumeRecord(record);
     expect(parsed).toEqual(record);
     expect(parsed).not.toBe(record);
     expect(parsed.manifest).not.toBe(record.manifest);
+
+    expect(parseResumeRecord({ ...structuredClone(record), futureExtension: true })).toMatchObject({
+      id: record.id
+    });
+    expect(() => parseResumeRecord({
+      ...structuredClone(record),
+      schemaVersion: "large-image-ingest.resume.v99"
+    })).toThrow(expect.objectContaining({ code: "resume.schema_unsupported" }));
+  });
+
+  it("rejects malformed and manifest-inconsistent v0.3 content identities", async () => {
+    const record = await createRecord();
+    if (record.schemaVersion !== "large-image-ingest.resume.v0.3") {
+      throw new Error("Expected a v0.3 record.");
+    }
+
+    const malformed = structuredClone(record);
+    malformed.file.contentIdentity.value = "not-a-sha256";
+    expect(validateResumeRecord(malformed)).toMatchObject({
+      ok: false,
+      issues: [expect.objectContaining({ code: "resume.content_identity_missing" })]
+    });
+
+    const inconsistent = structuredClone(record);
+    inconsistent.file.contentIdentity.value = "f".repeat(64);
+    expect(validateResumeRecord(inconsistent)).toMatchObject({
+      ok: false,
+      issues: [expect.objectContaining({ code: "resume.content_mismatch" })]
+    });
+  });
+
+  it("retains explicit v0.1 and v0.2 compatibility fixtures", async () => {
+    const current = await createRecord();
+    const v0_1 = toLegacyResumeRecord(current);
+    const v0_2 = toV0_2ResumeRecord(current);
+    const file = createLargeTestFile();
+
+    expect(parseResumeRecord(v0_1).schemaVersion).toBe("large-image-ingest.resume.v0.1");
+    expect(parseResumeRecord(v0_2).schemaVersion).toBe("large-image-ingest.resume.v0.2");
+    await expect(
+      classifyResumeRecordForFile(v0_2, file, { chunkSize: 256 * 1024 })
+    ).resolves.toBe("compatible");
+
+    const unsafe = structuredClone(v0_2);
+    delete unsafe.manifest.original.checksum;
+    await expect(
+      classifyResumeRecordForFile(unsafe, file, { chunkSize: 256 * 1024 })
+    ).resolves.toBe("content_identity_missing");
+  });
+
+  it("classifies same-metadata different bytes as a content mismatch", async () => {
+    const { original, replacement } = createSameMetadataFiles();
+    const manifest = await createManifest(original, { chunking: { chunkSize: 256 * 1024 } });
+    const record = createResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(original),
+      chunking: createResumeChunkingIdentity(original.size, { chunkSize: 256 * 1024 }),
+      transport: { uploadId: "upload-content-bound" }
+    });
+
+    await expect(
+      classifyResumeRecordForFile(record, replacement, { chunkSize: 256 * 1024 })
+    ).resolves.toBe("content_mismatch");
   });
 
   it("rejects out-of-range progress before iterating it", async () => {
@@ -130,8 +205,8 @@ describe("resume helpers", () => {
 
   it("rejects duplicate and inconsistent durable receipts", async () => {
     const record = await createRecord();
-    if (record.schemaVersion !== "large-image-ingest.resume.v0.2") {
-      throw new Error("Expected a v0.2 record.");
+    if (record.schemaVersion === "large-image-ingest.resume.v0.1") {
+      throw new Error("Expected a receipt-bearing record.");
     }
 
     const receipt = {

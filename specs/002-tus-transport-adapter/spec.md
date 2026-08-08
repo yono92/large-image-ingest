@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-06
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Prioritize the next Spec Kit feature for a real transport adapter. Start with a tus-compatible transport because it is the most natural fit for browser restart and resume, and it directly validates the persistent resume session contract. Keep strong checksum/verification and package structure cleanup as follow-up features."
 

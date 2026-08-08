@@ -12,6 +12,7 @@ import type {
   S3MultipartBroker,
   S3MultipartFetch,
   S3MultipartPartContext,
+  UploadCompletionResult,
   UploadChunkReceipt,
   UploadSessionSnapshot
 } from "../src";
@@ -115,6 +116,51 @@ describe("createS3MultipartTransport", () => {
       "\"etag-2\"",
       "\"etag-3\""
     ]);
+    expect(session.getCompletionEvidence()?.status).toBe("completed-unverified");
+  });
+
+  it("passes normalized broker completion evidence through without treating multipart ETags as proof", async () => {
+    const file = createLargeFile(chunkSize);
+    const verifiedBroker = createFakeBroker({
+      completeResult({ manifest }) {
+        const checksum = manifest.original.checksum;
+        if (!checksum) throw new Error("Expected checksum.");
+        return {
+          completedAt: "2026-08-07T00:00:00.000Z",
+          storage: { kind: "s3", label: "verified-originals" },
+          storedObject: {
+            sizeBytes: manifest.original.sizeBytes,
+            checksum: { algorithm: "sha256", value: checksum.value }
+          }
+        };
+      }
+    });
+    const verified = createIngestSession(file, {
+      chunking: { chunkSize },
+      transport: createS3MultipartTransport({ broker: verifiedBroker, fetch: createFakeS3Fetch().fetch })
+    });
+    await verified.start();
+    expect(verified.getCompletionEvidence()).toMatchObject({
+      status: "verified",
+      storage: { kind: "s3", label: "verified-originals" }
+    });
+
+    const conflictingBroker = createFakeBroker({
+      completeResult({ manifest }) {
+        return {
+          storedObject: {
+            sizeBytes: manifest.original.sizeBytes,
+            checksum: { algorithm: "sha256", value: "f".repeat(64) }
+          }
+        };
+      }
+    });
+    const conflicting = createIngestSession(file, {
+      chunking: { chunkSize },
+      transport: createS3MultipartTransport({ broker: conflictingBroker, fetch: createFakeS3Fetch().fetch })
+    });
+    await expect(conflicting.start()).rejects.toMatchObject({ code: "completion.integrity_mismatch" });
+    expect(conflicting.getCompletionEvidence()).toBeUndefined();
   });
 
   it("rejects non-final chunks smaller than the S3 multipart minimum before creating upload", async () => {
@@ -233,7 +279,7 @@ describe("createS3MultipartTransport", () => {
 
     const [record] = await store.list();
     expect(record).toMatchObject({
-      schemaVersion: "large-image-ingest.resume.v0.2",
+      schemaVersion: "large-image-ingest.resume.v0.3",
       receipts: [{
         chunkIndex: 0,
         transport: { partNumber: 1, etag: "\"etag-1\"" }
@@ -403,6 +449,7 @@ function createFakeBroker(options: {
   onComplete?: (parts: readonly S3CompletedPart[]) => void;
   onCreate?: () => void;
   onPart?: (context: S3MultipartPartContext) => void;
+  completeResult?: (context: Parameters<S3MultipartBroker["completeMultipartUpload"]>[0]) => UploadCompletionResult | void;
 } = {}): S3MultipartBroker {
   return {
     async createMultipartUpload() {
@@ -423,8 +470,9 @@ function createFakeBroker(options: {
         }
       };
     },
-    async completeMultipartUpload({ parts }) {
-      options.onComplete?.(parts);
+    async completeMultipartUpload(context) {
+      options.onComplete?.(context.parts);
+      return options.completeResult?.(context);
     },
     async abortMultipartUpload({ receipts }) {
       options.onAbort?.(receipts);

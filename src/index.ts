@@ -18,5 +18,7 @@ export type {
   TusMetadataMapper,
   TusMetadataRecord,
   TusMetadataValue,
+  TusUploadVerificationContext,
+  TusUploadVerifier,
   TusTransportOptions
 } from "./tus.js";

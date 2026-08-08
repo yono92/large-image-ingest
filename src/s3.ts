@@ -6,6 +6,7 @@ import type {
   TransportSession,
   UploadChunkContext,
   UploadChunkReceipt,
+  UploadCompletionResult,
   UploadSessionContext,
   UploadTransport
 } from "./types.js";
@@ -74,7 +75,9 @@ export interface S3MultipartAbortContext extends UploadSessionContext {
 export interface S3MultipartBroker {
   createMultipartUpload(context: S3MultipartCreateContext): Promise<S3MultipartUploadHandle>;
   getUploadPartUrl(context: S3MultipartPartContext): Promise<S3MultipartUploadTarget>;
-  completeMultipartUpload(context: S3MultipartCompleteContext): Promise<void>;
+  completeMultipartUpload(
+    context: S3MultipartCompleteContext
+  ): Promise<void | UploadCompletionResult>;
   abortMultipartUpload?(context: S3MultipartAbortContext): Promise<void>;
 }
 
@@ -250,7 +253,7 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
 
       validateCompletedParts(parts);
 
-      await options.broker.completeMultipartUpload({
+      return options.broker.completeMultipartUpload({
         manifest: context.manifest,
         file: context.file,
         signal: context.signal,

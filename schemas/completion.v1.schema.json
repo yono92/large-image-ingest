@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://large-image-ingest.dev/schemas/completion.v1.schema.json",
+  "title": "large-image-ingest completion evidence v1",
+  "type": "object",
+  "required": ["schemaVersion", "id", "createdAt", "completedAt", "producer", "manifest", "source", "status", "upload"],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.completion.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "completedAt": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "large-image-ingest" },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "manifest": {
+      "type": "object",
+      "required": ["id", "schemaVersion"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "schemaVersion": { "const": "large-image-ingest.manifest.v1" }
+      },
+      "additionalProperties": true
+    },
+    "source": {
+      "type": "object",
+      "required": ["sizeBytes"],
+      "properties": {
+        "sizeBytes": { "type": "integer", "minimum": 0 },
+        "checksum": { "$ref": "#/$defs/fileChecksum" }
+      },
+      "additionalProperties": true
+    },
+    "status": { "enum": ["verified", "completed-unverified"] },
+    "upload": {
+      "type": "object",
+      "required": ["transportName", "totalBytes", "totalChunks", "acknowledgedChunks", "receiptDigest"],
+      "properties": {
+        "transportName": { "type": "string", "minLength": 1 },
+        "totalBytes": { "type": "integer", "minimum": 0 },
+        "totalChunks": { "type": "integer", "minimum": 0 },
+        "acknowledgedChunks": { "type": "integer", "minimum": 0 },
+        "receiptDigest": {
+          "type": "object",
+          "required": ["algorithm", "value"],
+          "properties": {
+            "algorithm": { "const": "sha256" },
+            "value": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "storage": { "$ref": "#/$defs/storage" },
+    "verification": {
+      "type": "object",
+      "required": ["verifiedAt", "sourceChecksum", "storedChecksum", "storedSizeBytes"],
+      "properties": {
+        "verifiedAt": { "type": "string", "minLength": 1 },
+        "sourceChecksum": { "$ref": "#/$defs/fileChecksum" },
+        "storedChecksum": { "$ref": "#/$defs/checksumReceipt" },
+        "storedSizeBytes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "verified" } }, "required": ["status"] },
+      "then": {
+        "required": ["verification"],
+        "properties": {
+          "verification": true,
+          "source": {
+            "type": "object",
+            "required": ["checksum"],
+            "properties": { "checksum": true }
+          }
+        }
+      },
+      "else": { "not": { "required": ["verification"] } }
+    }
+  ],
+  "additionalProperties": true,
+  "$defs": {
+    "fileChecksum": {
+      "type": "object",
+      "required": ["algorithm", "calculatedAt", "chunkSizeBytes", "scope", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "calculatedAt": { "type": "string", "minLength": 1 },
+        "chunkSizeBytes": { "type": "integer", "minimum": 1 },
+        "scope": { "const": "whole-file" },
+        "value": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+      },
+      "additionalProperties": true
+    },
+    "checksumReceipt": {
+      "type": "object",
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "enum": ["sha256", "crc64nvme", "crc32c", "crc32", "md5", "custom"] },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "storage": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["s3", "tus", "nas", "filesystem", "custom"] },
+        "label": { "type": "string" },
+        "locationHint": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

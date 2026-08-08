@@ -4,7 +4,7 @@ TypeScript SDK for verifiable, resumable ingestion of very large inspection imag
 
 The package is built for semiconductor inspection, microscopy, industrial vision, wafer inspection, medical imaging, satellite imaging, and other workflows where the uploaded original is a source-of-truth artifact that must remain verifiable.
 
-The package orchestrates validation, checksums, manifest generation, chunk planning, resumable session state, safe diagnostics, derivative references, and adapter-based storage transfer. It does not decode, resize, compress, tile, or otherwise transform images.
+The package orchestrates validation, checksums, manifest generation, chunk planning, resumable session state, bounded multi-file queues, safe diagnostics, derivative references, and adapter-based storage transfer. It does not decode, resize, compress, tile, or otherwise transform images.
 
 ## Install
 
@@ -95,6 +95,13 @@ const session = createIngestSession(file, {
 });
 
 const manifest = await session.start();
+const evidence = session.getCompletionEvidence();
+
+if (evidence?.status === "verified") {
+  // Whole stored-object size and checksum match the source manifest.
+} else {
+  // Transport completion succeeded without equivalent stored-byte proof.
+}
 ```
 
 More examples are in [docs/quickstart.md](docs/quickstart.md).
@@ -102,11 +109,14 @@ More examples are in [docs/quickstart.md](docs/quickstart.md).
 ## What It Provides
 
 - Original-preserving manifest schema `large-image-ingest.manifest.v1`
+- Evidence-grade completion schema `large-image-ingest.completion.v1` with explicit verified/unverified status
 - File validation for size, MIME type, extension, metadata, dimensions, and checksum mismatch
 - Whole-file SHA-256 checksums using bounded `Blob.slice` reads
+- Optional Web Worker-compatible checksum execution with cancellation and validated progress
 - Deterministic chunk planning for large files
 - Upload sessions with progress, retry, pause, cancel, failure, completion, and resume events
-- Versioned persistent resume records with durable chunk receipts and redacted session snapshots
+- Opt-in bounded parallel chunk scheduling for transports that explicitly advertise support
+- Content-bound persistent resume records (`large-image-ingest.resume.v0.3`) with durable chunk receipts
 - Safe diagnostics helpers for logs, telemetry, support traces, and recovery UI
 - Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs
 - Browser-safe tus and S3 multipart transport helpers
@@ -125,6 +135,9 @@ large-image-ingest/transport-s3
 large-image-ingest/node
 large-image-ingest/react
 large-image-ingest/tiff
+large-image-ingest/schemas/manifest.v1
+large-image-ingest/schemas/resume.v0.3
+large-image-ingest/schemas/completion.v1
 ```
 
 - Use `large-image-ingest/core` for framework-agnostic browser-safe core APIs.
@@ -134,6 +147,7 @@ large-image-ingest/tiff
 - Use `large-image-ingest/react` for optional headless React state and upload controls.
 - Use `large-image-ingest/tiff` for optional bounded TIFF and BigTIFF structural metadata probing.
 - Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.
+- Use the `large-image-ingest/schemas/*` subpaths for packaged JSON Schema Draft 2020-12 contracts.
 
 ## React Headless Adapter
 
@@ -264,13 +278,90 @@ See [docs/derivatives.md](docs/derivatives.md) for derivative boundaries and exa
 
 The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a filesystem. Use a server-side gateway for those targets.
 
+### Extreme-file execution
+
+Checksum calculation stays sequential and bounded by default. Applications that need to keep the browser UI responsive during multi-gigabyte hashing can inject `createWorkerChecksumExecutor()` and bundle the small runtime installer in their own module Worker. The application owns the Worker URL, CSP, and bundler configuration; see [examples/worker-checksum.ts](examples/worker-checksum.ts).
+
+Chunk transfer also remains sequential by default. Set `execution.maxParallelChunks` only when the configured transport reports `supportsParallelChunks: true`:
+
+```ts
+const session = createIngestSession(file, {
+  execution: { maxParallelChunks: 4 },
+  transport: parallelCapableTransport
+});
+```
+
+The SDK accepts limits from 1 through 32, settles work in bounded batches, and serializes validated durable checkpoints by chunk index. Start conservatively: each active chunk consumes a request, provider/broker capacity, and transport-specific buffering even though Blob slices do not copy the whole file. The official tus and S3 helpers remain sequential.
+
+### Production multi-file orchestration
+
+`createIngestQueue()` composes existing single-file sessions into a FIFO queue with explicit active-item, admitted-byte, and stored-item limits. It remains framework- and provider-neutral: the application supplies `CreateIngestSessionOptions` per item, so transports and credentials are runtime-only.
+
+```ts
+import { createIngestQueue, WebStorageQueueStore } from "large-image-ingest/core";
+
+const queue = createIngestQueue({
+  maxActiveItems: 2,
+  maxActiveBytes: 8 * 1024 ** 3,
+  store: new WebStorageQueueStore(localStorage),
+  createSessionOptions({ itemId }) {
+    return {
+      checksum: { required: true },
+      resume: { store: resumeStore },
+      transport: createTransportForItem(itemId)
+    };
+  },
+  resolveSource(identity, itemId) {
+    return reattachExactSource(identity, itemId);
+  }
+});
+
+await queue.restore();
+await queue.enqueue(file);
+await queue.start();
+```
+
+Queue storage contains versioned operational intent, never source bytes, live `File`/`Blob` objects, manifests, checksums, transport handles, receipts, URLs, credentials, callbacks, or raw errors. Restored work stays `needs-source` until the application supplies a metadata-matching source; session resume then performs the authoritative whole-file content check.
+
+`maxActiveBytes` is an admission budget based on source sizes, not exact heap usage. Total active network calls can approach `maxActiveItems × execution.maxParallelChunks`, so measure both limits conservatively. See [the multi-file example](examples/multi-file-queue.ts) and [1.6 migration guide](docs/migration-1.6.md).
+
+### Inspection policies and signable evidence
+
+Versioned metadata profiles and policy packs turn manifest/completion facts into deterministic inspection decisions without decoding pixels or importing a provider SDK:
+
+```ts
+import {
+  EVIDENCE_GRADE_INSPECTION_POLICY_V1,
+  createEvidenceBundle,
+  evaluateInspectionPolicy,
+  signEvidenceBundle
+} from "large-image-ingest/core";
+
+const policyReport = evaluateInspectionPolicy({
+  manifest,
+  completion: session.getCompletionEvidence(),
+  policy: EVIDENCE_GRADE_INSPECTION_POLICY_V1
+});
+
+const bundle = createEvidenceBundle({ manifest, completion, policyReport });
+const envelope = await signEvidenceBundle(bundle, applicationOwnedSigner);
+```
+
+The built-in evidence-grade policy requires semiconductor lot/wafer/inspection/tool identity, original preservation, whole-file SHA-256, verified completion, and matching stored checksum facts. Custom serializable profiles/policies are supported.
+
+Signing callbacks receive canonical bundle bytes only. Private keys, KMS/HSM clients, certificate chains, trust stores, timestamp authorities, and regulatory interpretation remain application responsibilities. Verification recomputes the payload digest before calling the application trust callback. See [the 1.7 migration guide](docs/migration-1.7.md), [custom policy example](examples/inspection-policy.ts), and [WebCrypto boundary example](examples/evidence-signing.ts).
+
 NAS gateway instances that share a staging root coordinate same-session staging, finalization, cancellation, and expired cleanup. Session metadata is promoted atomically from unique same-directory candidates so concurrent or interrupted updates preserve the last committed state without changing the v0.1 session schema.
 
-Persistent resume records created by 1.2.0 use schema `large-image-ingest.resume.v0.2` and retain acknowledged chunk receipts. This allows S3 multipart uploads to resume after a page or process restart without relying on an in-memory snapshot. Legacy v0.1 records remain readable when the transport can recover safely; progressed S3 v0.1 records are rejected because their ETags cannot be reconstructed safely.
+Persistent resume records created by 1.4.0 use schema `large-image-ingest.resume.v0.3`. In addition to acknowledged chunk receipts, each new record binds progress to the original whole-file SHA-256 identity. The selected source is hashed again before any transport resume lookup. Matching metadata with different bytes fails as `resume.content_mismatch`; missing trustworthy identity fails as `resume.content_identity_missing`.
+
+Legacy v0.1/v0.2 records remain readable. They resume only when the embedded manifest supplies equivalent whole-file identity and the transport has enough authoritative receipt state. Progressed S3 v0.1 records remain rejected because ETags cannot be reconstructed safely. See the [1.4 migration guide](docs/migration-1.4.md).
 
 Full resume records can contain upload identifiers, tus upload URLs, customer metadata, object keys, and provider receipt evidence. Store them according to application security policy and use the diagnostic redaction helpers for logs and support output.
 
 Starting in 1.3.0, successful transport completion remains authoritative even when local resume-record cleanup fails. The session still resolves with a completed snapshot and emits a non-fatal `resume:cleanup-failed` event so applications can inspect or remove stale local state without retrying remote completion.
+
+Starting in 1.4.0, the pre-upload manifest remains an immutable intent artifact with `upload.status: "pending"`. Every successful session separately exposes one `completion.v1` evidence record through `getCompletionEvidence()`, the completed event, and React controller state. A `verified` result requires matching whole stored-object size and same-algorithm checksum; multipart ETags, tus offsets, and HTTP success alone yield `completed-unverified`.
 
 Event and snapshot observers are isolated from upload control flow. Use `onObserverError` when UI or telemetry callback failures need separate reporting; exceptions from observers or from the reporter itself never change session state.
 

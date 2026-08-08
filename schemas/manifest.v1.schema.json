@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://large-image-ingest.dev/schemas/manifest.v1.schema.json",
+  "title": "large-image-ingest manifest v1",
+  "type": "object",
+  "required": ["schemaVersion", "id", "createdAt", "library", "original", "image", "chunking", "upload", "metadata", "derivatives", "validation"],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.manifest.v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "library": { "$ref": "#/$defs/producer" },
+    "original": {
+      "type": "object",
+      "required": ["kind", "name", "sizeBytes", "mediaType", "fingerprint", "preservation"],
+      "properties": {
+        "kind": { "const": "original" },
+        "name": { "type": "string", "minLength": 1 },
+        "sizeBytes": { "type": "integer", "minimum": 0 },
+        "mediaType": { "type": "string", "minLength": 1 },
+        "extension": { "type": "string", "minLength": 1 },
+        "lastModifiedAt": { "type": "string", "minLength": 1 },
+        "fingerprint": { "$ref": "#/$defs/fingerprint" },
+        "checksum": { "$ref": "#/$defs/fileChecksum" },
+        "preservation": {
+          "type": "object",
+          "required": ["required", "allowedMutations"],
+          "properties": {
+            "required": { "const": true },
+            "allowedMutations": { "type": "array", "maxItems": 0 }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "image": {
+      "type": "object",
+      "required": ["status", "width", "height", "colorDepth"],
+      "properties": {
+        "status": { "enum": ["not_inspected", "provided"] },
+        "format": { "type": "string" },
+        "width": { "type": ["integer", "null"], "minimum": 0 },
+        "height": { "type": ["integer", "null"], "minimum": 0 },
+        "colorDepth": { "type": ["integer", "null"], "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "chunking": { "$ref": "#/$defs/chunking" },
+    "upload": {
+      "type": "object",
+      "required": ["status", "resumable", "retryLimit"],
+      "properties": {
+        "status": { "const": "pending" },
+        "resumable": { "const": true },
+        "retryLimit": { "type": "integer", "minimum": 0 },
+        "transport": {
+          "type": "object",
+          "required": ["name"],
+          "properties": { "name": { "type": "string", "minLength": 1 } },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "storage": { "$ref": "#/$defs/storage" },
+    "metadata": { "type": "object" },
+    "derivatives": { "type": "array", "items": { "type": "object" } },
+    "validation": {
+      "type": "object",
+      "required": ["ok", "issues"],
+      "properties": {
+        "ok": { "type": "boolean" },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["code", "message", "severity"],
+            "properties": {
+              "code": { "type": "string", "minLength": 1 },
+              "message": { "type": "string" },
+              "severity": { "enum": ["error", "warning"] },
+              "path": { "type": "string" },
+              "details": { "type": "object" }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "producer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "large-image-ingest" },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "fingerprint": {
+      "type": "object",
+      "required": ["algorithm", "scope", "value"],
+      "properties": {
+        "algorithm": { "enum": ["metadata-sha256", "metadata-fallback"] },
+        "scope": { "const": "file-metadata" },
+        "value": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "fileChecksum": {
+      "type": "object",
+      "required": ["algorithm", "calculatedAt", "chunkSizeBytes", "scope", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "calculatedAt": { "type": "string", "minLength": 1 },
+        "chunkSizeBytes": { "type": "integer", "minimum": 1 },
+        "scope": { "const": "whole-file" },
+        "value": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+      },
+      "additionalProperties": true
+    },
+    "chunking": {
+      "type": "object",
+      "required": ["strategy", "chunkSizeBytes", "totalBytes", "totalChunks", "chunkRangesIncluded"],
+      "properties": {
+        "strategy": { "const": "fixed-size" },
+        "chunkSizeBytes": { "type": "integer", "minimum": 1 },
+        "totalBytes": { "type": "integer", "minimum": 0 },
+        "totalChunks": { "type": "integer", "minimum": 0 },
+        "chunkRangesIncluded": { "const": false }
+      },
+      "additionalProperties": true
+    },
+    "storage": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["s3", "tus", "nas", "filesystem", "custom"] },
+        "label": { "type": "string" },
+        "locationHint": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

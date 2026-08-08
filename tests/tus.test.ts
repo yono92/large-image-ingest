@@ -13,6 +13,7 @@ import type {
   UploadSessionSnapshot
 } from "../src";
 import { MemoryResumeStore, toLegacyResumeRecord } from "./resume-fixtures";
+import { sensitiveEvidenceValues } from "./evidence-fixtures";
 
 const endpoint = "https://tus.example/uploads";
 const uploadUrl = "https://tus.example/uploads/upload-1";
@@ -110,6 +111,41 @@ describe("createTusTransport", () => {
     expect(offsets).toEqual([chunkSize, chunkSize * 2, file.size]);
     expect(fullSnapshots.at(-1)?.transportSession?.resumeToken).toBe(uploadUrl);
     expect(eventSnapshots.at(-1)?.transportSession?.resumeToken).toBeUndefined();
+    expect(session.getCompletionEvidence()?.status).toBe("completed-unverified");
+  });
+
+  it("uses optional application-owned final verification and excludes opaque callback values", async () => {
+    const server = createFakeTusServer();
+    const file = new File([new Uint8Array(chunkSize)], "verified-wafer.tif", { type: "image/tiff" });
+    let verificationCalls = 0;
+    const session = createIngestSession(file, {
+      chunking: { chunkSize },
+      transport: createTusTransport({
+        endpoint,
+        fetch: server.fetch,
+        async verifyUpload({ manifest, uploadUrl: verifiedUploadUrl }) {
+          verificationCalls += 1;
+          expect(verifiedUploadUrl).toBe(uploadUrl);
+          const checksum = manifest.original.checksum;
+          if (!checksum) throw new Error("Expected checksum.");
+          return {
+            completedAt: "2026-08-07T00:00:00.000Z",
+            storedObject: {
+              sizeBytes: manifest.original.sizeBytes,
+              checksum: { algorithm: "sha256", value: checksum.value }
+            },
+            opaque: sensitiveEvidenceValues.opaque
+          } as never;
+        }
+      })
+    });
+
+    await session.start();
+
+    expect(verificationCalls).toBe(1);
+    expect(session.getCompletionEvidence()?.status).toBe("verified");
+    expect(JSON.stringify(session.getCompletionEvidence())).not.toContain(sensitiveEvidenceValues.opaque);
+    expect(JSON.stringify(session.getCompletionEvidence())).not.toContain(uploadUrl);
   });
 
   it("resumes from a stored tus upload URL without creating a new upload", async () => {

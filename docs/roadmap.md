@@ -2,6 +2,53 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+The commercial-readiness roadmap through 1.7.0 is implemented. Future items below are optional follow-on work, not incomplete 1.7 scope.
+
+## 1.7.0 Included - Inspection Ecosystem
+
+Spec Kit artifacts:
+
+- [Inspection ecosystem](../specs/014-inspection-ecosystem/spec.md)
+
+- [x] Add versioned custom and built-in inspection metadata profiles.
+- [x] Add provider-neutral reusable policy packs and deterministic reports.
+- [x] Add canonical SHA-256 evidence bundles and application-owned signing/verification boundaries.
+- [x] Add four JSON Schemas, safe summaries, and custom/WebCrypto reference integrations.
+
+## 1.6.0 Included - Production Orchestration
+
+Spec Kit artifacts:
+
+- [Production orchestration](../specs/013-production-orchestration/spec.md)
+
+- [x] Add deterministic multi-file FIFO scheduling with active item, byte, and queue limits.
+- [x] Add queue/item pause, resume, retry, cancel, source attachment, and terminal removal lifecycle.
+- [x] Add versioned durable queue intent and browser Web Storage recovery without serializing sources or credentials.
+- [x] Add detached aggregate telemetry, observer isolation, and allowlisted safe diagnostics.
+
+## 1.5.0 Included - Extreme-File Execution
+
+Spec Kit artifacts:
+
+- [Extreme-file execution](../specs/012-extreme-file-execution/spec.md)
+
+- [x] Add cancelable Worker-compatible whole-file checksum execution.
+- [x] Add opt-in bounded parallel chunk scheduling with an explicit transport capability boundary.
+- [x] Persist successful siblings before reporting mixed parallel failure.
+- [x] Preserve deterministic receipt ordering, completion evidence, and exact-source resume.
+
+## 1.4.0 Included - Evidence-Grade Ingest Integrity
+
+Spec Kit artifacts:
+
+- [Evidence-grade ingest integrity](../specs/011-evidence-grade-ingest-integrity/spec.md)
+
+- [x] Bind persistent resume to whole-file content identity before transport access.
+- [x] Add immutable verified/unverified completion evidence without mutating manifest v1.
+- [x] Normalize S3, tus, custom, and Node/NAS stored-object integrity facts through provider-neutral contracts.
+- [x] Ship current manifest, resume, and completion JSON Schemas with exact producer attribution.
+- [x] Add allowlisted completion diagnostics and migration guidance.
+
 ## 1.3.1 Included - NAS Concurrency Integrity
 
 Spec Kit artifacts:
@@ -61,14 +108,10 @@ Spec Kit artifacts:
 
 ## Future TODO - Remaining Ingest Integrity
 
-- [ ] Harden source-file content identity for persistent resume.
-- [ ] Add cancelable worker-based browser checksum execution.
 - [ ] Replace provider preflight checks with complete opt-in integration scenarios.
-- [ ] Align manifest producer version and transport capability reporting.
 
 ## Future TODO - Advanced Upload Modes
 
-- [ ] Evaluate parallel upload support and its impact on chunk planning, receipt ordering, resume checkpoints, and transport capabilities.
 - [ ] Define per-chunk checksum policy for transports that require provider-specific integrity records.
 - [ ] Assess whether scoped packages are needed after 1.1 API growth.
 - [ ] Add styled upload components only after headless adapter usage stabilizes.
@@ -76,5 +119,4 @@ Spec Kit artifacts:
 ## Parking Lot
 
 - [ ] Provider-specific AWS S3 package if the generic S3-compatible multipart adapter becomes too broad.
-- [ ] Web Worker checksum helper if checksum work causes main-thread pressure in real applications.
 - [ ] Dedicated migration guide if subpath exports move to scoped packages.

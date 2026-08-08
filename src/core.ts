@@ -1,7 +1,22 @@
-export { calculateChecksum } from "./checksum.js";
+export { calculateChecksum, ChecksumExecutionError } from "./checksum.js";
+export {
+  CHECKSUM_WORKER_PROTOCOL,
+  createWorkerChecksumExecutor
+} from "./checksum-worker.js";
+export type { CreateWorkerChecksumExecutorOptions } from "./checksum-worker.js";
+export { installChecksumWorkerRuntime } from "./checksum-worker-runtime.js";
+export {
+  CompletionEvidenceError,
+  cloneCompletionEvidence,
+  createCompletionEvidence,
+  createReceiptSetDigest,
+  parseCompletionEvidence,
+  validateCompletionEvidence
+} from "./completion-evidence.js";
 export { planChunks } from "./chunks.js";
 export {
   createSafeEventSummary,
+  createSafeCompletionSummary,
   createSafeVerificationSummary,
   redactResumeRecord,
   redactUploadSessionSnapshot
@@ -14,8 +29,63 @@ export {
 } from "./derivatives.js";
 export { LargeImageIngestError, isLargeImageIngestError } from "./errors.js";
 export { createFastFingerprint } from "./fingerprint.js";
+export {
+  INDUSTRIAL_INSPECTION_PROFILE_V1,
+  SEMICONDUCTOR_WAFER_PROFILE_V1,
+  InspectionProfileError,
+  compileInspectionMetadataProfile,
+  validateInspectionMetadata
+} from "./inspection-profile.js";
+export {
+  EVIDENCE_GRADE_INSPECTION_POLICY_V1,
+  InspectionPolicyError,
+  evaluateInspectionPolicy,
+  parseInspectionPolicyPack
+} from "./inspection-policy.js";
+export {
+  EvidenceExportError,
+  canonicalizeEvidenceBundle,
+  createEvidenceBundle,
+  createEvidenceBundleDigest,
+  parseEvidenceBundle,
+  parseSignedEvidenceEnvelope,
+  signEvidenceBundle,
+  verifySignedEvidenceEnvelope
+} from "./evidence-bundle.js";
+export {
+  createSafeEvidenceBundleSummary,
+  createSafeEvidenceVerificationSummary,
+  createSafeInspectionPolicySummary,
+  createSafeMetadataValidationSummary,
+  createSafeSignedEvidenceSummary
+} from "./evidence-diagnostics.js";
 export { createManifest } from "./manifest.js";
+export { LARGE_IMAGE_INGEST_VERSION } from "./version.js";
 export { createPreviewDerivative } from "./preview.js";
+export {
+  DEFAULT_MAX_ACTIVE_QUEUE_BYTES,
+  DEFAULT_MAX_ACTIVE_QUEUE_ITEMS,
+  DEFAULT_MAX_QUEUED_ITEMS,
+  INGEST_QUEUE_RECORD_SCHEMA_VERSION,
+  MAX_ACTIVE_QUEUE_ITEMS,
+  MAX_QUEUED_ITEMS,
+  IngestQueueError,
+  LargeImageIngestQueue,
+  createIngestQueue,
+  createQueueSourceIdentity,
+  parseIngestQueueRecord,
+  queueSourceIdentityMatches
+} from "./queue.js";
+export {
+  createSafeQueueEventSummary,
+  createSafeQueueSnapshotSummary,
+  redactIngestQueueRecord
+} from "./queue-diagnostics.js";
+export type {
+  SafeQueueEventSummary,
+  SafeQueueItemSummary,
+  SafeQueueSnapshotSummary
+} from "./queue-diagnostics.js";
 export {
   ResumeConflictError,
   UploadCanceledError,
@@ -28,6 +98,7 @@ export {
   createResumeRecord,
   fileIdentityMatches,
   getNextIncompleteChunkIndex,
+  getResumeContentIdentity,
   isChunkCompleted,
   isRecoverableResumeRecord,
   isRecoverableResumeStatus,
@@ -47,11 +118,26 @@ export {
   verifyUploadReceipts
 } from "./verification.js";
 export { WebStorageResumeStore } from "./web-storage-resume-store.js";
+export { WebStorageQueueStore } from "./web-storage-queue-store.js";
 export type {
+  ArtifactProducer,
   ChecksumAlgorithm,
+  ChecksumExecutionOptions,
+  ChecksumExecutor,
   ChecksumOptions,
   ChecksumProgress,
+  ChecksumWorkerEvent,
+  ChecksumWorkerEventListener,
+  ChecksumWorkerLike,
+  ChecksumWorkerRequest,
+  ChecksumWorkerResponse,
+  ChecksumWorkerRuntimeScope,
   ChecksumReceipt,
+  CreateCompletionEvidenceInput,
+  CreateEvidenceBundleInput,
+  CompletionEvidenceValidationIssue,
+  CompletionEvidenceValidationResult,
+  CompletionIssueCode,
   ChunkDescriptor,
   ChunkPlan,
   ChunkPlanOptions,
@@ -62,6 +148,7 @@ export type {
   CreatePreviewDerivativeInput,
   CreateTilePyramidDerivativeInput,
   CreateIngestSessionOptions,
+  CreateIngestQueueOptions,
   DerivativeFailure,
   DerivativeKind,
   DerivativeManifest,
@@ -75,6 +162,16 @@ export type {
   DerivativeValidationIssueCode,
   DerivativeValidationOptions,
   DerivativeValidationResult,
+  EnqueueIngestOptions,
+  EvaluateInspectionPolicyInput,
+  EvidenceBundle,
+  EvidenceBundleDigest,
+  EvidenceBundleSchemaVersion,
+  EvidenceBundleSigner,
+  EvidenceBundleVerifier,
+  EvidenceBundleVerifierInput,
+  EvidenceExportIssueCode,
+  EvidenceSignatureVerification,
   FileChecksum,
   FileChecksumAlgorithm,
   ImageMetadataInput,
@@ -86,15 +183,42 @@ export type {
   IngestIssue,
   IngestIssueCode,
   IngestIssueSeverity,
+  IngestQueueEvent,
+  IngestQueueFailure,
+  IngestQueueItemSnapshot,
+  IngestQueueItemStatus,
+  IngestQueueObserverFailure,
+  IngestQueueRecord,
+  IngestQueueRecordSchemaVersion,
+  IngestQueueSessionFactoryContext,
+  IngestQueueSnapshot,
+  IngestQueueSourceIdentity,
+  IngestQueueStatus,
+  IngestQueueStore,
   IngestManifest,
+  IngestCompletionEvidence,
+  IngestCompletionEvidenceSchemaVersion,
+  IngestCompletionStatus,
   IngestManifestSchemaVersion,
   IngestObserverFailure,
+  InspectionMetadataFieldRule,
+  InspectionMetadataProfile,
+  InspectionMetadataProfileSchemaVersion,
+  InspectionMetadataScalarType,
+  InspectionMetadataValidationIssue,
+  InspectionMetadataValidationResult,
+  InspectionPolicyIssue,
+  InspectionPolicyPack,
+  InspectionPolicyReport,
+  InspectionPolicyReportSchemaVersion,
+  InspectionPolicySchemaVersion,
   ManifestIdentityOverride,
   OriginalImageManifest,
   ResumeChunkingIdentity,
   ResumeCleanupPolicy,
   ResumeCleanupOperation,
   ResumeConflictCode,
+  ResumeContentIdentity,
   ResumeFileIdentity,
   ResumeOptions,
   ResumeProgress,
@@ -104,6 +228,7 @@ export type {
   ResumeRecordStatus,
   ResumeRecordV0_1,
   ResumeRecordV0_2,
+  ResumeRecordV0_3,
   ResumeRecordValidationIssue,
   ResumeRecordValidationResult,
   ResumeSessionContext,
@@ -111,6 +236,11 @@ export type {
   ResumeTransportState,
   RetryDecisionContext,
   RetryPolicy,
+  QueueIssueCode,
+  PolicyIssueCode,
+  ProfileIssueCode,
+  ReceiptSetDigest,
+  StoredObjectEvidence,
   TilePyramidDescriptor,
   TilePyramidLevelDescriptor,
   TransportCapabilities,
@@ -118,11 +248,16 @@ export type {
   UploadChunkContext,
   UploadChunkReceipt,
   UploadChunkResult,
+  UploadCompletionContext,
+  UploadCompletionResult,
+  UploadExecutionOptions,
   UploadSessionContext,
   UploadSessionResult,
   UploadSessionSnapshot,
   UploadSessionStatus,
   UploadTransport,
+  SignedEvidenceEnvelope,
+  SignedEvidenceEnvelopeSchemaVersion,
   VerificationChecksumPolicy,
   VerificationIssueCode,
   VerificationResult,
@@ -137,6 +272,7 @@ export type {
   RedactedSnapshotResult,
   RedactionSummary,
   SafeErrorSummary,
+  SafeCompletionSummary,
   SafeEventSummary,
   SafeProgressSummary,
   SafeVerificationSummary

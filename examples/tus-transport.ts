@@ -20,7 +20,20 @@ export async function uploadWithTus(file: File): Promise<void> {
       metadata: {
         filename: file.name
       },
-      terminateOnAbort: true
+      terminateOnAbort: true,
+      async verifyUpload({ manifest, uploadUrl }) {
+        // tus offset completion proves accepted bytes, not the finalized stored object.
+        // This application-owned endpoint returns normalized stored size/checksum facts.
+        const response = await fetch("/api/tus/verify", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ manifestId: manifest.id, uploadUrl })
+        });
+        if (!response.ok) {
+          throw new Error("Final tus object verification failed.");
+        }
+        return response.json();
+      }
     }),
     validation: {
       acceptedExtensions: ["tif", "tiff", "png", "jpg", "jpeg"],
@@ -29,4 +42,9 @@ export async function uploadWithTus(file: File): Promise<void> {
   });
 
   await session.start();
+
+  const evidence = session.getCompletionEvidence();
+  if (evidence?.status === "completed-unverified") {
+    console.warn("tus upload completed without equivalent stored-object proof.");
+  }
 }

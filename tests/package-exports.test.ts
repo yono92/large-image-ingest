@@ -48,9 +48,17 @@ describe("package exports", () => {
         types: "./dist/esm/tiff.d.ts",
         import: "./dist/esm/tiff.js",
         require: "./dist/cjs/tiff.js"
-      }
+      },
+      "./schemas/manifest.v1": "./schemas/manifest.v1.schema.json",
+      "./schemas/resume.v0.3": "./schemas/resume.v0.3.schema.json",
+      "./schemas/completion.v1": "./schemas/completion.v1.schema.json",
+      "./schemas/queue.v0.1": "./schemas/queue.v0.1.schema.json",
+      "./schemas/inspection-profile.v1": "./schemas/inspection-profile.v1.schema.json",
+      "./schemas/inspection-policy.v1": "./schemas/inspection-policy.v1.schema.json",
+      "./schemas/evidence-bundle.v1": "./schemas/evidence-bundle.v1.schema.json",
+      "./schemas/signed-evidence.v1": "./schemas/signed-evidence.v1.schema.json"
     });
-    expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "docs", "examples"]));
+    expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "docs", "examples", "schemas"]));
     expect(packageJson.exports).not.toHaveProperty("./preview");
     expect(packageJson.peerDependencies?.react).toBe(">=18 <20");
     expect(packageJson.peerDependenciesMeta?.react?.optional).toBe(true);
@@ -67,7 +75,7 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.3.1");
+    expect(packageJson.version).toBe("1.7.0");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./node");

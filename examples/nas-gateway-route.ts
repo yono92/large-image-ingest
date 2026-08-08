@@ -1,6 +1,7 @@
 import {
   createNasFileLockProvider,
-  createNasGateway
+  createNasGateway,
+  createNodeFileCompletionResult
 } from "large-image-ingest/node";
 
 const gateway = createNasGateway({
@@ -48,7 +49,17 @@ export async function handleNasUploadRequest(request: Request): Promise<Response
       sessionId
     });
 
-    return Response.json(session);
+    const completionResult = await createNodeFileCompletionResult(session.targetPath, {
+      completedAt: session.finalizedAt ?? new Date().toISOString(),
+      storage: {
+        kind: "nas",
+        label: "inspection-originals"
+      }
+    });
+
+    // Return normalized facts to the upload transport; core compares them with
+    // the source manifest and creates verified or unverified completion evidence.
+    return Response.json({ session, completionResult });
   }
 
   if (request.method === "DELETE" && route.startsWith("/api/nas/uploads/")) {

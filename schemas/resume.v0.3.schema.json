@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://large-image-ingest.dev/schemas/resume.v0.3.schema.json",
+  "title": "large-image-ingest resume record v0.3",
+  "type": "object",
+  "required": ["schemaVersion", "producer", "id", "manifest", "file", "chunking", "transport", "receipts", "progress", "createdAt", "updatedAt"],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.resume.v0.3" },
+    "producer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "large-image-ingest" },
+        "version": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "manifest": {
+      "type": "object",
+      "required": ["schemaVersion", "id", "original", "chunking"],
+      "properties": {
+        "schemaVersion": { "const": "large-image-ingest.manifest.v1" },
+        "id": { "type": "string", "minLength": 1 },
+        "original": {
+          "type": "object",
+          "required": ["sizeBytes", "checksum"],
+          "properties": {
+            "sizeBytes": { "type": "integer", "minimum": 0 },
+            "checksum": { "$ref": "#/$defs/fileChecksum" }
+          },
+          "additionalProperties": true
+        },
+        "chunking": {
+          "type": "object",
+          "required": ["chunkSizeBytes", "totalBytes", "totalChunks"],
+          "properties": {
+            "chunkSizeBytes": { "type": "integer", "minimum": 1 },
+            "totalBytes": { "type": "integer", "minimum": 0 },
+            "totalChunks": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "file": {
+      "type": "object",
+      "required": ["name", "sizeBytes", "mediaType", "fingerprint", "contentIdentity"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "sizeBytes": { "type": "integer", "minimum": 0 },
+        "mediaType": { "type": "string", "minLength": 1 },
+        "lastModified": { "type": "integer", "minimum": 0 },
+        "fingerprint": {
+          "type": "object",
+          "required": ["algorithm", "scope", "value"],
+          "properties": {
+            "algorithm": { "enum": ["metadata-sha256", "metadata-fallback"] },
+            "scope": { "const": "file-metadata" },
+            "value": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": true
+        },
+        "contentIdentity": { "$ref": "#/$defs/contentIdentity" }
+      },
+      "additionalProperties": true
+    },
+    "chunking": { "$ref": "#/$defs/chunking" },
+    "transport": {
+      "type": "object",
+      "required": ["uploadId"],
+      "properties": {
+        "name": { "type": "string" },
+        "uploadId": { "type": "string", "minLength": 1 },
+        "resumeToken": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "data": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "receipts": { "type": "array", "items": { "$ref": "#/$defs/receipt" } },
+    "progress": {
+      "type": "object",
+      "required": ["status", "uploadedBytes", "completedChunkRanges", "nextChunkIndex"],
+      "properties": {
+        "status": { "enum": ["active", "paused", "failed", "completed", "canceled", "expired"] },
+        "uploadedBytes": { "type": "integer", "minimum": 0 },
+        "completedChunkRanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["startIndex", "endIndexInclusive"],
+            "properties": {
+              "startIndex": { "type": "integer", "minimum": 0 },
+              "endIndexInclusive": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": true
+          }
+        },
+        "nextChunkIndex": { "type": "integer", "minimum": 0 },
+        "lastErrorCode": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "createdAt": { "type": "string", "minLength": 1 },
+    "updatedAt": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "fileChecksum": {
+      "type": "object",
+      "required": ["algorithm", "calculatedAt", "chunkSizeBytes", "scope", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "calculatedAt": { "type": "string", "minLength": 1 },
+        "chunkSizeBytes": { "type": "integer", "minimum": 1 },
+        "scope": { "const": "whole-file" },
+        "value": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+      },
+      "additionalProperties": true
+    },
+    "contentIdentity": {
+      "type": "object",
+      "required": ["algorithm", "scope", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "scope": { "const": "whole-file" },
+        "value": { "type": "string", "pattern": "^[A-Fa-f0-9]{64}$" }
+      },
+      "additionalProperties": true
+    },
+    "chunking": {
+      "type": "object",
+      "required": ["strategy", "chunkSizeBytes", "totalBytes", "totalChunks"],
+      "properties": {
+        "strategy": { "const": "fixed-size" },
+        "chunkSizeBytes": { "type": "integer", "minimum": 1 },
+        "totalBytes": { "type": "integer", "minimum": 0 },
+        "totalChunks": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "receipt": {
+      "type": "object",
+      "required": ["chunkIndex", "sizeBytes", "completedAt", "transport"],
+      "properties": {
+        "chunkIndex": { "type": "integer", "minimum": 0 },
+        "sizeBytes": { "type": "integer", "minimum": 0 },
+        "completedAt": { "type": "string", "minLength": 1 },
+        "checksum": {
+          "type": "object",
+          "required": ["algorithm", "value"],
+          "properties": {
+            "algorithm": { "enum": ["sha256", "crc64nvme", "crc32c", "crc32", "md5", "custom"] },
+            "value": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": true
+        },
+        "transport": {
+          "type": "object",
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "partNumber": { "type": "integer", "minimum": 0 },
+            "etag": { "type": "string" },
+            "offset": { "type": "integer", "minimum": 0 },
+            "location": { "type": "string" },
+            "opaque": { "type": "object" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

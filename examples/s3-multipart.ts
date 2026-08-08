@@ -34,7 +34,7 @@ const broker: S3MultipartBroker = {
     return response.json();
   },
   async completeMultipartUpload({ key, parts, uploadId }) {
-    await fetch("/api/s3/multipart/complete", {
+    const response = await fetch("/api/s3/multipart/complete", {
       method: "POST",
       headers: {
         "content-type": "application/json"
@@ -45,6 +45,14 @@ const broker: S3MultipartBroker = {
         uploadId
       })
     });
+
+    if (!response.ok) {
+      throw new Error("S3 multipart completion failed.");
+    }
+
+    // The broker may return normalized whole-object size and SHA-256 facts.
+    // Multipart ETags and part checksums alone remain transfer receipts.
+    return response.json();
   },
   async abortMultipartUpload({ key, uploadId }) {
     await fetch("/api/s3/multipart/abort", {
@@ -79,4 +87,10 @@ export async function uploadWithS3Multipart(file: File): Promise<void> {
   });
 
   await session.start();
+
+  const evidence = session.getCompletionEvidence();
+  if (evidence?.status !== "verified") {
+    // Transport completion succeeded, but the broker did not prove stored-byte equivalence.
+    console.warn("S3 upload completed without whole-object verification.");
+  }
 }

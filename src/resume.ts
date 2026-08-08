@@ -1,5 +1,7 @@
 import { planChunks } from "./chunks.js";
+import { calculateChecksum } from "./checksum.js";
 import { createFastFingerprint } from "./fingerprint.js";
+import { LARGE_IMAGE_INGEST_VERSION } from "./version.js";
 import type {
   ChunkPlanOptions,
   CompletedChunkRange,
@@ -7,10 +9,11 @@ import type {
   IngestManifest,
   ResumeChunkingIdentity,
   ResumeConflictCode,
+  ResumeContentIdentity,
   ResumeFileIdentity,
   ResumeRecord,
   ResumeRecordStatus,
-  ResumeRecordV0_2,
+  ResumeRecordV0_3,
   ResumeRecordValidationIssue,
   ResumeRecordValidationResult,
   ResumeTransportState,
@@ -20,7 +23,8 @@ import type {
 } from "./types.js";
 
 const LEGACY_RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.1" as const;
-const RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.2" as const;
+const RECEIPT_RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.2" as const;
+const RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.3" as const;
 const RESUME_RECORD_STATUSES = new Set<ResumeRecordStatus>([
   "active",
   "paused",
@@ -202,7 +206,15 @@ export async function classifyResumeRecordForFile(
   record: ResumeRecord,
   file: IngestFileLike,
   options: ChunkPlanOptions = {}
-): Promise<"compatible" | "file_mismatch" | "chunking_mismatch" | "not_recoverable" | "expired"> {
+): Promise<
+  | "compatible"
+  | "file_mismatch"
+  | "content_identity_missing"
+  | "content_mismatch"
+  | "chunking_mismatch"
+  | "not_recoverable"
+  | "expired"
+> {
   if (isResumeRecordExpired(record)) {
     return "expired";
   }
@@ -214,6 +226,16 @@ export async function classifyResumeRecordForFile(
   const fileIdentity = await createResumeFileIdentity(file);
   if (!fileIdentityMatches(record.file, fileIdentity)) {
     return "file_mismatch";
+  }
+
+  const contentIdentity = getResumeContentIdentity(record);
+  if (!contentIdentity) {
+    return "content_identity_missing";
+  }
+
+  const checksum = await calculateChecksum(file, { algorithm: contentIdentity.algorithm });
+  if (checksum.value.toLowerCase() !== contentIdentity.value.toLowerCase()) {
+    return "content_mismatch";
   }
 
   const chunking = createResumeChunkingIdentity(file.size, options);
@@ -238,15 +260,34 @@ export function createResumeRecord(input: {
   chunking: ResumeChunkingIdentity;
   transport: ResumeTransportState;
   now?: Date;
-}): ResumeRecordV0_2 {
+}): ResumeRecordV0_3 {
   const now = input.now ?? new Date();
   const timestamp = now.toISOString();
+  const checksum = input.manifest.original.checksum;
+  if (!isTrustworthySha256(checksum)) {
+    throw new ResumeConflictError(
+      "resume.content_identity_missing",
+      "Persistent resume requires a trustworthy whole-file source checksum.",
+      input.id
+    );
+  }
 
   return {
     schemaVersion: RESUME_RECORD_SCHEMA_VERSION,
+    producer: {
+      name: "large-image-ingest",
+      version: LARGE_IMAGE_INGEST_VERSION
+    },
     id: input.id ?? `resume_${input.manifest.id}`,
     manifest: input.manifest,
-    file: input.file,
+    file: {
+      ...input.file,
+      contentIdentity: {
+        algorithm: "sha256",
+        scope: "whole-file",
+        value: checksum.value.toLowerCase()
+      }
+    },
     chunking: input.chunking,
     transport: input.transport,
     receipts: [],
@@ -269,7 +310,7 @@ export function validateResumeRecord(value: unknown): ResumeRecordValidationResu
 
   try {
     const record = structuredClone(value) as ResumeRecord;
-    if (record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION) {
+    if (record.schemaVersion !== LEGACY_RESUME_RECORD_SCHEMA_VERSION) {
       record.receipts.sort((left, right) => left.chunkIndex - right.chunkIndex);
     }
     return { ok: true, issues: [], record };
@@ -283,6 +324,25 @@ export function validateResumeRecord(value: unknown): ResumeRecordValidationResu
       }]
     };
   }
+}
+
+export function getResumeContentIdentity(
+  record: ResumeRecord
+): ResumeContentIdentity | undefined {
+  if (record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION) {
+    return { ...record.file.contentIdentity };
+  }
+
+  const checksum = record.manifest.original.checksum;
+  if (!isTrustworthySha256(checksum)) {
+    return undefined;
+  }
+
+  return {
+    algorithm: "sha256",
+    scope: "whole-file",
+    value: checksum.value.toLowerCase()
+  };
 }
 
 export function parseResumeRecord(value: unknown): ResumeRecord {
@@ -348,6 +408,7 @@ function findResumeRecordIssue(value: unknown): ResumeRecordValidationIssue | un
 
   if (
     value.schemaVersion !== LEGACY_RESUME_RECORD_SCHEMA_VERSION &&
+    value.schemaVersion !== RECEIPT_RESUME_RECORD_SCHEMA_VERSION &&
     value.schemaVersion !== RESUME_RECORD_SCHEMA_VERSION
   ) {
     return {
@@ -365,12 +426,25 @@ function findResumeRecordIssue(value: unknown): ResumeRecordValidationIssue | un
     return invalidRecord("Resume record timestamps must be valid ISO timestamps.", "createdAt");
   }
 
+  if (value.schemaVersion === RESUME_RECORD_SCHEMA_VERSION) {
+    if (
+      !isRecord(value.producer) ||
+      value.producer.name !== "large-image-ingest" ||
+      !isNonEmptyString(value.producer.version)
+    ) {
+      return invalidRecord("Resume record producer identity is invalid.", "producer");
+    }
+  }
+
   const manifestIssue = validatePersistedManifest(value.manifest);
   if (manifestIssue) {
     return manifestIssue;
   }
 
-  const fileIssue = validatePersistedFileIdentity(value.file);
+  const fileIssue = validatePersistedFileIdentity(
+    value.file,
+    value.schemaVersion === RESUME_RECORD_SCHEMA_VERSION
+  );
   if (fileIssue) {
     return fileIssue;
   }
@@ -391,6 +465,25 @@ function findResumeRecordIssue(value: unknown): ResumeRecordValidationIssue | un
     manifest.chunking.totalChunks !== chunking.totalChunks
   ) {
     return invalidRecord("Resume record file, manifest, and chunking totals must agree.", "chunking");
+  }
+
+
+  if (value.schemaVersion === RESUME_RECORD_SCHEMA_VERSION) {
+    const storedFile = value.file as unknown as ResumeRecordV0_3["file"];
+    const manifestChecksum = manifest.original.checksum;
+    if (!isTrustworthySha256(manifestChecksum)) {
+      return missingContentIdentity(
+        "Resume record manifest does not contain a trustworthy whole-file checksum.",
+        "manifest.original.checksum"
+      );
+    }
+    if (storedFile.contentIdentity.value.toLowerCase() !== manifestChecksum.value.toLowerCase()) {
+      return {
+        code: "resume.content_mismatch",
+        message: "Resume content identity does not match the embedded manifest.",
+        path: "file.contentIdentity"
+      };
+    }
   }
 
   const transportIssue = validatePersistedTransport(value.transport);
@@ -481,7 +574,10 @@ function validatePersistedManifest(value: unknown): ResumeRecordValidationIssue 
   return undefined;
 }
 
-function validatePersistedFileIdentity(value: unknown): ResumeRecordValidationIssue | undefined {
+function validatePersistedFileIdentity(
+  value: unknown,
+  requireContentIdentity: boolean
+): ResumeRecordValidationIssue | undefined {
   if (
     !isRecord(value) ||
     !isNonEmptyString(value.name) ||
@@ -495,6 +591,18 @@ function validatePersistedFileIdentity(value: unknown): ResumeRecordValidationIs
 
   if (value.lastModified !== undefined && !isNonNegativeSafeInteger(value.lastModified)) {
     return invalidRecord("Resume file lastModified must be a non-negative safe integer.", "file.lastModified");
+  }
+
+  if (requireContentIdentity && (
+    !isRecord(value.contentIdentity) ||
+    value.contentIdentity.algorithm !== "sha256" ||
+    value.contentIdentity.scope !== "whole-file" ||
+    !isSha256Hex(value.contentIdentity.value)
+  )) {
+    return missingContentIdentity(
+      "Resume record content identity must be a whole-file SHA-256 digest.",
+      "file.contentIdentity"
+    );
   }
 
   return undefined;
@@ -706,6 +814,27 @@ function invalidRecord(message: string, path: string): ResumeRecordValidationIss
 
 function invalidReceipt(message: string, path: string): ResumeRecordValidationIssue {
   return { code: "resume.receipt_invalid", message, path };
+}
+
+function missingContentIdentity(message: string, path: string): ResumeRecordValidationIssue {
+  return { code: "resume.content_identity_missing", message, path };
+}
+
+function isTrustworthySha256(value: unknown): value is {
+  algorithm: "sha256";
+  scope: "whole-file";
+  value: string;
+} {
+  return Boolean(
+    isRecord(value) &&
+    value.algorithm === "sha256" &&
+    value.scope === "whole-file" &&
+    isSha256Hex(value.value)
+  );
+}
+
+function isSha256Hex(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
