@@ -7,6 +7,8 @@
       "large-image-ingest": ["./src/index.ts"],
       "large-image-ingest/core": ["./src/core.ts"],
       "large-image-ingest/node": ["./src/nas.ts"],
+      "large-image-ingest/react": ["./src/react.ts"],
+      "large-image-ingest/react-ui": ["./src/react-ui.ts"],
       "large-image-ingest/transport-s3": ["./src/s3.ts"],
       "large-image-ingest/transport-tus": ["./src/tus.ts"]
     }
