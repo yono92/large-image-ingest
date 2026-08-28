@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createIngestSession } from "../src/session";
 import { createIngestController } from "../src/react-controller";
 import type {
+  IngestObserverFailure,
   TransportSession,
   UploadChunkReceipt,
   UploadTransport
@@ -11,6 +12,81 @@ import { FakeTransport, MemoryResumeStore, createLargeTestFile } from "./resume-
 const chunkSize = 256 * 1024;
 
 describe("React ingest controller", () => {
+  it("publishes validation, source identity preparation, and upload creation distinctly", async () => {
+    const states: ReturnType<ReturnType<typeof createIngestController>["getState"]>[] = [];
+    const checksumProgress: number[] = [];
+    let statusAtTransportCreation: string | undefined;
+    const controller = createIngestController(createFile(), {
+      checksum: {
+        chunkSize: 64 * 1024,
+        onProgress(progress) {
+          checksumProgress.push(progress.loadedBytes);
+        }
+      },
+      chunking: { chunkSize },
+      transport: {
+        ...createTransport(),
+        async createSession(): Promise<TransportSession> {
+          statusAtTransportCreation = controller.getState().status;
+          return {
+            uploadId: "react-controller-phases",
+            transportName: "react-controller-fake",
+            createdAt: "2026-01-01T00:00:00.000Z"
+          };
+        }
+      }
+    });
+    controller.subscribe(() => states.push(controller.getState()));
+
+    await controller.start();
+
+    expect(states.map((state) => state.status)).toEqual(expect.arrayContaining([
+      "starting",
+      "validating",
+      "creating",
+      "uploading",
+      "completed"
+    ]));
+    expect(states.map((state) => state.preparation?.phase)).toEqual(expect.arrayContaining([
+      "validating",
+      "preparing_identity",
+      "creating_upload"
+    ]));
+    expect(states.some((state) => state.preparation?.processedBytes === createFile().size)).toBe(true);
+    expect(states.find((state) => state.status === "uploading")?.preparation).toBeUndefined();
+    expect(controller.getState().preparation).toBeUndefined();
+    expect(checksumProgress.at(-1)).toBe(createFile().size);
+    expect(statusAtTransportCreation).toBe("creating");
+  });
+
+  it("preserves application observers and isolates observer failures", async () => {
+    const eventTypes: string[] = [];
+    const failures: IngestObserverFailure[] = [];
+    const controller = createIngestController(createFile(), {
+      chunking: { chunkSize },
+      onEvent(event) {
+        eventTypes.push(event.type);
+        throw new Error("Application event observer failed.");
+      },
+      onObserverError(failure) {
+        failures.push(failure);
+        throw new Error("Application observer reporter failed.");
+      },
+      onSnapshot() {
+        throw new Error("Application snapshot observer failed.");
+      },
+      transport: createTransport()
+    });
+
+    await expect(controller.start()).resolves.toMatchObject({
+      schemaVersion: "large-image-ingest.manifest.v1"
+    });
+    expect(eventTypes).toContain("completed");
+    expect(failures.some((failure) => failure.observer === "event")).toBe(true);
+    expect(failures.some((failure) => failure.observer === "snapshot")).toBe(true);
+    expect(controller.getState().status).toBe("completed");
+  });
+
   it("publishes stable state revisions and removes subscriptions", async () => {
     const states: string[] = [];
     const controller = createIngestController(createFile(), {

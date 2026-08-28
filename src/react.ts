@@ -18,6 +18,8 @@ export { createIngestController } from "./react-controller.js";
 export type {
   IngestController,
   IngestControllerState,
+  IngestPreparationPhase,
+  IngestPreparationProgress,
   ReactIngestStatus
 } from "./react-controller.js";
 

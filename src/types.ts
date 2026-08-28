@@ -78,7 +78,7 @@ export interface IngestIssue {
 }
 
 export interface IngestError extends Error {
-  code: IngestIssueCode;
+  code: IngestErrorCode;
   retryable: boolean;
   details?: Record<string, unknown>;
 }
@@ -497,7 +497,7 @@ export interface UploadSessionSnapshot {
   createdAt: string;
   updatedAt: string;
   error?: {
-    code: IngestIssueCode;
+    code: IngestErrorCode;
     message: string;
     retryable: boolean;
   } | undefined;

@@ -2,6 +2,29 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.4.0 Included - First-Party Inspection Upload UI
+
+Spec Kit artifacts:
+
+- [First-party inspection upload UI](../specs/012-first-party-react-ui/spec.md)
+
+- [x] Correct typed validation presentation and expose source preparation progress from the headless controller.
+- [x] Ship an optional `react-ui` surface with a complete panel, composable primitives, opt-in CSS, and no Uppy runtime dependency.
+- [x] Present safe resume choices and application-supplied stored-object verification without duplicating controller authority.
+- [x] Add an official credential-free React reference experience covering upload, pause, reload, resume, cancellation, failure, and verification.
+- [x] Keep Uppy as an optional integration recipe and evaluate a dedicated adapter only from observed API friction.
+
+## 1.4.0 Included - Uppy UI Composition Validation
+
+Spec Kit artifacts:
+
+- [Uppy UI integration](../specs/011-uppy-ui-integration/spec.md)
+
+- [x] Define Uppy as selection UI while preserving one authoritative SDK upload lifecycle.
+- [x] Add a credential-free React example with real local transfer, recovery, cancellation, and verification.
+- [x] Record observed API friction and defer an official Uppy adapter when public APIs remain sufficient.
+- [x] Produce a separate review-ready tus-js-client transport brief without adding its dependency or export.
+
 ## 1.3.1 Included - NAS Concurrency Integrity
 
 Spec Kit artifacts:
@@ -71,7 +94,7 @@ Spec Kit artifacts:
 - [ ] Evaluate parallel upload support and its impact on chunk planning, receipt ordering, resume checkpoints, and transport capabilities.
 - [ ] Define per-chunk checksum policy for transports that require provider-specific integrity records.
 - [ ] Assess whether scoped packages are needed after 1.1 API growth.
-- [ ] Add styled upload components only after headless adapter usage stabilizes.
+- [x] Promote styled upload components into formal scope after headless adapter usage stabilized; implementation is tracked by feature 012.
 
 ## Parking Lot
 

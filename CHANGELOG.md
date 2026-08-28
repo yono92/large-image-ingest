@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+## 1.4.0
+
+- Classify preflight policy rejection with the existing `validation.failed` error code.
+- Add controller preparation phases and bounded checksum progress while preserving existing callbacks and upload authority.
+- Add the optional `large-image-ingest/react-ui` panel, provider, hook, composable primitives, safe recovery and verification adapters, and opt-in prefixed stylesheet.
+- Add a credential-free first-party React reference app and provider-neutral local infrastructure while retaining Uppy as an optional selection-only recipe.
+- Add DOM accessibility, 320px/200%-zoom/reduced-motion browser, CSS boundary, package export, and stale async result regression gates.
+
 ## 1.3.1
 
 - Prevent concurrent NAS chunk staging from losing acknowledged chunk records across gateway instances.
