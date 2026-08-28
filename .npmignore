@@ -1,6 +1,13 @@
 node_modules/
 dist/
 coverage/
+examples/uppy-react/.fixtures/
+examples/uppy-react/.local-data/
+examples/uppy-react/.vite-dist/
+examples/reference-local/.fixtures/
+examples/inspection-upload-react/.vite-dist/
+test-results/
+playwright-report/
 *.log
 .env
 .env.*

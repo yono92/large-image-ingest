@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "rootDir": ".",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "large-image-ingest": ["./src/index.ts"],
+      "large-image-ingest/core": ["./src/core.ts"],
+      "large-image-ingest/node": ["./src/node.ts"],
+      "large-image-ingest/react": ["./src/react.ts"]
+    }
+  },
+  "include": [
+    "examples/uppy-react/src/**/*.ts",
+    "examples/uppy-react/src/**/*.tsx",
+    "examples/reference-local/local-reference-transport.ts",
+    "examples/uppy-react/vite.config.ts"
+  ]
+}

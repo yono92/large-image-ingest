@@ -111,9 +111,10 @@ More examples are in [docs/quickstart.md](docs/quickstart.md).
 - Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs
 - Browser-safe tus and S3 multipart transport helpers
 - Server-side NAS gateway and stored-file verification helpers under the Node subpath
+- Optional first-party React panel, provider, hook, composable primitives, and opt-in static CSS
 - ESM, CommonJS, and TypeScript declaration entrypoints
 
-The optional React subpath contains headless state and control hooks only. The package does not include styled React components, image decoding, raster or thumbnail rendering, resize, tile generation, image viewing, or cloud SDKs. The optional TIFF subpath probes structural metadata without decoding pixels. Processing, presentation, and provider SDKs remain caller-owned adapters or companion packages.
+The first-party UI never decodes, previews, resizes, recompresses, or strips metadata from the selected original. Any preview is an explicit caller-owned derivative. The optional TIFF subpath probes structural metadata without decoding pixels, and provider SDKs remain caller-owned adapters.
 
 ## Package Map
 
@@ -124,6 +125,8 @@ large-image-ingest/transport-tus
 large-image-ingest/transport-s3
 large-image-ingest/node
 large-image-ingest/react
+large-image-ingest/react-ui
+large-image-ingest/react-ui/styles.css
 large-image-ingest/tiff
 ```
 
@@ -132,8 +135,31 @@ large-image-ingest/tiff
 - Use `large-image-ingest/transport-s3` for broker-backed S3 multipart uploads.
 - Use `large-image-ingest/node` for server-only NAS gateway, metadata derivative, tile descriptor, and stored-file verification APIs.
 - Use `large-image-ingest/react` for optional headless React state and upload controls.
+- Use `large-image-ingest/react-ui` for the official ready-made panel or composable inspection UI.
+- Import `large-image-ingest/react-ui/styles.css` only when the default theme is wanted.
 - Use `large-image-ingest/tiff` for optional bounded TIFF and BigTIFF structural metadata probing.
 - Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.
+
+## First-Party React UI
+
+Install React as an optional peer, import the panel, and opt into the static stylesheet. The application still supplies the exact-file controller configuration, transport, resume store, and stored-object verifier.
+
+```tsx
+import { InspectionUploadPanel } from "large-image-ingest/react-ui";
+import "large-image-ingest/react-ui/styles.css";
+import { createIngestController } from "large-image-ingest/react";
+
+<InspectionUploadPanel
+  createController={(file) => createIngestController(file, options)}
+  recovery={{ store: resumeStore, chunking: options.chunking }}
+  verifier={storedObjectVerifier}
+  accept=".tif,.tiff,.png,.jpg,.jpeg"
+/>
+```
+
+The initial public workflow supports one local `File`. It shows controller-authoritative validation, source-identity preparation, acknowledged progress, pause/cancel/recovery, transfer completion, and application-supplied stored-original verification. Full manifests, resume records, URLs, keys, credentials, provider receipts, and customer metadata are not rendered. See the [React UI guide](docs/react-ui.md) and [credential-free reference app](examples/inspection-upload-react/README.md).
+
+For an entirely custom design, use the provider, `useInspectionUploadUi`, and primitives from `react-ui`, or use the lower-level headless `large-image-ingest/react` surface. Uppy remains an optional selection-only recipe for applications already standardized on Uppy.
 
 ## React Headless Adapter
 
@@ -190,6 +216,30 @@ function UploadPanel({
 ```
 
 Keep the controller mounted above route changes when uploads must continue while individual UI components unmount.
+
+The controller preserves the existing `starting` revision and also publishes additive
+`preparation` details for `validating`, `preparing_identity`, and
+`creating_upload`. Byte progress is reported only when checksum preparation can
+measure bounded reads. Preflight policy rejection uses the typed
+`validation.failed` code, while application event, snapshot, and observer-error
+callbacks remain isolated from ingest control flow.
+
+## Uppy UI-Only Integration
+
+Uppy is an optional compatibility recipe for applications that already use its selection UI. `large-image-ingest` remains the sole owner of validation, checksum, manifest, upload, retry, progress, pause, cancellation, persistent resume, and completion evidence. New applications that want a ready-made experience should start with the first-party UI above.
+
+```bash
+npm install large-image-ingest react @uppy/core @uppy/react
+```
+
+The supported reference flow accepts one local file, passes the exact browser `File` to one ingest controller, and configures no Uppy uploader plugin or source transform. After reload, the user reselects the original and the SDK validates it against a versioned resume record before continuing.
+
+The [Uppy UI-only guide](docs/integrations/uppy.md) contains the ownership and event mapping. The repository also includes a [runnable React example](examples/uppy-react/README.md) with a credential-free local transfer, pause/reload recovery, cancellation, and final stored-file verification.
+
+```bash
+npm run example:uppy:fixture
+npm run example:uppy
+```
 
 ## TIFF And BigTIFF Metadata
 
@@ -297,6 +347,10 @@ Server-owned credential, object key, NAS path, cleanup, and final verification r
 - [Reference integration and benchmarks](docs/benchmarks.md)
 - [Opt-in integration test policy](docs/integration-tests.md)
 - [Server operational guide](docs/server-operational-guide.md)
+- [First-party React UI](docs/react-ui.md)
+- [Uppy UI-only integration](docs/integrations/uppy.md)
+- [Uppy friction and adapter decision](docs/integrations/uppy-friction.md)
+- [tus-js-client transport review brief](docs/integrations/tus-js-client-review.md)
 - [Roadmap](docs/roadmap.md)
 - [Changelog](CHANGELOG.md)
 
@@ -306,7 +360,10 @@ Server-owned credential, object key, NAS path, cleanup, and final verification r
 npm ci
 npm run typecheck
 npm run typecheck:examples
+npm run typecheck:uppy-example
+npm run typecheck:inspection-ui-example
 npm test
+npm run test:ui
 npm run build
 npm run test:reference
 npm pack --dry-run

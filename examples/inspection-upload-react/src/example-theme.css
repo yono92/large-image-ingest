@@ -1,0 +1,8 @@
+body { margin: 0; background: #07111f; }
+.example-shell { min-height: 100vh; padding: clamp(0.75rem, 3vw, 2rem); }
+.example-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; max-width: 64rem; margin: 0 auto 1rem; }
+.example-nav button { min-height: 2.75rem; padding: 0.5rem 1rem; border: 1px solid #6f7f95; border-radius: 999px; color: #eaf2ff; background: #132238; font: inherit; }
+.example-nav button[aria-pressed="true"] { border-color: #65d6c2; color: #07111f; background: #65d6c2; }
+.example-shell > .lii-panel, .example-shell > * > .lii-panel { margin-inline: auto; }
+.example-composed { --lii-surface: #0d1b2d; --lii-surface-elevated: #14263d; --lii-foreground: #f1f7ff; --lii-muted-foreground: #b7c5d8; --lii-border: #405875; --lii-accent: #65d6c2; --lii-accent-foreground: #07111f; --lii-focus: #ffd166; }
+.eyebrow { color: var(--lii-accent); font-size: 0.8rem; font-weight: 800; letter-spacing: 0.12em; }

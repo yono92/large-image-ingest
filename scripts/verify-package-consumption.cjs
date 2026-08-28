@@ -7,6 +7,7 @@ async function main() {
   const esmS3 = await import("large-image-ingest/transport-s3");
   const esmNode = await import("large-image-ingest/node");
   const esmReact = await import("large-image-ingest/react");
+  const esmReactUi = await import("large-image-ingest/react-ui");
   const esmTiff = await import("large-image-ingest/tiff");
   const cjs = require("large-image-ingest");
   const cjsCore = require("large-image-ingest/core");
@@ -14,7 +15,9 @@ async function main() {
   const cjsS3 = require("large-image-ingest/transport-s3");
   const cjsNode = require("large-image-ingest/node");
   const cjsReact = require("large-image-ingest/react");
+  const cjsReactUi = require("large-image-ingest/react-ui");
   const cjsTiff = require("large-image-ingest/tiff");
+  const reactUiStyles = require.resolve("large-image-ingest/react-ui/styles.css");
 
   assert.equal(typeof esm.planChunks, "function");
   assert.equal(typeof esm.createIngestSession, "function");
@@ -36,6 +39,9 @@ async function main() {
   assert.equal(typeof esmReact.createIngestController, "function");
   assert.equal(typeof esmReact.IngestProvider, "function");
   assert.equal(typeof esmReact.useIngestSession, "function");
+  assert.equal(typeof esmReactUi.InspectionUploadPanel, "function");
+  assert.equal(typeof esmReactUi.InspectionUploadProvider, "function");
+  assert.equal(typeof esmReactUi.useInspectionUploadUi, "function");
   assert.equal(typeof esmTiff.probeTiffMetadata, "function");
   assert.equal(typeof esmTiff.toTiffImageMetadata, "function");
   assert.equal(typeof cjs.planChunks, "function");
@@ -58,8 +64,12 @@ async function main() {
   assert.equal(typeof cjsReact.createIngestController, "function");
   assert.equal(typeof cjsReact.IngestProvider, "function");
   assert.equal(typeof cjsReact.useIngestSession, "function");
+  assert.equal(typeof cjsReactUi.InspectionUploadPanel, "function");
+  assert.equal(typeof cjsReactUi.InspectionUploadProvider, "function");
+  assert.equal(typeof cjsReactUi.useInspectionUploadUi, "function");
   assert.equal(typeof cjsTiff.probeTiffMetadata, "function");
   assert.equal(typeof cjsTiff.toTiffImageMetadata, "function");
+  assert.match(reactUiStyles, /styles[\\/]react-ui\.css$/);
   assert.deepEqual(esm.planChunks(10, { chunkSize: 256 * 1024 }).chunks, [
     { index: 0, start: 0, end: 10, size: 10 }
   ]);

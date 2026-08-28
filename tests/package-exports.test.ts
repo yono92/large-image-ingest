@@ -11,6 +11,7 @@ describe("package exports", () => {
       files: string[];
       peerDependencies?: Record<string, string>;
       peerDependenciesMeta?: Record<string, { optional?: boolean }>;
+      sideEffects?: boolean | string[];
     };
 
     expect(packageJson.exports).toMatchObject({
@@ -44,6 +45,12 @@ describe("package exports", () => {
         import: "./dist/esm/react.js",
         require: "./dist/cjs/react.js"
       },
+      "./react-ui": {
+        types: "./dist/esm/react-ui.d.ts",
+        import: "./dist/esm/react-ui.js",
+        require: "./dist/cjs/react-ui.js"
+      },
+      "./react-ui/styles.css": "./styles/react-ui.css",
       "./tiff": {
         types: "./dist/esm/tiff.d.ts",
         import: "./dist/esm/tiff.js",
@@ -54,6 +61,7 @@ describe("package exports", () => {
     expect(packageJson.exports).not.toHaveProperty("./preview");
     expect(packageJson.peerDependencies?.react).toBe(">=18 <20");
     expect(packageJson.peerDependenciesMeta?.react?.optional).toBe(true);
+    expect(packageJson.sideEffects).toContain("./styles/react-ui.css");
     expect(packageJson.peerDependencies?.geotiff).toBe("^3.0.5");
     expect(packageJson.peerDependenciesMeta?.geotiff?.optional).toBe(true);
     expect(packageJson.exports).not.toHaveProperty("./metadata");
@@ -67,11 +75,13 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.3.1");
+    expect(packageJson.version).toBe("1.4.0");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./node");
     expect(packageJson.exports).toHaveProperty("./react");
+    expect(packageJson.exports).toHaveProperty("./react-ui");
+    expect(packageJson.exports).toHaveProperty("./react-ui/styles.css");
     expect(packageJson.exports).toHaveProperty("./tiff");
     expect(packageJson.dependencies ?? {}).toEqual({});
   });

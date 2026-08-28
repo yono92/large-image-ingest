@@ -23,6 +23,32 @@ const fakeCapabilities: TransportCapabilities = {
 };
 
 describe("LargeImageIngestSession", () => {
+  it("classifies preflight policy rejection as validation.failed before transport creation", async () => {
+    let createCalls = 0;
+    const transport: UploadTransport = {
+      async createSession(): Promise<TransportSession> {
+        createCalls += 1;
+        return {
+          uploadId: "unused",
+          transportName: "noop",
+          createdAt: "2026-01-01T00:00:00.000Z"
+        };
+      },
+      async uploadChunk(): Promise<void> {},
+      async completeSession(): Promise<void> {}
+    };
+
+    await expect(createIngestSession(new File([], "empty.tif", { type: "image/tiff" }), {
+      transport,
+      validation: { requireNonEmpty: true }
+    }).start()).rejects.toMatchObject({
+      code: "validation.failed",
+      retryable: false
+    });
+
+    expect(createCalls).toBe(0);
+  });
+
   it("tracks chunk receipts and passes ordered receipts to completeSession", async () => {
     const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
       type: "image/tiff"

@@ -23,6 +23,7 @@ import type {
   CompletedChunkRange,
   CreateIngestSessionOptions,
   IngestError,
+  IngestErrorCode,
   IngestEvent,
   IngestFileLike,
   IngestIssueCode,
@@ -113,7 +114,7 @@ export class LargeImageIngestSession {
 
       if (!manifest.validation.ok) {
         throw createIngestError(
-          "transport.failed",
+          "validation.failed",
           "Cannot start upload because validation failed.",
           false
         );
@@ -1147,7 +1148,7 @@ export class LargeImageIngestSession {
       return error.code;
     }
 
-    if (isIngestError(error)) {
+    if (isIngestError(error) && isIngestIssueErrorCode(error.code)) {
       return error.code;
     }
 
@@ -1581,7 +1582,7 @@ function assertRetryNumber(value: number, name: string): void {
 }
 
 function createIngestError(
-  code: IngestIssueCode,
+  code: IngestErrorCode,
   message: string,
   retryable: boolean,
   details?: Record<string, unknown>
@@ -1608,6 +1609,15 @@ function isIngestError(error: unknown): error is IngestError {
 
 function isNonRetryableIngestError(error: unknown): error is IngestError {
   return isIngestError(error) && error.retryable === false;
+}
+
+function isIngestIssueErrorCode(code: IngestErrorCode): code is IngestIssueCode {
+  return code !== "manifest.failed" &&
+    code !== "session.failed" &&
+    code !== "validation.failed" &&
+    code !== "session.aborted" &&
+    code !== "session.invalid_state" &&
+    code !== "session.snapshot_file_mismatch";
 }
 
 function toSnapshotError(error: unknown): UploadSessionSnapshot["error"] {

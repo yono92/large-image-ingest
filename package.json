@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -18,12 +18,15 @@
   },
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
-  "sideEffects": false,
+  "sideEffects": [
+    "./styles/react-ui.css"
+  ],
   "files": [
     "dist",
     "CHANGELOG.md",
     "docs",
     "examples",
+    "styles",
     "README.md",
     "LICENSE"
   ],
@@ -64,6 +67,13 @@
       "require": "./dist/cjs/react.js",
       "default": "./dist/esm/react.js"
     },
+    "./react-ui": {
+      "types": "./dist/esm/react-ui.d.ts",
+      "import": "./dist/esm/react-ui.js",
+      "require": "./dist/cjs/react-ui.js",
+      "default": "./dist/esm/react-ui.js"
+    },
+    "./react-ui/styles.css": "./styles/react-ui.css",
     "./tiff": {
       "types": "./dist/esm/tiff.d.ts",
       "import": "./dist/esm/tiff.js",
@@ -76,13 +86,22 @@
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
     "benchmark:local": "npm run build && node benchmarks/run-local.cjs",
     "clean": "node scripts/clean-dist.cjs",
+    "example:uppy": "node scripts/run-uppy-example.cjs",
+    "example:uppy:fixture": "node scripts/create-uppy-example-fixture.cjs",
+    "example:inspection-ui": "node scripts/run-inspection-ui-example.cjs",
+    "example:inspection-ui:fixture": "node examples/reference-local/create-fixture.cjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm test && npm run build && npm run test:reference && npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && npm run test:reference && npm audit --audit-level=moderate",
     "smoke:exports": "node scripts/verify-package-consumption.cjs",
     "test:integration": "node scripts/run-integration-tests.cjs",
     "test:reference": "node benchmarks/run-local.cjs --size-mib 64",
+    "test:ui": "npm run test:ui:unit && npm run test:ui:browser",
+    "test:ui:browser": "node scripts/run-ui-tests.cjs",
+    "test:ui:unit": "vitest run tests/react-ui-coordinator.test.ts tests/react-ui-recovery.test.tsx tests/react-ui-components.test.tsx tests/react-ui-accessibility.test.tsx tests/react-ui-css.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.cjs.json --noEmit",
     "typecheck:examples": "tsc -p tsconfig.examples.json",
+    "typecheck:inspection-ui-example": "tsc -p tsconfig.inspection-ui-example.json",
+    "typecheck:uppy-example": "tsc -p tsconfig.uppy-example.json",
     "test": "vitest run"
   },
   "keywords": [
@@ -109,15 +128,22 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^20.19.43",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/react-test-renderer": "^19.1.0",
+    "@uppy/core": "^5.2.0",
+    "@uppy/react": "^5.2.0",
+    "axe-core": "^4.13.0",
     "geotiff": "^3.0.5",
+    "jsdom": "^29.1.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-test-renderer": "^19.2.7",
     "typescript": "^5.0.0",
+    "vite": "^7.3.6",
     "vitest": "^4.1.9"
   }
 }
