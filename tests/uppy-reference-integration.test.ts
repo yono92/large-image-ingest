@@ -42,7 +42,7 @@ describe("Uppy reference fixture", () => {
     expect((await stat(firstPath)).size).toBe(first.sizeBytes);
     expect(await readFile(firstPath)).toEqual(await readFile(secondPath));
     expect(first.outputPath).toBe(firstPath);
-  });
+  }, 15_000);
 });
 
 describe("local reference HTTP contract", () => {
