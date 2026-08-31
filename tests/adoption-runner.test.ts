@@ -1,15 +1,16 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
+import * as sdk from "../src/core.js";
 
 const require = createRequire(import.meta.url);
 const { runEvidence } = require("../benchmarks/run-adoption-evidence.cjs") as {
-  runEvidence(): Promise<any>;
+  runEvidence(options?: { sdk?: typeof sdk }): Promise<any>;
 };
 
 describe("adoption evidence runner", () => {
   it("reproduces frozen metrics and all raw classifications", async () => {
-    const first = await runEvidence();
-    const second = await runEvidence();
+    const first = await runEvidence({ sdk });
+    const second = await runEvidence({ sdk });
     const stable = (report: any) => report.candidates.map((candidate: any) => ({
       id: candidate.id,
       revision: candidate.revision,
