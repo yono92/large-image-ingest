@@ -16,7 +16,7 @@ describe("verification helpers", () => {
 
     expect(manifest).toMatchObject({
       schemaVersion: "large-image-ingest.manifest.v1",
-      library: { name: "large-image-ingest", version: "1.5.0" }
+      library: { name: "large-image-ingest", version: "1.6.0" }
     });
     await expect(verifyManifest(manifest)).resolves.toMatchObject({ ok: true });
   });

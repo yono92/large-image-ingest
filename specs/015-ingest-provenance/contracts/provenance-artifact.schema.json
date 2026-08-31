@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yono92/large-image-ingest/specs/015-ingest-provenance/contracts/provenance-artifact.schema.json",
+  "title": "large-image-ingest provenance v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "correlationId", "createdAt", "library", "disclosureProfile", "manifest", "policy", "transport", "recovery", "entries", "derivatives", "attestations", "terminalStatus", "integrity"],
+  "properties": {
+    "schemaVersion": { "const": "large-image-ingest.provenance.v1" },
+    "id": { "$ref": "#/$defs/id" },
+    "correlationId": { "$ref": "#/$defs/id" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "library": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "large-image-ingest" },
+        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" }
+      }
+    },
+    "disclosureProfile": { "enum": ["audit", "authorized-full"] },
+    "manifest": { "$ref": "#/$defs/manifest" },
+    "policy": { "$ref": "#/$defs/policy" },
+    "transport": { "$ref": "#/$defs/transport" },
+    "recovery": { "$ref": "#/$defs/recovery" },
+    "entries": { "type": "array", "minItems": 1, "maxItems": 4096, "items": { "$ref": "#/$defs/entry" } },
+    "verification": { "$ref": "#/$defs/verification" },
+    "derivatives": { "type": "array", "maxItems": 1024, "items": { "$ref": "#/$defs/derivative" } },
+    "attestations": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/attestation" } },
+    "terminalStatus": { "enum": ["active", "completed", "completed_unverified", "verification_failed", "upload_failed", "canceled"] },
+    "annotations": {
+      "type": "object",
+      "maxProperties": 32,
+      "additionalProperties": { "type": "string", "maxLength": 256 }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "canonicalization", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "canonicalization": { "const": "rfc8785-jcs" },
+        "value": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
+    "code": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z0-9][a-z0-9._-]{0,127}$" },
+    "checksum": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "value": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "schemaVersion", "sizeBytes", "sourceEvidence"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "schemaVersion": { "const": "large-image-ingest.manifest.v1" },
+        "sizeBytes": { "type": "integer", "minimum": 0 },
+        "sourceEvidence": { "enum": ["whole-file-sha256", "none"] },
+        "checksum": { "$ref": "#/$defs/checksum" }
+      }
+    },
+    "policyEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "result", "failedRuleCodes", "warningRuleCodes", "failedRuleCount", "warningRuleCount"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "$ref": "#/$defs/id" },
+        "result": { "enum": ["passed", "passed_with_warnings", "failed"] },
+        "failedRuleCodes": { "$ref": "#/$defs/codeArray" },
+        "warningRuleCodes": { "$ref": "#/$defs/codeArray" },
+        "failedRuleCount": { "type": "integer", "minimum": 0 },
+        "warningRuleCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "result", "failedRuleCodes", "warningRuleCodes", "failedRuleCount", "warningRuleCount", "history"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "version": { "$ref": "#/$defs/id" },
+        "result": { "enum": ["passed", "passed_with_warnings", "failed"] },
+        "failedRuleCodes": { "$ref": "#/$defs/codeArray" },
+        "warningRuleCodes": { "$ref": "#/$defs/codeArray" },
+        "failedRuleCount": { "type": "integer", "minimum": 0 },
+        "warningRuleCount": { "type": "integer", "minimum": 0 },
+        "history": { "type": "array", "minItems": 1, "maxItems": 128, "items": { "$ref": "#/$defs/policyEvaluation" } }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resumable", "snapshotResume", "persistentResume", "abortable", "expirationAware", "parallelChunks", "chunkIntegrity"],
+      "properties": {
+        "resumable": { "type": "boolean" },
+        "snapshotResume": { "type": "boolean" },
+        "persistentResume": { "type": "boolean" },
+        "abortable": { "type": "boolean" },
+        "expirationAware": { "type": "boolean" },
+        "parallelChunks": { "type": "boolean" },
+        "chunkIntegrity": { "type": "boolean" }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "capabilities", "receiptEvidenceCount", "offsetEvidenceCount"],
+      "properties": {
+        "category": { "$ref": "#/$defs/code" },
+        "capabilities": { "$ref": "#/$defs/capabilities" },
+        "receiptEvidenceCount": { "type": "integer", "minimum": 0 },
+        "offsetEvidenceCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "codeArray": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/code" }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recordSchemaVersions", "classifications", "resumeCount", "acknowledgedRangesReused", "conflictCodes"],
+      "properties": {
+        "recordSchemaVersions": { "$ref": "#/$defs/codeArray" },
+        "classifications": {
+          "type": "array",
+          "maxItems": 128,
+          "uniqueItems": true,
+          "items": { "enum": ["resumable", "upgradeable", "restart_only", "expired", "incompatible"] }
+        },
+        "resumeCount": { "type": "integer", "minimum": 0 },
+        "acknowledgedRangesReused": { "type": "integer", "minimum": 0 },
+        "retransmittedAcknowledgedBytes": { "type": "integer", "minimum": 0 },
+        "conflictCodes": { "$ref": "#/$defs/codeArray" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "chunkIndex": { "type": "integer", "minimum": 0 },
+        "uploadedBytes": { "type": "integer", "minimum": 0 },
+        "totalBytes": { "type": "integer", "minimum": 0 },
+        "attempt": { "type": "integer", "minimum": 0 },
+        "completedRangeCount": { "type": "integer", "minimum": 0 },
+        "acknowledgedRangesReused": { "type": "integer", "minimum": 0 },
+        "retransmittedAcknowledgedBytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entryId", "sequence", "occurredAt", "type", "evidenceSource"],
+      "properties": {
+        "entryId": { "$ref": "#/$defs/id" },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "occurredAt": { "type": "string", "format": "date-time" },
+        "type": { "enum": ["preparation", "validation", "session_created", "progress_snapshot", "chunk_started", "acknowledgement", "retry", "recovery_available", "resume", "recovery_checkpoint", "recovery_conflict", "recovery_cleanup_failed", "recovery_expired", "pause", "cancellation", "completion", "failure", "verification", "derivative", "attestation", "application_assertion"] },
+        "evidenceSource": { "enum": ["library", "application", "transport", "verification", "external"] },
+        "code": { "$ref": "#/$defs/code" },
+        "metrics": { "$ref": "#/$defs/metrics" }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "verifierCategory", "expectedEvidenceCategories", "observedEvidenceCategories", "verifiedAt", "issueCodes"],
+      "properties": {
+        "status": { "enum": ["verified", "failed", "unavailable"] },
+        "verifierCategory": { "$ref": "#/$defs/code" },
+        "expectedEvidenceCategories": { "$ref": "#/$defs/codeArray" },
+        "observedEvidenceCategories": { "$ref": "#/$defs/codeArray" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "issueCodes": { "$ref": "#/$defs/codeArray" }
+      }
+    },
+    "derivative": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "status", "sourceManifestId"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "$ref": "#/$defs/id" },
+        "status": { "$ref": "#/$defs/id" },
+        "sourceManifestId": { "$ref": "#/$defs/id" },
+        "generator": { "$ref": "#/$defs/id" },
+        "generatorVersion": { "$ref": "#/$defs/id" },
+        "policyId": { "$ref": "#/$defs/id" },
+        "checksum": { "$ref": "#/$defs/checksum" },
+        "storageCategory": { "$ref": "#/$defs/id" }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "digest"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "type": { "$ref": "#/$defs/id" },
+        "digest": { "$ref": "#/$defs/checksum" },
+        "referenceId": { "$ref": "#/$defs/id" }
+      }
+    }
+  }
+}

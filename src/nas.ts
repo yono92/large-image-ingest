@@ -334,6 +334,10 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
         const stagingPath = sessionPath(stagingRoot, safeSessionId);
         await cleanupMetadataCandidates(stagingPath);
         const snapshot = await readSnapshot(stagingRoot, targetRoot, safeSessionId);
+        if (snapshot.status === "finalized") {
+          await verifyFinalizedTarget(stagingPath, snapshot);
+          return snapshot;
+        }
         ensureSessionOpen(snapshot);
         ensureNotExpired(snapshot, clock());
         await cleanupUnreferencedChunkArtifacts(stagingPath, snapshot.chunks);
@@ -676,6 +680,41 @@ async function verifyAllChunks(stagingPath: string, snapshot: NasGatewaySessionS
       expectedTotalBytes: snapshot.totalBytes,
       actualTotalBytes: totalBytes
     });
+  }
+}
+
+async function verifyFinalizedTarget(
+  stagingPath: string,
+  snapshot: NasGatewaySessionSnapshot
+): Promise<void> {
+  await verifyAllChunks(stagingPath, snapshot);
+
+  let targetInfo;
+  try {
+    targetInfo = await stat(snapshot.targetPath);
+  } catch {
+    throw createNasError("nas.finalize_failed", "Finalized NAS target is unavailable.");
+  }
+
+  if (!targetInfo.isFile() || targetInfo.size !== snapshot.totalBytes) {
+    throw createNasError("nas.checksum_mismatch", "Finalized NAS target size changed after completion.");
+  }
+
+  const stagedHash = createHash("sha256");
+  for (const chunk of [...snapshot.chunks].sort((left, right) => left.index - right.index)) {
+    const chunkPath = resolveWithinRoot(stagingPath, chunk.path);
+    for await (const bytes of createReadStream(chunkPath)) {
+      stagedHash.update(bytes);
+    }
+  }
+
+  const targetHash = createHash("sha256");
+  for await (const bytes of createReadStream(snapshot.targetPath)) {
+    targetHash.update(bytes);
+  }
+
+  if (stagedHash.digest("hex") !== targetHash.digest("hex")) {
+    throw createNasError("nas.checksum_mismatch", "Finalized NAS target bytes changed after completion.");
   }
 }
 

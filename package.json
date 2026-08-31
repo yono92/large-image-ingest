@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -48,6 +48,30 @@
       "import": "./dist/esm/browser.js",
       "default": "./dist/esm/browser.js"
     },
+    "./conformance": {
+      "types": "./dist/esm/conformance.d.ts",
+      "import": "./dist/esm/conformance.js",
+      "require": "./dist/cjs/conformance.js",
+      "default": "./dist/esm/conformance.js"
+    },
+    "./provenance": {
+      "types": "./dist/esm/provenance.d.ts",
+      "import": "./dist/esm/provenance.js",
+      "require": "./dist/cjs/provenance.js",
+      "default": "./dist/esm/provenance.js"
+    },
+    "./preservation": {
+      "types": "./dist/esm/preservation.d.ts",
+      "import": "./dist/esm/preservation.js",
+      "require": "./dist/cjs/preservation.js",
+      "default": "./dist/esm/preservation.js"
+    },
+    "./profiles": {
+      "types": "./dist/esm/profiles.d.ts",
+      "import": "./dist/esm/profiles.js",
+      "require": "./dist/cjs/profiles.js",
+      "default": "./dist/esm/profiles.js"
+    },
     "./transport-s3": {
       "types": "./dist/esm/s3.d.ts",
       "import": "./dist/esm/s3.js",
@@ -91,16 +115,21 @@
     "prebuild": "node scripts/verify-package-version.cjs",
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
     "benchmark:local": "npm run build && node benchmarks/run-local.cjs",
+    "benchmark:browser-checksum": "npm run build && node benchmarks/run-browser-checksum.cjs",
+    "evidence:adoption": "npm run build && node benchmarks/run-adoption-evidence.cjs",
     "clean": "node scripts/clean-dist.cjs",
     "example:uppy": "node scripts/run-uppy-example.cjs",
     "example:uppy:fixture": "node scripts/create-uppy-example-fixture.cjs",
     "example:inspection-ui": "node scripts/run-inspection-ui-example.cjs",
     "example:inspection-ui:fixture": "node examples/reference-local/create-fixture.cjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && npm run test:browser-checksum && npm run test:reference && npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && npm run test:conformance && npm run test:browser-checksum && npm run test:reference && npm run test:adoption-evidence && npm audit --audit-level=moderate",
+    "qualify:transport": "npm run build && node scripts/run-conformance.cjs --real-target",
     "smoke:exports": "node scripts/verify-package-consumption.cjs",
     "test:integration": "node scripts/run-integration-tests.cjs",
-    "test:browser-checksum": "node scripts/verify-browser-checksum.cjs",
+    "test:browser-checksum": "node scripts/verify-browser-checksum.cjs && node benchmarks/run-browser-checksum.cjs --size-mib 64",
+    "test:adoption-evidence": "npm run build && vitest run tests/adoption-counting.test.ts tests/adoption-report.test.ts tests/adoption-runner.test.ts tests/adoption-security.test.ts",
+    "test:conformance": "npm run build && node scripts/run-conformance.cjs",
     "test:reference": "node benchmarks/run-local.cjs --size-mib 64",
     "test:ui": "npm run test:ui:unit && npm run test:ui:browser",
     "test:ui:browser": "node scripts/run-ui-tests.cjs",

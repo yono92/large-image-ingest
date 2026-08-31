@@ -1,60 +1,66 @@
 # Integration Test Policy
 
-Default test commands must stay local and credential-free:
+Default verification is local, isolated, and credential-free:
 
 ```bash
 npm run typecheck
 npm run typecheck:examples
 npm test
 npm run build
+npm run test:conformance
 npm run test:reference
+npm run test:browser-checksum
+npm run test:adoption-evidence
 npm run test:integration
 npm run smoke:exports
-npm run test:browser-checksum
 ```
 
-The default unit suite uses in-memory fakes, mocked `fetch`, Worker protocol fakes, and temporary directories. `npm run test:browser-checksum` consumes the built ESM browser entrypoint and its packaged Worker runtime without provider credentials. The credential-free `npm run test:reference` gate additionally uses a real loopback HTTP server, durable JSON resume state, and temporary filesystem storage to prove an interrupted upload can resume and verify its stored checksum. It must not require a real tus server, cloud credentials, object storage buckets, or mounted NAS paths. `npm run test:integration` stays safe by default: without target-specific environment variables it prints skip messages and performs no target preflight.
+The default conformance suite executes the complete catalog through in-memory S3 and tus representatives and temporary-directory NAS gateways. The reference gate separately uses loopback HTTP, durable JSON resume state, and temporary storage. The adoption-evidence gate compares three frozen candidates and validates 150 raw controlled trials. None of these paths needs cloud credentials, a real tus server, a bucket, or a mounted NAS path.
 
-The reference methodology and recorded result are documented in [benchmarks.md](benchmarks.md). Executable harness code lives under `benchmarks/` in the repository and is intentionally excluded from the npm tarball.
+`npm run test:integration` is safe by default. Without exact opt-in and a driver module, it prints one skip and performs no target import, network request, or storage mutation. Endpoint reachability and filesystem accessibility are no longer reported as a pass because they do not prove recovery or integrity behavior.
 
-## Opt-In Targets
+## Explicit Real-Target Qualification
 
-Use opt-in integration tests for infrastructure-specific behavior:
-
-- tus servers: offset reconciliation, expiration, termination, and resume token behavior against a real endpoint.
-- S3-compatible storage: multipart upload creation, presigned URL CORS, ETag visibility, completion, abort, and lifecycle cleanup.
-- NAS mounts: cross-process file locking, rename behavior, permissions, stale staging cleanup, and throughput under production-like mount options.
-
-The current harness entry point is:
+Use the same versioned catalog against a deployment-specific driver:
 
 ```bash
-npm run test:integration
+LII_CONFORMANCE_OPT_IN=1 \
+LII_CONFORMANCE_DRIVER_MODULE=./private/target-driver.mjs \
+npm run qualify:transport -- \
+  --output benchmarks/results/private-target-report.json
 ```
 
-Target enablement is all-or-skip per target. Partial configuration must skip that target.
+Both environment variables are required. The opt-in value must be exactly `1`. Partial configuration skips without importing the driver. A configured run passes only when the resulting report is complete and conformant; failed, skipped, or unproven behavior cannot be promoted by a successful endpoint preflight.
 
-## Required Safeguards
+The driver must export `createTarget()` or a target value matching `TransportConformanceTarget` from `large-image-ingest/conformance`. Its profile must use `targetClass: "real-deployment"` and non-sensitive category values.
 
-Infrastructure tests should:
+## Driver Ownership
 
-- Require explicit environment variables before running.
-- Use dedicated test buckets, prefixes, directories, or tus namespaces.
-- Generate object keys and target paths from test-owned prefixes only.
-- Avoid logging credentials, presigned URLs, raw customer metadata, or full manifests.
-- Avoid logging raw endpoint values, mounted storage paths, full resume records, or opaque transport state.
-- Avoid logging whole-file source identity or checksum values in default recovery diagnostics.
-- Clean up incomplete multipart uploads, staged NAS sessions, and server-side tus uploads after each run.
-- Be excluded from default CI unless the CI job is explicitly configured for that target.
+The operator-owned driver is responsible for:
 
-## Suggested Environment Variables
+- provisioning a dedicated test bucket, prefix, directory, or tus namespace;
+- keeping credentials, endpoints, upload URLs, object keys, and mount paths outside report fields;
+- setting cost, quota, timeout, lifecycle, and retention limits;
+- implementing provider-specific reconciliation and independent stored-object verification;
+- cleaning incomplete multipart uploads, tus resources, NAS staging data, and locks on success or failure;
+- reporting abandoned-resource counts and a safe opaque cleanup reference when automatic cleanup cannot finish.
 
-```bash
-LII_INTEGRATION_TUS_ENDPOINT=https://uploads.example.test/files
-LII_INTEGRATION_S3_BROKER_URL=https://app.example.test/api/s3
-LII_INTEGRATION_NAS_STAGING_ROOT=/mnt/inspection-staging/test
-LII_INTEGRATION_NAS_TARGET_ROOT=/mnt/inspection-originals/test
-```
+Do not point a qualification driver at a production namespace containing customer originals. Provision an isolated namespace whose contents may be overwritten or removed by the driver.
+
+## Safe Output
+
+CLI output is deliberately categorical. It may contain transport category, pass/fail/skip counts, conformance status, and whether a report was written. It must not echo:
+
+- the driver module path;
+- credentials, authorization headers, or presigned URLs;
+- endpoints, buckets, object keys, filesystem or mount paths;
+- customer metadata, full manifests, recovery records, raw receipts, or checksum values;
+- raw provider or driver exceptions.
+
+The machine-readable report uses a bounded schema and safe identifiers. Store private real-target reports according to the environment's security and retention policy; do not commit them by default.
 
 ## Promotion Criteria
 
-Promote an integration scenario into a repeatable test only when it covers behavior that fakes cannot prove, such as provider-specific offset handling, CORS header exposure, multipart lifecycle cleanup, mounted filesystem locking, or rename semantics.
+A deployment may be described as qualified only for the exact driver version, library version, provider or mount configuration, and report environment that were exercised. Re-run qualification when relevant provider behavior, gateway code, mount options, lifecycle policies, or the conformance catalog changes. Representative evidence demonstrates library regression behavior; it is not provider certification.
+
+See [Official Transport Conformance](transport-conformance.md) for shared invariants and report interpretation.

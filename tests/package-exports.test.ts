@@ -29,6 +29,26 @@ describe("package exports", () => {
         types: "./dist/esm/browser.d.ts",
         import: "./dist/esm/browser.js"
       },
+      "./conformance": {
+        types: "./dist/esm/conformance.d.ts",
+        import: "./dist/esm/conformance.js",
+        require: "./dist/cjs/conformance.js"
+      },
+      "./provenance": {
+        types: "./dist/esm/provenance.d.ts",
+        import: "./dist/esm/provenance.js",
+        require: "./dist/cjs/provenance.js"
+      },
+      "./preservation": {
+        types: "./dist/esm/preservation.d.ts",
+        import: "./dist/esm/preservation.js",
+        require: "./dist/cjs/preservation.js"
+      },
+      "./profiles": {
+        types: "./dist/esm/profiles.d.ts",
+        import: "./dist/esm/profiles.js",
+        require: "./dist/cjs/profiles.js"
+      },
       "./transport-s3": {
         types: "./dist/esm/s3.d.ts",
         import: "./dist/esm/s3.js",
@@ -79,9 +99,12 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.5.0");
+    expect(packageJson.version).toBe("1.6.0");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
+    expect(packageJson.exports).toHaveProperty("./provenance");
+    expect(packageJson.exports).toHaveProperty("./preservation");
+    expect(packageJson.exports).toHaveProperty("./profiles");
     expect(packageJson.exports).toHaveProperty("./node");
     expect(packageJson.exports).toHaveProperty("./react");
     expect(packageJson.exports).toHaveProperty("./react-ui");

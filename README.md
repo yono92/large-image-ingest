@@ -28,6 +28,10 @@ The repository reference harness exercises the built package through real loopba
 
 This August 31, 2026 Feature 013 verification used Node.js 22.14.0 on macOS 26.6.2 arm64 with a 64 MiB upload chunk. The client and local reference server shared one process; loopback throughput is not a remote-provider or browser-responsiveness guarantee. See the [methodology, historical results, limitations, and reproduction commands](docs/benchmarks.md).
 
+The separately retained Chromium Worker qualification hashed real 1 GiB and 3 GiB `File` inputs at 266.58 and 267.06 MiB/s. Both digests matched, cancellation returned `checksum.canceled` with no late progress, and the maximum measured main-thread delay was 2.00 ms with no observed long task. These are machine-specific qualification results, not universal performance guarantees.
+
+The credential-free adoption comparison also records three equivalent reference integrations across 14 injected scenarios. The SDK binding reduced application-owned lifecycle responsibilities from 14 to 2 (85.71%) and explicit configuration decisions from 12 to 5 (58.33%), while the honest physical-line result was adverse: 167 SDK-binding lines versus 140 and 142 in the two generic fixtures. All candidates passed 14/14 controlled scenarios, so this evidence demonstrates coordination ownership reduction—not a lower real-world incident rate. See [the method, raw report, and claim limits](docs/adoption-evidence.md).
+
 ## Quick Start
 
 ```ts
@@ -111,6 +115,10 @@ More examples are in [docs/quickstart.md](docs/quickstart.md).
 - Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs
 - Browser-safe tus and S3 multipart transport helpers
 - Server-side NAS gateway and stored-file verification helpers under the Node subpath
+- Versioned, evidence-driven S3/tus/NAS conformance reports and an explicit real-target qualification path
+- Opt-in integrity-protected ingest provenance with safe summaries, explicit exports, and application-owned persistence
+- Node-only BagIt 1.0 and OCFL 1.1 preflight, streaming export, and independent fixity validation
+- Explicit versioned semiconductor, microscopy, and satellite validation profiles with safe derived-policy and resume binding
 - Optional first-party React panel, provider, hook, composable primitives, and opt-in static CSS
 - ESM, CommonJS, and TypeScript declaration entrypoints
 
@@ -122,6 +130,10 @@ The first-party UI never decodes, previews, resizes, recompresses, or strips met
 large-image-ingest
 large-image-ingest/core
 large-image-ingest/browser
+large-image-ingest/conformance
+large-image-ingest/provenance
+large-image-ingest/preservation
+large-image-ingest/profiles
 large-image-ingest/transport-tus
 large-image-ingest/transport-s3
 large-image-ingest/node
@@ -133,6 +145,10 @@ large-image-ingest/tiff
 
 - Use `large-image-ingest/core` for framework-agnostic browser-safe core APIs.
 - Use the ESM-only `large-image-ingest/browser` subpath for the packaged Worker checksum executor.
+- Use `large-image-ingest/conformance` for the versioned scenario catalog, runner, target types, and untrusted-report validator.
+- Use `large-image-ingest/provenance` for durable lifecycle evidence that remains separate from sensitive resume state.
+- Use `large-image-ingest/preservation` to map and export one verified ingest as a new BagIt 1.0 package or OCFL 1.1 v1 object.
+- Use `large-image-ingest/profiles` for explicitly selected domain baselines, derived organization policies, and safe profile evaluation.
 - Use `large-image-ingest/transport-tus` for the raw `fetch` tus transport.
 - Use `large-image-ingest/transport-s3` for broker-backed S3 multipart uploads.
 - Use `large-image-ingest/node` for server-only NAS gateway, metadata derivative, tile descriptor, and stored-file verification APIs.
@@ -168,6 +184,82 @@ Fallback is explicit: omit `fallback` to receive `checksum.execution_failed` whe
 The reader continues to validate v0.1 and v0.2 records. Legacy records with trustworthy manifest whole-file SHA-256 evidence can resume or promote at the next authoritative checkpoint. Weak zero-progress records are restart-only; weak progressed records and progressed v0.1 S3 records are incompatible. They remain stored until explicit cleanup. Never log full records or content identities; use `redactResumeRecord()` and safe UI summaries.
 
 Transport recovery support is conservative. `resumable`, `supportsSnapshotResume`, and `supportsPersistentResume` describe different behaviors. Missing detailed capability flags do not block ordinary upload, but they are not treated as proof that snapshot or durable recovery is safe. Manifest schema remains `large-image-ingest.manifest.v1`; `manifest.library.version` identifies the actual producing package release independently.
+
+## Auditable Provenance
+
+Create an opt-in recorder after the manifest exists and forward the existing event stream. The recorder does not change session authority or persistence when unused.
+
+```ts
+import { createIngestProvenanceRecorder } from "large-image-ingest/provenance";
+
+const recorder = createIngestProvenanceRecorder({
+  manifest,
+  policy: { id: "inspection-default", version: "1.0.0" },
+  transport: { category: "s3-multipart", capabilities: transport.capabilities }
+});
+
+const session = createIngestSession(file, {
+  manifest,
+  transport,
+  onEvent: (event) => recorder.observeIngestEvent(event)
+});
+```
+
+After completion, record independent stored verification and call `seal()`. SHA-256 over RFC 8785 canonical JSON detects artifact changes but is not a signature or trusted timestamp. Default summaries omit filenames, checksums, annotation values, manifests, resume state, receipts, URLs, paths, keys, and raw errors. See [Auditable ingest provenance](docs/provenance.md).
+
+## BagIt And OCFL Preservation
+
+The Node-only preservation subpath verifies selected Blob bytes against manifest evidence before it touches an output directory. It assigns source-independent paths, retains original/derivative/provenance relationships in an integrity-protected sidecar, and streams either a new BagIt 1.0 package or a new OCFL 1.1 `v1` object through an incomplete staging directory.
+
+```ts
+import {
+  evaluatePreservationMapping,
+  exportOcflObject
+} from "large-image-ingest/preservation";
+
+const mapping = await evaluatePreservationMapping({
+  profile: "ocfl-1.1-sha256",
+  manifest,
+  original: { bytes: originalFile },
+  derivatives,
+  provenance
+});
+
+if (mapping.status !== "blocked") {
+  await exportOcflObject(mapping, { destination: "/new/object" });
+}
+```
+
+The first release creates only new outputs; it does not import, append versions, or manage an OCFL storage root. See [BagIt and OCFL preservation export](docs/preservation.md).
+
+## Domain Validation Profiles
+
+Domain policy is opt-in and never inferred. Load one immutable baseline, evaluate it against the existing manifest and labelled bounded structural evidence, then pass the resulting binding to the session only when it passed.
+
+```ts
+import {
+  evaluateDomainValidationProfile,
+  loadBundledDomainProfile
+} from "large-image-ingest/profiles";
+
+const profile = await loadBundledDomainProfile("semiconductor-inspection");
+const evaluation = await evaluateDomainValidationProfile({
+  profile,
+  manifest,
+  structuralEvidence
+});
+
+if (evaluation.sessionBinding) {
+  await createIngestSession(file, {
+    manifest,
+    domainProfile: evaluation.sessionBinding,
+    transport,
+    resume: { store: resumeStore }
+  }).start();
+}
+```
+
+Baseline profiles are reference starting points, not compliance or scientific certification. Derived policies require a new identity and explicit categorized exceptions for any relaxation. New resume records retain the exact profile reference and reject policy changes before remote resume. See [Domain validation profiles](docs/domain-profiles.md).
 
 ## First-Party React UI
 
@@ -346,6 +438,8 @@ See [docs/derivatives.md](docs/derivatives.md) for derivative boundaries and exa
 - S3 multipart: broker-backed presigned part upload flow through `large-image-ingest/transport-s3`
 - NAS: server-side staging/finalize gateway through `large-image-ingest/node`
 
+The credential-free conformance suite runs the same ten safety scenarios through all three official paths. S3 multipart and NAS pass all ten; tus passes the nine applicable scenarios and explicitly marks optional chunk-integrity evidence unsupported. A positive capability must have passing behavior evidence, and stored completion is checked independently by byte count and whole-file SHA-256. See [Official transport conformance](docs/transport-conformance.md).
+
 The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a filesystem. Use a server-side gateway for those targets.
 
 NAS gateway instances that share a staging root coordinate same-session staging, finalization, cancellation, and expired cleanup. Session metadata is promoted atomically from unique same-directory candidates so concurrent or interrupted updates preserve the last committed state without changing the v0.1 session schema.
@@ -379,6 +473,9 @@ Server-owned credential, object key, NAS path, cleanup, and final verification r
 - [Quickstart and API examples](docs/quickstart.md)
 - [Derivative and preview foundations](docs/derivatives.md)
 - [Reference integration and benchmarks](docs/benchmarks.md)
+- [Comparative adoption evidence](docs/adoption-evidence.md)
+- [Official transport conformance](docs/transport-conformance.md)
+- [Auditable ingest provenance](docs/provenance.md)
 - [Opt-in integration test policy](docs/integration-tests.md)
 - [Server operational guide](docs/server-operational-guide.md)
 - [First-party React UI](docs/react-ui.md)
@@ -399,11 +496,15 @@ npm run typecheck:inspection-ui-example
 npm test
 npm run test:ui
 npm run build
+npm run test:conformance
 npm run test:reference
+npm run test:browser-checksum
+npm run test:adoption-evidence
+npm run test:integration
 npm pack --dry-run
 ```
 
-Default verification is local and credential-free. The reference gate performs a 64 MiB HTTP interruption-and-resume scenario with stored-file verification. Real tus servers, S3-compatible buckets, and mounted NAS paths remain explicit opt-in integration checks.
+Default verification is local and credential-free. The conformance gate executes isolated S3 multipart, tus, and NAS representative targets; the reference gate performs a 64 MiB HTTP interruption-and-resume scenario with stored-file verification. Real tus servers, S3-compatible buckets, and mounted NAS paths require `LII_CONFORMANCE_OPT_IN=1` plus an operator-owned conformance driver.
 
 ## Design Principles
 

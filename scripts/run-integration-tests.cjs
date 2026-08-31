@@ -1,28 +1,19 @@
 #!/usr/bin/env node
 
-const { access } = require("node:fs/promises");
+const { runRealTarget } = require("./run-conformance.cjs");
 
 const targetDefinitions = [
   {
-    kind: "tus",
-    requiredEnvironment: ["LII_INTEGRATION_TUS_ENDPOINT"]
-  },
-  {
-    kind: "s3-compatible",
-    requiredEnvironment: ["LII_INTEGRATION_S3_BROKER_URL"]
-  },
-  {
-    kind: "nas",
-    requiredEnvironment: [
-      "LII_INTEGRATION_NAS_STAGING_ROOT",
-      "LII_INTEGRATION_NAS_TARGET_ROOT"
-    ]
+    kind: "transport-conformance",
+    requiredEnvironment: ["LII_CONFORMANCE_OPT_IN", "LII_CONFORMANCE_DRIVER_MODULE"]
   }
 ];
 
 function getIntegrationTargets(env = process.env) {
   return targetDefinitions.map((target) => {
-    const missing = target.requiredEnvironment.filter((name) => !env[name]);
+    const missing = target.requiredEnvironment.filter((name) => (
+      name === "LII_CONFORMANCE_OPT_IN" ? env[name] !== "1" : !env[name]
+    ));
     return {
       kind: target.kind,
       enabled: missing.length === 0,
@@ -36,7 +27,7 @@ async function runIntegrationHarness(options = {}) {
   const env = options.env ?? process.env;
   const stdout = options.stdout ?? process.stdout;
   const stderr = options.stderr ?? process.stderr;
-  const fetchImpl = options.fetch ?? globalThis.fetch;
+  const runQualification = options.runQualification ?? runRealTarget;
   const targets = getIntegrationTargets(env);
   let failed = false;
 
@@ -47,15 +38,13 @@ async function runIntegrationHarness(options = {}) {
     }
 
     try {
-      if (target.kind === "tus") {
-        await checkTusTarget(fetchImpl, env);
-      } else if (target.kind === "s3-compatible") {
-        await checkS3BrokerTarget(fetchImpl, env);
-      } else if (target.kind === "nas") {
-        await checkNasTarget(env);
+      const suite = await runQualification({ repeat: 1, realTarget: true }, env);
+      if (!suite || suite.status !== "conformant") {
+        failed = true;
+        stderr.write(`FAIL ${target.kind}: conformance.${suite?.status ?? "execution_failed"}\n`);
+        continue;
       }
-
-      stdout.write(`PASS ${target.kind}: integration preflight completed\n`);
+      stdout.write(`PASS ${target.kind}: catalog completed\n`);
     } catch (error) {
       failed = true;
       stderr.write(`FAIL ${target.kind}: ${toSafeMessage(error)}\n`);
@@ -65,46 +54,16 @@ async function runIntegrationHarness(options = {}) {
   return failed ? 1 : 0;
 }
 
-async function checkTusTarget(fetchImpl, env) {
-  if (typeof fetchImpl !== "function") {
-    throw new Error("fetch is unavailable in this runtime.");
-  }
-
-  const response = await fetchImpl(env.LII_INTEGRATION_TUS_ENDPOINT, {
-    method: "OPTIONS"
-  });
-
-  if (!response || typeof response.ok !== "boolean" || !response.ok) {
-    throw new Error("endpoint preflight failed.");
-  }
-}
-
-async function checkS3BrokerTarget(fetchImpl, env) {
-  if (typeof fetchImpl !== "function") {
-    throw new Error("fetch is unavailable in this runtime.");
-  }
-
-  const response = await fetchImpl(env.LII_INTEGRATION_S3_BROKER_URL, {
-    method: "GET"
-  });
-
-  if (!response || typeof response.ok !== "boolean" || !response.ok) {
-    throw new Error("broker preflight failed.");
-  }
-}
-
-async function checkNasTarget(env) {
-  await access(env.LII_INTEGRATION_NAS_STAGING_ROOT);
-  await access(env.LII_INTEGRATION_NAS_TARGET_ROOT);
-}
-
 function toSafeMessage(error) {
-  const message = error instanceof Error ? error.message : "integration preflight failed.";
-  if (/https?:\/\//i.test(message) || /credential|authorization|presigned|secret/i.test(message)) {
-    return "details redacted.";
+  if (
+    error &&
+    typeof error === "object" &&
+    typeof error.code === "string" &&
+    /^conformance\.[a-z0-9._-]+$/.test(error.code)
+  ) {
+    return error.code;
   }
-
-  return message;
+  return "conformance.execution_failed";
 }
 
 if (require.main === module) {

@@ -96,6 +96,32 @@ describe("createNasGateway", () => {
     expect(finalized.metadata).toEqual({ lotId: "LOT-1" });
   });
 
+  it("reconciles a duplicate finalize call after the target is already committed", async () => {
+    const { gateway, targetRoot } = await createTempGateway();
+    const session = await gateway.createSession({
+      sessionId: "session-idempotent-finalize",
+      targetRelativePath: "inspection/idempotent.bin",
+      totalBytes: 3,
+      expectedChunks: 1
+    });
+    await gateway.stageChunk({
+      sessionId: session.sessionId,
+      index: 0,
+      body: new Uint8Array([1, 2, 3])
+    });
+
+    const first = await gateway.finalizeSession({ sessionId: session.sessionId });
+    const reconciled = await gateway.finalizeSession({ sessionId: session.sessionId });
+
+    expect(reconciled).toMatchObject({
+      status: "finalized",
+      finalizedAt: first.finalizedAt
+    });
+    expect(await readFile(join(targetRoot, "inspection", "idempotent.bin"))).toEqual(
+      Buffer.from([1, 2, 3])
+    );
+  });
+
   it("preserves all chunks staged concurrently through shared gateway instances", async () => {
     const { root, stagingRoot, targetRoot } = await createTempRoots();
     const gatewayA = createNasGateway({ stagingRoot, targetRoot });

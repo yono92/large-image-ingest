@@ -12,6 +12,7 @@ export type ResumeConflictCode =
   | "resume.chunking_mismatch"
   | "resume.transport_unsupported"
   | "resume.transport_mismatch"
+  | "resume.profile_mismatch"
   | "resume.expired"
   | "resume.store_failed";
 
@@ -69,6 +70,7 @@ export type IngestErrorCode =
   | "manifest.failed"
   | "session.failed"
   | "validation.failed"
+  | "profile.binding_invalid"
   | "session.aborted"
   | "session.invalid_state"
   | "session.snapshot_file_mismatch";
@@ -609,6 +611,24 @@ export interface ResumeRecordBase {
   progress: ResumeProgress;
   createdAt: string;
   updatedAt: string;
+  domainProfile?: DomainProfileReference;
+}
+
+export interface DomainProfileReference {
+  schemaVersion: "large-image-ingest.domain-profile-reference.v1";
+  name: string;
+  version: string;
+  effectivePolicyDigest: {
+    algorithm: "sha256";
+    value: string;
+  };
+}
+
+export interface DomainProfileSessionBinding {
+  schemaVersion: "large-image-ingest.domain-profile-binding.v1";
+  manifestId: string;
+  result: "passed" | "passed_with_warnings";
+  profile: DomainProfileReference;
 }
 
 export interface ResumeRecordV0_1 extends ResumeRecordBase {
@@ -645,6 +665,7 @@ export type ResumeCompatibilityReason =
   | "chunking_mismatch"
   | "transport_unsupported"
   | "transport_mismatch"
+  | "profile_mismatch"
   | "receipt_missing"
   | "expired"
   | "terminal";
@@ -659,6 +680,7 @@ export interface PersistentResumeClassificationOptions extends ChunkPlanOptions 
   capabilities?: TransportCapabilities;
   checksum?: ChecksumOptions;
   sourceIdentity?: ContentSourceIdentityV1;
+  domainProfile?: DomainProfileReference;
 }
 
 export interface ResumeRecordValidationIssue {
@@ -813,6 +835,7 @@ export interface CreateIngestSessionOptions {
   resumeFrom?: UploadSessionSnapshot;
   sourceIdentity?: ChecksumOptions;
   storage?: StorageTargetManifest;
+  domainProfile?: DomainProfileSessionBinding;
   transport: UploadTransport;
   validation?: ValidationRules;
 }

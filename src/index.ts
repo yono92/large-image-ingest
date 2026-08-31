@@ -9,6 +9,8 @@ export type {
   S3MultipartCreateContext,
   S3MultipartFetch,
   S3MultipartPartContext,
+  S3MultipartReconcileContext,
+  S3MultipartReconciliationResult,
   S3MultipartTransportOptions,
   S3MultipartUploadHandle,
   S3MultipartUploadTarget

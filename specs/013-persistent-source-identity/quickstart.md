@@ -77,6 +77,23 @@ npm run benchmark:local -- --size-mib 3072 --chunk-mib 64 --output benchmarks/re
 
 These optional runs must record bounded heap/array-buffer evidence, exact identity, zero retransmitted acknowledged bytes, and stored-file verification. They are machine-specific evidence, not universal latency guarantees.
 
+## Browser Worker Qualification
+
+The default browser checksum gate runs the package-consumption check plus a bounded 64 MiB real-browser scenario:
+
+```bash
+npm run test:browser-checksum
+```
+
+When sufficient local disk, memory, and time are available, reproduce the retained Feature 013 qualification sizes:
+
+```bash
+npm run benchmark:browser-checksum -- --size-mib 1024 --output benchmarks/results/browser-checksum-1g.json
+npm run benchmark:browser-checksum -- --size-mib 3072 --output benchmarks/results/browser-checksum-3g.json
+```
+
+Expected: exact SHA-256 verification, monotonic progress to the full source size, `checksum.canceled` with zero late progress after cancellation, fixed 4 MiB Worker slices, no measured main-thread task at or above 100 ms, and page/process memory below the fixed gates recorded in the report. The report contains environment and aggregate memory/timing evidence but not the source digest.
+
 ## Optional Provider Qualification
 
 Set only the target-specific environment variables documented in `docs/integration-tests.md`, then run:

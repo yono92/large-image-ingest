@@ -2,6 +2,30 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.6.0 Included - Official Transport Conformance
+
+Spec Kit artifacts:
+
+- [Official transport conformance](../specs/014-transport-conformance/spec.md)
+- [Comparative adoption evidence](../specs/018-adoption-evidence/spec.md)
+
+- [x] Define one versioned, provider-neutral catalog and bounded qualification report.
+- [x] Run the applicable recovery, integrity, completion, cancellation, and cleanup scenarios through the official S3 multipart, tus, and NAS paths.
+- [x] Require behavioral evidence for positive capabilities and keep skipped or unsupported behavior explicit.
+- [x] Replace endpoint reachability preflights with an exact opt-in real-target driver and safe output boundary.
+- [x] Retain a deterministic ten-run, three-target credential-free release report.
+- [x] Add an opt-in versioned provenance artifact separate from manifests and operational resume state.
+- [x] Protect authoritative provenance fields with RFC 8785 canonicalization and SHA-256 while keeping external trust application-owned.
+- [x] Add safe summary, explicit disclosure export, cross-artifact validation, and non-authoritative persistence contracts.
+- [x] Add BagIt 1.0 and OCFL 1.1 preflight mappings, streaming new-output exporters, and independent validators.
+- [x] Preserve original/derivative/provenance identity through deterministic paths and an integrity-protected relationship sidecar.
+- [x] Keep interrupted output isolated and reject existing destinations, imports, repository history changes, and multi-version synchronization.
+- [x] Add explicit versioned semiconductor, microscopy, and satellite validation baselines with deterministic effective-policy identity.
+- [x] Add constrained derived profiles, metadata mappings, and categorized exceptions without mutating published baselines.
+- [x] Bind passing profile evaluations to upload sessions and reject profile changes before persistent resume mutation.
+- [x] Publish a frozen three-candidate implementation/responsibility comparison with all adverse and parity results retained.
+- [x] Run fourteen controlled failure scenarios, retain 150 raw trials, validate safe output, and prohibit unsupported production extrapolation.
+
 ## 1.5.0 Included - Persistent Source Identity And Responsive Checksum
 
 Spec Kit artifacts:
@@ -10,6 +34,7 @@ Spec Kit artifacts:
 
 - [x] Bind persistent resume to exact whole-file content identity before remote recovery or acknowledged-byte skipping.
 - [x] Add cancelable bounded checksum execution and an official ESM browser Worker subpath with explicit fallback.
+- [x] Retain reviewed 1 GiB and 3 GiB browser Worker qualification evidence for digest accuracy, cancellation, responsiveness, and bounded memory.
 - [x] Preserve safe v0.1/v0.2 discovery, deterministic compatibility outcomes, and checkpoint-only migration to v0.3.
 - [x] Align manifest producer release metadata and conservative transport recovery capabilities without breaking ordinary custom uploads.
 
@@ -92,10 +117,6 @@ Spec Kit artifacts:
 - [x] Add TIFF and BigTIFF metadata probing without decoding image pixels.
 - [x] Add a credential-free HTTP interruption, durable resume, and stored-file verification release gate.
 - [x] Publish reproducible 1 GiB and 3 GiB timing, memory, retransmission, and integrity evidence.
-
-## Future TODO - Remaining Ingest Integrity
-
-- [ ] Replace provider preflight checks with complete opt-in integration scenarios.
 
 ## Future TODO - Advanced Upload Modes
 

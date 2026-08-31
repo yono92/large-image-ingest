@@ -454,7 +454,21 @@ function readRequiredOffset(response: Response): number {
 }
 
 function readUploadExpires(response: Response): string | undefined {
-  return response.headers.get("Upload-Expires") ?? undefined;
+  const raw = response.headers.get("Upload-Expires");
+  if (!raw) {
+    return undefined;
+  }
+
+  const timestamp = Date.parse(raw);
+  if (Number.isNaN(timestamp)) {
+    throw createTusError(
+      "transport.failed",
+      "tus response included an invalid Upload-Expires value.",
+      false
+    );
+  }
+
+  return new Date(timestamp).toISOString();
 }
 
 function assertUploadStillExists(response: Response): void {

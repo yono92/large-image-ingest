@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 1.6.0
+
+- Add a versioned official transport-conformance catalog and safe qualification reports that compare S3 multipart, tus, and NAS by recovery and stored-integrity outcomes rather than protocol receipt shape.
+- Keep conformance evidence-driven and opt-in for real targets; static capabilities, endpoint reachability, and source compatibility never imply a conformant result.
+- Add deterministic representative targets, a bounded JSON report validator, ten-run retained evidence, and the `large-image-ingest/conformance` ESM/CJS subpath.
+- Reconcile accepted-but-lost S3 completion responses, normalize tus `Upload-Expires` HTTP dates, and make repeated NAS finalize verify the stored target before returning prior authority.
+- Add the opt-in `large-image-ingest/provenance` subpath with deterministic lifecycle entries, recovery/verification/derivative relationships, RFC 8785 canonical JSON SHA-256 integrity, external-attestation trust separation, safe summaries, explicit exports, and application-owned persistence.
+- Add the Node-only `large-image-ingest/preservation` subpath with preflight mappings, deterministic safe paths, BagIt 1.0 and OCFL 1.1 streaming export, SHA-256 fixity validation, OCFL content deduplication, and integrity-protected ingest relationship sidecars.
+- Stage preservation output in distinguishable incomplete directories, validate before promotion, and reject existing destinations or reconstructed mappings without verified source handles.
+- Add the browser-safe `large-image-ingest/profiles` subpath with explicit semiconductor, microscopy, and satellite baseline v1 policies, deterministic SHA-256 policy identity, safe evidence-labelled outcomes, constrained derived policies, mappings, and categorized exceptions.
+- Add optional passing profile bindings to upload sessions and safe profile references to resume v0.3 records, rejecting missing or changed policy identity before remote resume or acknowledged-byte reuse while preserving no-profile compatibility.
+- Add a credential-free comparative adoption-evidence protocol, three executable reference candidates, fourteen controlled failure scenarios, 150 retained raw trials, bounded report validation, staleness detection, and claim-policy enforcement.
+- Quantify an 85.71% reduction in application-owned lifecycle responsibilities and a 58.33% reduction in explicit configuration decisions for the frozen SDK binding while retaining the adverse physical-line result and full scenario parity.
+
 ## 1.5.0
 
 - Bind new durable resume records to mandatory whole-file SHA-256 source identity in `large-image-ingest.resume.v0.3`, rejecting metadata-equal altered sources before remote recovery.
@@ -11,6 +25,7 @@
 - Report manifest producer version 1.5.0 independently from manifest schema v1 and enforce package/source version synchronization during build.
 - Interpret snapshot and persistent recovery capabilities conservatively while preserving ordinary upload compatibility for custom transports without detailed flags.
 - Redact v0.3 content identity, full recovery state, receipts, and provider evidence from safe diagnostics and first-party UI projections.
+- Add a reproducible real-browser Worker checksum qualification gate and retain reviewed 1 GiB/3 GiB results covering digest verification, cancellation, main-thread responsiveness, and bounded page/process memory.
 
 ## 1.4.0
 
