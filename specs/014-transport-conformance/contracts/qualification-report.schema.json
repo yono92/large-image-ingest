@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yono92/large-image-ingest/specs/014-transport-conformance/contracts/qualification-report.schema.json",
+  "title": "large-image-ingest transport conformance report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "catalogVersion",
+    "libraryVersion",
+    "reportId",
+    "startedAt",
+    "completedAt",
+    "target",
+    "capabilities",
+    "results",
+    "issues",
+    "overallStatus",
+    "cleanup",
+    "limitations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "large-image-ingest.transport-conformance-report.v1"
+    },
+    "catalogVersion": {
+      "const": "large-image-ingest.transport-conformance-catalog.v1"
+    },
+    "libraryVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "reportId": { "$ref": "#/$defs/safeSlug" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "target": { "$ref": "#/$defs/target" },
+    "capabilities": { "$ref": "#/$defs/capabilities" },
+    "results": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": { "$ref": "#/$defs/result" }
+    },
+    "issues": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/issue" }
+    },
+    "overallStatus": {
+      "enum": ["conformant", "non_conformant", "incomplete"]
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "abandonedResourceCount"],
+      "properties": {
+        "status": { "$ref": "#/$defs/cleanupStatus" },
+        "abandonedResourceCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/safeSlug" }
+    }
+  },
+  "$defs": {
+    "safeSlug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId", "transportCategory", "targetClass", "environment", "configurationCategories"],
+      "properties": {
+        "profileId": { "$ref": "#/$defs/safeSlug" },
+        "transportCategory": { "enum": ["s3-multipart", "tus", "nas"] },
+        "targetClass": { "enum": ["credential-free-representative", "real-deployment"] },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runtime", "os", "architecture"],
+          "properties": {
+            "runtime": { "$ref": "#/$defs/safeSlug" },
+            "os": { "$ref": "#/$defs/safeSlug" },
+            "architecture": { "$ref": "#/$defs/safeSlug" }
+          }
+        },
+        "configurationCategories": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/safeSlug" }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resumable", "snapshotResume", "persistentResume", "abortable", "expirationAware", "parallelChunks", "chunkIntegrity"],
+      "properties": {
+        "resumable": { "type": "boolean" },
+        "snapshotResume": { "type": "boolean" },
+        "persistentResume": { "type": "boolean" },
+        "abortable": { "type": "boolean" },
+        "expirationAware": { "type": "boolean" },
+        "parallelChunks": { "type": "boolean" },
+        "chunkIntegrity": { "type": "boolean" }
+      }
+    },
+    "cleanupStatus": {
+      "enum": ["not_required", "completed", "failed", "abandoned_identifiable"]
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": { "$ref": "#/$defs/safeSlug" },
+        "path": { "$ref": "#/$defs/safeSlug" },
+        "scenarioId": { "$ref": "#/$defs/safeSlug" },
+        "capability": {
+          "enum": [
+            "resumable",
+            "snapshotResume",
+            "persistentResume",
+            "abortable",
+            "expirationAware",
+            "parallelChunks",
+            "chunkIntegrity"
+          ]
+        }
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarioId", "status", "durationMs", "cleanupStatus", "limitationCodes", "evidence"],
+      "properties": {
+        "scenarioId": { "$ref": "#/$defs/safeSlug" },
+        "status": { "enum": ["passed", "failed", "skipped", "unsupported"] },
+        "diagnosticCategory": { "$ref": "#/$defs/safeSlug" },
+        "durationMs": { "type": "number", "minimum": 0 },
+        "cleanupStatus": { "$ref": "#/$defs/cleanupStatus" },
+        "limitationCodes": {
+          "type": "array",
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/safeSlug" }
+        },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sourceValidationRejected": { "type": "boolean" },
+            "sourceIdentityEstablished": { "type": "boolean" },
+            "sourceMismatchDetected": { "type": "boolean" },
+            "sourceBytesUnchanged": { "type": "boolean" },
+            "remoteMutationCountBeforeAuthority": { "type": "integer", "minimum": 0 },
+            "remoteMutationCount": { "type": "integer", "minimum": 0 },
+            "acknowledgedBytes": { "type": "integer", "minimum": 0 },
+            "retransmittedAcknowledgedBytes": { "type": "integer", "minimum": 0 },
+            "snapshotRecoveryProven": { "type": "boolean" },
+            "persistentRecoveryProven": { "type": "boolean" },
+            "reconciliationOutcomes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": ["matched", "missing", "expired", "local_ahead", "remote_ahead", "unverifiable"]
+              }
+            },
+            "expirationReconciliationProven": { "type": "boolean" },
+            "invalidEvidenceRejected": { "type": "boolean" },
+            "chunkIntegrityEvidenceValidated": { "type": "boolean" },
+            "transferFinalized": { "type": "boolean" },
+            "authoritativeCompletionCount": { "type": "integer", "minimum": 0 },
+            "ambiguousCompletionReconciled": { "type": "boolean" },
+            "authoritativeCompletionPreserved": { "type": "boolean" },
+            "storedByteCountMatched": { "type": "boolean" },
+            "storedChecksumMatched": { "type": "boolean" },
+            "injectedCleanupFailureObserved": { "type": "boolean" },
+            "abandonedResourceCount": { "type": "integer", "minimum": 0 },
+            "cleanupReferenceId": { "$ref": "#/$defs/safeSlug" }
+          },
+          "maxProperties": 32
+        }
+      }
+    }
+  }
+}

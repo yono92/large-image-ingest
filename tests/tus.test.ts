@@ -492,7 +492,7 @@ function createFakeTusServer(options: FakeTusServerOptions = {}): {
         return createResponse(201, {
           Location: uploadUrl,
           "Tus-Resumable": "1.0.0",
-          "Upload-Expires": "2026-01-01T00:00:00.000Z"
+          "Upload-Expires": "Wed, 31 Dec 2031 00:00:00 GMT"
         });
       }
 

@@ -1,0 +1,5411 @@
+{
+  "schemaVersion": "large-image-ingest.transport-conformance-suite.v1",
+  "recordedAt": "2026-08-31T00:57:02.320Z",
+  "libraryVersion": "1.6.0",
+  "targetClass": "credential-free-representative",
+  "repeatCount": 10,
+  "deterministic": true,
+  "status": "conformant",
+  "runs": [
+    {
+      "iteration": 1,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-1",
+          "startedAt": "2026-08-31T00:56:58.520Z",
+          "completedAt": "2026-08-31T00:56:58.679Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-1",
+          "startedAt": "2026-08-31T00:56:58.680Z",
+          "completedAt": "2026-08-31T00:56:58.811Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-1",
+          "startedAt": "2026-08-31T00:56:58.811Z",
+          "completedAt": "2026-08-31T00:56:58.925Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-2",
+          "startedAt": "2026-08-31T00:56:58.925Z",
+          "completedAt": "2026-08-31T00:56:59.063Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-2",
+          "startedAt": "2026-08-31T00:56:59.063Z",
+          "completedAt": "2026-08-31T00:56:59.193Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-2",
+          "startedAt": "2026-08-31T00:56:59.193Z",
+          "completedAt": "2026-08-31T00:56:59.303Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 3,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-3",
+          "startedAt": "2026-08-31T00:56:59.303Z",
+          "completedAt": "2026-08-31T00:56:59.441Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-3",
+          "startedAt": "2026-08-31T00:56:59.441Z",
+          "completedAt": "2026-08-31T00:56:59.571Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-3",
+          "startedAt": "2026-08-31T00:56:59.571Z",
+          "completedAt": "2026-08-31T00:56:59.680Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 4,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-4",
+          "startedAt": "2026-08-31T00:56:59.680Z",
+          "completedAt": "2026-08-31T00:56:59.816Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-4",
+          "startedAt": "2026-08-31T00:56:59.816Z",
+          "completedAt": "2026-08-31T00:56:59.944Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-4",
+          "startedAt": "2026-08-31T00:56:59.945Z",
+          "completedAt": "2026-08-31T00:57:00.051Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 5,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-5",
+          "startedAt": "2026-08-31T00:57:00.051Z",
+          "completedAt": "2026-08-31T00:57:00.194Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-5",
+          "startedAt": "2026-08-31T00:57:00.194Z",
+          "completedAt": "2026-08-31T00:57:00.322Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-5",
+          "startedAt": "2026-08-31T00:57:00.322Z",
+          "completedAt": "2026-08-31T00:57:00.429Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 6,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-6",
+          "startedAt": "2026-08-31T00:57:00.429Z",
+          "completedAt": "2026-08-31T00:57:00.565Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-6",
+          "startedAt": "2026-08-31T00:57:00.565Z",
+          "completedAt": "2026-08-31T00:57:00.693Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-6",
+          "startedAt": "2026-08-31T00:57:00.693Z",
+          "completedAt": "2026-08-31T00:57:00.833Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 7,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-7",
+          "startedAt": "2026-08-31T00:57:00.833Z",
+          "completedAt": "2026-08-31T00:57:00.970Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-7",
+          "startedAt": "2026-08-31T00:57:00.970Z",
+          "completedAt": "2026-08-31T00:57:01.099Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-7",
+          "startedAt": "2026-08-31T00:57:01.099Z",
+          "completedAt": "2026-08-31T00:57:01.205Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 8,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-8",
+          "startedAt": "2026-08-31T00:57:01.205Z",
+          "completedAt": "2026-08-31T00:57:01.340Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-8",
+          "startedAt": "2026-08-31T00:57:01.340Z",
+          "completedAt": "2026-08-31T00:57:01.468Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-8",
+          "startedAt": "2026-08-31T00:57:01.468Z",
+          "completedAt": "2026-08-31T00:57:01.575Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 9,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-9",
+          "startedAt": "2026-08-31T00:57:01.575Z",
+          "completedAt": "2026-08-31T00:57:01.712Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-9",
+          "startedAt": "2026-08-31T00:57:01.712Z",
+          "completedAt": "2026-08-31T00:57:01.841Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-9",
+          "startedAt": "2026-08-31T00:57:01.841Z",
+          "completedAt": "2026-08-31T00:57:01.947Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    },
+    {
+      "iteration": 10,
+      "reports": [
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-s3-run-10",
+          "startedAt": "2026-08-31T00:57:01.947Z",
+          "completedAt": "2026-08-31T00:57:02.084Z",
+          "target": {
+            "profileId": "representative-s3",
+            "transportCategory": "s3-multipart",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "in-memory-broker",
+              "multipart-etag",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": false,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "s3-remote-state-broker-defined"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": false,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "s3-remote-state-broker-defined"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-tus-run-10",
+          "startedAt": "2026-08-31T00:57:02.084Z",
+          "completedAt": "2026-08-31T00:57:02.212Z",
+          "target": {
+            "profileId": "representative-tus",
+            "transportCategory": "tus",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "tus-1.0.0",
+              "creation",
+              "expiration",
+              "termination",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": false
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "tus-offset-is-progress-evidence"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "unsupported",
+              "durationMs": 0,
+              "cleanupStatus": "not_required",
+              "limitationCodes": [
+                "capability-not-advertised"
+              ],
+              "evidence": {}
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "tus-offset-is-progress-evidence",
+            "capability-not-advertised"
+          ]
+        },
+        {
+          "schemaVersion": "large-image-ingest.transport-conformance-report.v1",
+          "catalogVersion": "large-image-ingest.transport-conformance-catalog.v1",
+          "libraryVersion": "1.6.0",
+          "reportId": "representative-nas-run-10",
+          "startedAt": "2026-08-31T00:57:02.212Z",
+          "completedAt": "2026-08-31T00:57:02.320Z",
+          "target": {
+            "profileId": "representative-nas",
+            "transportCategory": "nas",
+            "targetClass": "credential-free-representative",
+            "environment": {
+              "runtime": "node-22",
+              "os": "darwin",
+              "architecture": "arm64"
+            },
+            "configurationCategories": [
+              "temporary-filesystem",
+              "staged-sha256",
+              "atomic-finalize",
+              "stored-sha256"
+            ]
+          },
+          "capabilities": {
+            "resumable": true,
+            "snapshotResume": true,
+            "persistentResume": true,
+            "abortable": true,
+            "expirationAware": true,
+            "parallelChunks": false,
+            "chunkIntegrity": true
+          },
+          "results": [
+            {
+              "scenarioId": "source.validation-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceValidationRejected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "source.mismatch-before-mutation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceMismatchDetected": true,
+                "sourceBytesUnchanged": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.interrupted-no-retransmit",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceIdentityEstablished": true,
+                "snapshotRecoveryProven": true,
+                "persistentRecoveryProven": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "acknowledgedBytes": 262144,
+                "retransmittedAcknowledgedBytes": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.invalid-evidence-rejected",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "remoteMutationCount": 0
+              }
+            },
+            {
+              "scenarioId": "recovery.session-reconciliation",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [
+                "nas-mount-semantics-require-target-run"
+              ],
+              "evidence": {
+                "expirationReconciliationProven": true,
+                "remoteMutationCountBeforeAuthority": 0,
+                "reconciliationOutcomes": [
+                  "matched",
+                  "missing",
+                  "expired",
+                  "local_ahead",
+                  "remote_ahead",
+                  "unverifiable"
+                ]
+              }
+            },
+            {
+              "scenarioId": "completion.stored-original-verified",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "sourceBytesUnchanged": true,
+                "transferFinalized": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "completion.ambiguous-result-reconciled",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "ambiguousCompletionReconciled": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "cancellation.abandoned-session-reported",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "abandonedResourceCount": 0
+              }
+            },
+            {
+              "scenarioId": "cleanup.failure-after-completion-isolated",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "authoritativeCompletionPreserved": true,
+                "storedByteCountMatched": true,
+                "storedChecksumMatched": true,
+                "injectedCleanupFailureObserved": true,
+                "authoritativeCompletionCount": 1
+              }
+            },
+            {
+              "scenarioId": "integrity.chunk-evidence-enforced",
+              "status": "passed",
+              "durationMs": 0,
+              "cleanupStatus": "completed",
+              "limitationCodes": [],
+              "evidence": {
+                "invalidEvidenceRejected": true,
+                "chunkIntegrityEvidenceValidated": true,
+                "remoteMutationCountBeforeAuthority": 0
+              }
+            }
+          ],
+          "issues": [],
+          "overallStatus": "conformant",
+          "cleanup": {
+            "status": "completed",
+            "abandonedResourceCount": 0
+          },
+          "limitations": [
+            "nas-mount-semantics-require-target-run"
+          ]
+        }
+      ]
+    }
+  ]
+}

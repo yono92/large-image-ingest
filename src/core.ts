@@ -91,6 +91,8 @@ export type {
   DerivativeValidationIssueCode,
   DerivativeValidationOptions,
   DerivativeValidationResult,
+  DomainProfileReference,
+  DomainProfileSessionBinding,
   FileChecksum,
   FileChecksumAlgorithm,
   ImageMetadataInput,

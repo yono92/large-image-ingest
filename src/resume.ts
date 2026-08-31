@@ -2,11 +2,16 @@ import { planChunks } from "./chunks.js";
 import { calculateChecksum } from "./checksum.js";
 import { LargeImageIngestError } from "./errors.js";
 import { createFastFingerprint } from "./fingerprint.js";
+import {
+  domainProfileReferencesEqual,
+  validateDomainProfileReference
+} from "./profiles.js";
 import type {
   ChecksumOptions,
   ChunkPlanOptions,
   CompletedChunkRange,
   ContentSourceIdentityV1,
+  DomainProfileReference,
   FileChecksum,
   IngestFileLike,
   IngestManifest,
@@ -306,6 +311,11 @@ export async function classifyPersistentResume(
   ) {
     return compatibility(record, "incompatible", "transport_mismatch");
   }
+  if (!domainProfileReferencesEqual(record.domainProfile, options.domainProfile)) {
+    return record.progress.uploadedBytes === 0
+      ? compatibility(record, "restart_only", "profile_mismatch")
+      : compatibility(record, "incompatible", "profile_mismatch");
+  }
 
   const metadataIdentity = await createResumeFileIdentity(file);
   if (!fileIdentityMatches(record.file, metadataIdentity)) {
@@ -383,6 +393,7 @@ export function createResumeRecord(input: {
   file: ResumeFileIdentity;
   chunking: ResumeChunkingIdentity;
   transport: ResumeTransportState;
+  domainProfile?: DomainProfileReference;
   now?: Date;
 }): ResumeRecordV0_2 {
   const now = input.now ?? new Date();
@@ -395,6 +406,7 @@ export function createResumeRecord(input: {
     file: input.file,
     chunking: input.chunking,
     transport: input.transport,
+    ...(input.domainProfile ? { domainProfile: structuredClone(input.domainProfile) } : {}),
     receipts: [],
     progress: {
       status: "active",
@@ -414,6 +426,7 @@ export function createPersistentResumeRecord(input: {
   contentIdentity: ContentSourceIdentityV1;
   chunking: ResumeChunkingIdentity;
   transport: ResumeTransportState;
+  domainProfile?: DomainProfileReference;
   now?: Date;
 }): ResumeRecordV0_3 {
   const now = input.now ?? new Date();
@@ -432,6 +445,7 @@ export function createPersistentResumeRecord(input: {
     },
     chunking: input.chunking,
     transport: input.transport,
+    ...(input.domainProfile ? { domainProfile: structuredClone(input.domainProfile) } : {}),
     receipts: [],
     progress: {
       status: "active",
@@ -550,6 +564,10 @@ function findResumeRecordIssue(value: unknown): ResumeRecordValidationIssue | un
 
   if (!isIsoTimestamp(value.createdAt) || !isIsoTimestamp(value.updatedAt)) {
     return invalidRecord("Resume record timestamps must be valid ISO timestamps.", "createdAt");
+  }
+
+  if (value.domainProfile !== undefined && !validateDomainProfileReference(value.domainProfile)) {
+    return invalidRecord("Resume domain profile reference is invalid.", "domainProfile");
   }
 
   const manifestIssue = validatePersistedManifest(value.manifest);

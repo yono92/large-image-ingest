@@ -206,3 +206,9 @@ Task T022: packed browser consumption harness
 - Existing dirty Feature 013 files are preserved; every edit must trace to this task list.
 - No commit, push, tag, or npm publish task is included.
 - Real provider checks remain opt-in and missing environment is an explicit skip.
+
+## Phase 8: Convergence
+
+- [x] T051 Add a reproducible real-browser Worker qualification harness with real `File` inputs, monotonic progress, cancellation/late-result checks, main-thread long-task measurement, fixed-slice evidence, and machine-readable environment/memory output per SC-003 and SC-004 (missing)
+- [x] T052 Run and retain reviewed 1 GiB and 3 GiB browser qualification results covering completion and cancellation, and fail the run when any main-thread task exceeds 100 ms or source buffering grows with total file size per SC-003 and SC-004 (missing)
+- [x] T053 Update browser checksum scripts, benchmark guidance, and Feature 013 completion evidence so the bounded small gate prevents harness drift and published claims trace to retained raw results per T050 and SC-010 (partial)

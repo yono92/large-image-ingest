@@ -396,6 +396,47 @@ describe("createS3MultipartTransport", () => {
       retryable: false
     });
   });
+
+  it("reconciles an accepted multipart completion whose response was lost", async () => {
+    let completionCalls = 0;
+    let reconciliationCalls = 0;
+    const broker: S3MultipartBroker = {
+      ...createFakeBroker(),
+      async completeMultipartUpload() {
+        completionCalls += 1;
+        throw new Error("Completion response was lost after the object was committed.");
+      },
+      async reconcileMultipartUpload() {
+        reconciliationCalls += 1;
+        return "completed";
+      }
+    };
+
+    await expect(createIngestSession(createLargeFile(chunkSize), {
+      chunking: { chunkSize },
+      transport: createS3MultipartTransport({ broker, fetch: createFakeS3Fetch().fetch })
+    }).start()).resolves.toMatchObject({ schemaVersion: "large-image-ingest.manifest.v1" });
+
+    expect(completionCalls).toBe(1);
+    expect(reconciliationCalls).toBe(1);
+  });
+
+  it("keeps an ambiguous multipart completion fatal when reconciliation cannot prove it", async () => {
+    const broker: S3MultipartBroker = {
+      ...createFakeBroker(),
+      async completeMultipartUpload() {
+        throw new Error("Ambiguous completion.");
+      },
+      async reconcileMultipartUpload() {
+        return "unknown";
+      }
+    };
+
+    await expect(createIngestSession(createLargeFile(chunkSize), {
+      chunking: { chunkSize },
+      transport: createS3MultipartTransport({ broker, fetch: createFakeS3Fetch().fetch })
+    }).start()).rejects.toThrow("Ambiguous completion.");
+  });
 });
 
 function createFakeBroker(options: {

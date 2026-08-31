@@ -256,6 +256,119 @@ const session = createIngestSession(file, {
 
 `maxAttempts` is the total number of attempts for a chunk operation. Pause, cancel, aborted signals, validation failures, checksum mismatches, resume conflicts, remote offset mismatches, expired resume state, and non-retryable transport errors bypass retry.
 
+## Transport Conformance
+
+Use the additive conformance subpath when a transport target must produce auditable behavior evidence:
+
+```ts
+import {
+  runTransportConformance,
+  validateTransportConformanceReport,
+  type TransportConformanceTarget
+} from "large-image-ingest/conformance";
+
+declare const target: TransportConformanceTarget;
+
+const report = await runTransportConformance(target);
+if (!validateTransportConformanceReport(report).ok) {
+  throw new Error("The qualification report is invalid.");
+}
+```
+
+`TransportCapabilities` alone never imply conformance. Use `npm run test:conformance` for the credential-free official matrix and `npm run qualify:transport` only with the explicit real-target variables documented in [transport-conformance.md](transport-conformance.md).
+
+## Auditable Provenance
+
+```ts
+import { createIngestProvenanceRecorder } from "large-image-ingest/provenance";
+
+const recorder = createIngestProvenanceRecorder({
+  manifest,
+  policy: { id: "inspection-default", version: "1.0.0" },
+  transport: { category: "application-transport", capabilities: transport.capabilities }
+});
+
+const session = createIngestSession(file, {
+  manifest,
+  transport,
+  onEvent: (event) => recorder.observeIngestEvent(event)
+});
+
+await session.start();
+recorder.recordVerification({
+  status: "verified",
+  verifierCategory: "stored-original",
+  expectedEvidenceCategories: ["byte-count", "whole-file-sha256"],
+  observedEvidenceCategories: ["byte-count", "whole-file-sha256"]
+});
+const artifact = await recorder.seal();
+```
+
+The artifact is distinct from the manifest and resume record. Use `createSafeProvenanceSummary()` for support/audit projection, `exportIngestProvenance()` with an explicit disclosure profile, and `persistIngestProvenance()` with an application-owned sink. See [provenance.md](provenance.md).
+
+## BagIt And OCFL Preservation
+
+After original and optional derivative bytes are available, preflight a new preservation output before filesystem mutation:
+
+```ts
+import {
+  evaluatePreservationMapping,
+  exportBagIt,
+  validateBagIt
+} from "large-image-ingest/preservation";
+
+const mapping = await evaluatePreservationMapping({
+  profile: "bagit-1.0-sha256",
+  manifest,
+  original: { bytes: file },
+  derivatives,
+  provenance,
+  digestPolicy: "require-existing"
+});
+
+if (mapping.status !== "blocked") {
+  await exportBagIt(mapping, { destination: "/new/bag" });
+  const validation = await validateBagIt("/new/bag");
+}
+```
+
+Use `ocfl-1.1-sha256`, `exportOcflObject()`, and `validateOcflObject()` for one new OCFL `v1` object. Output paths never derive from source filenames or storage hints. Failed writes remain in a distinguishable `.incomplete-*` sibling and never replace an existing destination. See [preservation.md](preservation.md).
+
+## Domain Validation Profiles
+
+Select one baseline explicitly after manifest creation:
+
+```ts
+import {
+  evaluateDomainValidationProfile,
+  loadBundledDomainProfile
+} from "large-image-ingest/profiles";
+
+const profile = await loadBundledDomainProfile("microscopy-acquisition");
+const evaluation = await evaluateDomainValidationProfile({
+  profile,
+  manifest,
+  structuralEvidence: {
+    source: "sdk_observed",
+    format: "ome-tiff",
+    width: 4096,
+    height: 4096,
+    bitDepth: 16
+  }
+});
+
+if (evaluation.sessionBinding) {
+  await createIngestSession(file, {
+    manifest,
+    domainProfile: evaluation.sessionBinding,
+    transport,
+    resume: { store: resumeStore }
+  }).start();
+}
+```
+
+The evaluator reuses manifest checksum evidence and never receives the source Blob. A profile reference is stored in new resume records so a changed, removed, or newly introduced profile cannot silently govern acknowledged bytes. See [domain-profiles.md](domain-profiles.md).
+
 ## Transport Examples
 
 Focused examples live in the repository:
@@ -264,3 +377,5 @@ Focused examples live in the repository:
 - `examples/tus-transport.ts`: browser upload through a tus endpoint.
 - `examples/s3-multipart.ts`: browser upload through a broker-backed S3 multipart flow.
 - `examples/nas-gateway-route.ts`: server-side NAS staging and finalize route shape.
+- `examples/conformance-target.ts`: typed custom conformance target and report validation.
+- `examples/provenance.ts`: opt-in event composition, verification evidence, summary, and persistence.

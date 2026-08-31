@@ -71,10 +71,19 @@ export interface S3MultipartAbortContext extends UploadSessionContext {
   uploadId: string;
 }
 
+export type S3MultipartReconciliationResult = "completed" | "not_completed" | "unknown";
+
+export interface S3MultipartReconcileContext extends S3MultipartCompleteContext {
+  completionError: unknown;
+}
+
 export interface S3MultipartBroker {
   createMultipartUpload(context: S3MultipartCreateContext): Promise<S3MultipartUploadHandle>;
   getUploadPartUrl(context: S3MultipartPartContext): Promise<S3MultipartUploadTarget>;
   completeMultipartUpload(context: S3MultipartCompleteContext): Promise<void>;
+  reconcileMultipartUpload?(
+    context: S3MultipartReconcileContext
+  ): Promise<S3MultipartReconciliationResult>;
   abortMultipartUpload?(context: S3MultipartAbortContext): Promise<void>;
 }
 
@@ -250,7 +259,7 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
 
       validateCompletedParts(parts);
 
-      await options.broker.completeMultipartUpload({
+      const completionContext: S3MultipartCompleteContext = {
         manifest: context.manifest,
         file: context.file,
         signal: context.signal,
@@ -260,7 +269,29 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
         session: context.session,
         receipts: context.receipts,
         parts
-      });
+      };
+
+      try {
+        await options.broker.completeMultipartUpload(completionContext);
+      } catch (completionError) {
+        if (!options.broker.reconcileMultipartUpload) {
+          throw completionError;
+        }
+
+        let reconciliation: S3MultipartReconciliationResult;
+        try {
+          reconciliation = await options.broker.reconcileMultipartUpload({
+            ...completionContext,
+            completionError
+          });
+        } catch {
+          throw completionError;
+        }
+
+        if (reconciliation !== "completed") {
+          throw completionError;
+        }
+      }
     },
     async abortSession(context) {
       if (!options.broker.abortMultipartUpload) {

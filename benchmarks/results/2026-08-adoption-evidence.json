@@ -1,0 +1,3006 @@
+{
+  "schemaVersion": "large-image-ingest.adoption-evidence-report.v1",
+  "recordedAt": "2026-08-31T00:00:00.000Z",
+  "protocol": {
+    "id": "large-image-ingest.adoption-evidence-protocol.v1",
+    "digest": {
+      "algorithm": "sha256",
+      "value": "d2eb70677709f21d29b671586f313afca819cd96a32ce6819ad099f680249e73"
+    }
+  },
+  "environment": {
+    "nodeMajor": 22,
+    "platform": "darwin",
+    "architecture": "arm64",
+    "target": "credential-free-in-memory-reference"
+  },
+  "command": "npm run evidence:adoption",
+  "candidates": [
+    {
+      "id": "sdk-s3",
+      "version": "1.0.0",
+      "transportStyle": "s3-multipart",
+      "revision": {
+        "algorithm": "sha256",
+        "value": "44af23c152271a2fee2bccb3a7a49644950f64e45084a041437763bb3d0c25b6"
+      },
+      "artifacts": {
+        "application": [
+          "benchmarks/adoption/candidates/sdk-s3.cjs"
+        ],
+        "candidateTests": [
+          "benchmarks/adoption/candidate-tests/sdk-s3.cjs"
+        ],
+        "sharedHarness": [
+          "benchmarks/adoption/reference-harness.cjs",
+          "benchmarks/adoption/reference-target.cjs"
+        ]
+      },
+      "dependencies": [
+        {
+          "id": "large-image-ingest",
+          "version": "1.6.0"
+        }
+      ],
+      "responsibilityMatrix": {
+        "validation": "dependency",
+        "checksum": "dependency",
+        "manifest": "dependency",
+        "chunking": "dependency",
+        "retry": "dependency",
+        "sourceIdentity": "dependency",
+        "recoveryPersistence": "dependency",
+        "reconciliation": "dependency",
+        "progress": "dependency",
+        "completion": "dependency",
+        "storedVerification": "application",
+        "safeDiagnostics": "dependency",
+        "cleanup": "dependency",
+        "brokerIntegration": "application"
+      },
+      "publicBoundaries": [
+        "sdk-session",
+        "multipart-broker",
+        "resume-store",
+        "stored-verifier"
+      ],
+      "configurationDecisions": [
+        "chunk-size",
+        "retry-policy",
+        "resume-store",
+        "broker-boundary",
+        "stored-verifier"
+      ],
+      "eligibility": {
+        "status": "eligible",
+        "storedVerification": "verified",
+        "happyPath": {
+          "status": "eligible",
+          "expectedSizeBytes": 524425,
+          "expectedSha256": "5d36fae203914ca3d1e5ddbebebddcf1abaf9441a7d1efe128407ae3fe51c555",
+          "storedSizeBytes": 524425,
+          "storedSha256Match": true
+        }
+      },
+      "implementation": {
+        "applicationNonCommentSourceLines": 167,
+        "applicationFileCount": 1,
+        "testNonCommentSourceLines": 8,
+        "testFileCount": 1,
+        "configurationDecisionCount": 5,
+        "publicBoundaryCount": 4,
+        "applicationResponsibilityCount": 2,
+        "dependencyResponsibilityCount": 12,
+        "candidateSpecificVerificationCaseCount": 6
+      },
+      "scenarios": [
+        {
+          "scenarioId": "failure-before-acknowledgement",
+          "timingSensitive": true,
+          "invariant": "retry-unacknowledged",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "failure-after-acknowledgement",
+          "timingSensitive": true,
+          "invariant": "reconcile-before-retry",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "lost-acknowledgement-response",
+          "timingSensitive": true,
+          "invariant": "reconcile-before-retry",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "metadata-equal-source-mismatch",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "stale-recovery-state",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "remote-behind-state",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "remote-ahead-state",
+          "timingSensitive": false,
+          "invariant": "adopt-authoritative-receipt",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "adopt-authoritative-receipt",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "expired-session",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "missing-receipt",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "duplicate-receipt",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "lost-completion-response",
+          "timingSensitive": true,
+          "invariant": "reconcile-completion",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "stored-byte-corruption",
+          "timingSensitive": false,
+          "invariant": "detect-verification-failure",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "detect-verification-failure",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "verification_failed",
+              "storedVerification": "failed",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "cleanup-failure-after-completion",
+          "timingSensitive": false,
+          "invariant": "complete-with-warning",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "complete-with-warning",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed_with_warning",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "sensitive-provider-error",
+          "timingSensitive": false,
+          "invariant": "redact-provider-output",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "redact-provider-output",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "raw-tus",
+      "version": "tus-protocol-1.0-style",
+      "transportStyle": "tus-offset",
+      "revision": {
+        "algorithm": "sha256",
+        "value": "5cf8752cb04bb486001ba8a14b6a778fcc16994be9e62f5dd72ee2473d4ab85e"
+      },
+      "artifacts": {
+        "application": [
+          "benchmarks/adoption/candidates/raw-tus.cjs"
+        ],
+        "candidateTests": [
+          "benchmarks/adoption/candidate-tests/raw-tus.cjs"
+        ],
+        "sharedHarness": [
+          "benchmarks/adoption/reference-harness.cjs",
+          "benchmarks/adoption/reference-target.cjs"
+        ]
+      },
+      "dependencies": [
+        {
+          "id": "generic-tus-client",
+          "version": "representative-1.0"
+        }
+      ],
+      "responsibilityMatrix": {
+        "validation": "application",
+        "checksum": "application",
+        "manifest": "application",
+        "chunking": "application",
+        "retry": "application",
+        "sourceIdentity": "application",
+        "recoveryPersistence": "application",
+        "reconciliation": "application",
+        "progress": "application",
+        "completion": "application",
+        "storedVerification": "application",
+        "safeDiagnostics": "application",
+        "cleanup": "application",
+        "brokerIntegration": "application"
+      },
+      "publicBoundaries": [
+        "selection-handler",
+        "tus-endpoint",
+        "resume-store",
+        "verification-endpoint"
+      ],
+      "configurationDecisions": [
+        "chunk-size",
+        "retry-policy",
+        "metadata-validation",
+        "checksum-policy",
+        "manifest-schema",
+        "resume-store",
+        "source-binding",
+        "offset-reconciliation",
+        "receipt-validation",
+        "completion-reconciliation",
+        "stored-verifier",
+        "safe-errors"
+      ],
+      "eligibility": {
+        "status": "eligible",
+        "storedVerification": "verified",
+        "happyPath": {
+          "status": "eligible",
+          "expectedSizeBytes": 524425,
+          "expectedSha256": "5d36fae203914ca3d1e5ddbebebddcf1abaf9441a7d1efe128407ae3fe51c555",
+          "storedSizeBytes": 524425,
+          "storedSha256Match": true
+        }
+      },
+      "implementation": {
+        "applicationNonCommentSourceLines": 140,
+        "applicationFileCount": 1,
+        "testNonCommentSourceLines": 8,
+        "testFileCount": 1,
+        "configurationDecisionCount": 12,
+        "publicBoundaryCount": 4,
+        "applicationResponsibilityCount": 14,
+        "dependencyResponsibilityCount": 0,
+        "candidateSpecificVerificationCaseCount": 6
+      },
+      "scenarios": [
+        {
+          "scenarioId": "failure-before-acknowledgement",
+          "timingSensitive": true,
+          "invariant": "retry-unacknowledged",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "failure-after-acknowledgement",
+          "timingSensitive": true,
+          "invariant": "reconcile-before-retry",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "lost-acknowledgement-response",
+          "timingSensitive": true,
+          "invariant": "reconcile-before-retry",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "metadata-equal-source-mismatch",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "stale-recovery-state",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "remote-behind-state",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "remote-ahead-state",
+          "timingSensitive": false,
+          "invariant": "adopt-authoritative-receipt",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "adopt-authoritative-receipt",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "expired-session",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "missing-receipt",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "duplicate-receipt",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "lost-completion-response",
+          "timingSensitive": true,
+          "invariant": "reconcile-completion",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "stored-byte-corruption",
+          "timingSensitive": false,
+          "invariant": "detect-verification-failure",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "detect-verification-failure",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "verification_failed",
+              "storedVerification": "failed",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "cleanup-failure-after-completion",
+          "timingSensitive": false,
+          "invariant": "complete-with-warning",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "complete-with-warning",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed_with_warning",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "sensitive-provider-error",
+          "timingSensitive": false,
+          "invariant": "redact-provider-output",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "redact-provider-output",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "raw-s3",
+      "version": "presigned-multipart-style-1.0",
+      "transportStyle": "s3-multipart",
+      "revision": {
+        "algorithm": "sha256",
+        "value": "6fce1956bb431afdb1384a9fb76c93b567fe22af3788fb93163a7b39ab0cff90"
+      },
+      "artifacts": {
+        "application": [
+          "benchmarks/adoption/candidates/raw-s3.cjs"
+        ],
+        "candidateTests": [
+          "benchmarks/adoption/candidate-tests/raw-s3.cjs"
+        ],
+        "sharedHarness": [
+          "benchmarks/adoption/reference-harness.cjs",
+          "benchmarks/adoption/reference-target.cjs"
+        ]
+      },
+      "dependencies": [
+        {
+          "id": "generic-http-client",
+          "version": "native-fetch"
+        }
+      ],
+      "responsibilityMatrix": {
+        "validation": "application",
+        "checksum": "application",
+        "manifest": "application",
+        "chunking": "application",
+        "retry": "application",
+        "sourceIdentity": "application",
+        "recoveryPersistence": "application",
+        "reconciliation": "application",
+        "progress": "application",
+        "completion": "application",
+        "storedVerification": "application",
+        "safeDiagnostics": "application",
+        "cleanup": "application",
+        "brokerIntegration": "application"
+      },
+      "publicBoundaries": [
+        "selection-handler",
+        "multipart-broker",
+        "resume-store",
+        "verification-endpoint"
+      ],
+      "configurationDecisions": [
+        "part-size",
+        "retry-policy",
+        "metadata-validation",
+        "checksum-policy",
+        "manifest-schema",
+        "upload-id-store",
+        "source-binding",
+        "part-reconciliation",
+        "etag-receipts",
+        "completion-reconciliation",
+        "stored-verifier",
+        "safe-errors"
+      ],
+      "eligibility": {
+        "status": "eligible",
+        "storedVerification": "verified",
+        "happyPath": {
+          "status": "eligible",
+          "expectedSizeBytes": 524425,
+          "expectedSha256": "5d36fae203914ca3d1e5ddbebebddcf1abaf9441a7d1efe128407ae3fe51c555",
+          "storedSizeBytes": 524425,
+          "storedSha256Match": true
+        }
+      },
+      "implementation": {
+        "applicationNonCommentSourceLines": 142,
+        "applicationFileCount": 1,
+        "testNonCommentSourceLines": 8,
+        "testFileCount": 1,
+        "configurationDecisionCount": 12,
+        "publicBoundaryCount": 4,
+        "applicationResponsibilityCount": 14,
+        "dependencyResponsibilityCount": 0,
+        "candidateSpecificVerificationCaseCount": 6
+      },
+      "scenarios": [
+        {
+          "scenarioId": "failure-before-acknowledgement",
+          "timingSensitive": true,
+          "invariant": "retry-unacknowledged",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "retry-unacknowledged",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "failure-after-acknowledgement",
+          "timingSensitive": true,
+          "invariant": "reconcile-before-retry",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "lost-acknowledgement-response",
+          "timingSensitive": true,
+          "invariant": "reconcile-before-retry",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-before-retry",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "metadata-equal-source-mismatch",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "stale-recovery-state",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "remote-behind-state",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "remote-ahead-state",
+          "timingSensitive": false,
+          "invariant": "adopt-authoritative-receipt",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "adopt-authoritative-receipt",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "expired-session",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "missing-receipt",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "duplicate-receipt",
+          "timingSensitive": false,
+          "invariant": "reject-before-remote-mutation",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": true,
+              "recoveryAction": "reject-before-remote-mutation",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "lost-completion-response",
+          "timingSensitive": true,
+          "invariant": "reconcile-completion",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 2,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 3,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 4,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 5,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 6,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 7,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 8,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 9,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            },
+            {
+              "trialIndex": 10,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "reconcile-completion",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "stored-byte-corruption",
+          "timingSensitive": false,
+          "invariant": "detect-verification-failure",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "detect-verification-failure",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "verification_failed",
+              "storedVerification": "failed",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "cleanup-failure-after-completion",
+          "timingSensitive": false,
+          "invariant": "complete-with-warning",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "complete-with-warning",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 1,
+              "finalApplicationStatus": "completed_with_warning",
+              "storedVerification": "verified",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        },
+        {
+          "scenarioId": "sensitive-provider-error",
+          "timingSensitive": false,
+          "invariant": "redact-provider-output",
+          "status": "safe_pass",
+          "trials": [
+            {
+              "trialIndex": 1,
+              "status": "safe_pass",
+              "detected": true,
+              "preMutationRejected": false,
+              "recoveryAction": "redact-provider-output",
+              "acknowledgedBytesRetransmitted": 0,
+              "completionCallCount": 0,
+              "finalApplicationStatus": "rejected",
+              "storedVerification": "not_meaningful",
+              "remoteMutationCountBeforeAuthority": 0,
+              "safeOutput": "safe",
+              "invariantSatisfied": true,
+              "limitationCodes": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "aggregates": {
+    "observedSafeScenarioCoverage": {
+      "numerator": 42,
+      "denominator": 42,
+      "excludedScenarioCount": 0,
+      "weighting": "unweighted-candidate-scenario",
+      "trialComposition": "four-timing-sensitive-scenarios-ten-trials-and-ten-deterministic-scenarios-one-trial-per-candidate",
+      "percentage": 100
+    },
+    "implementationLineChanges": [
+      {
+        "candidateId": "sdk-s3",
+        "versusCandidateId": "raw-tus",
+        "numeratorLinesRemoved": -27,
+        "denominatorGenericLines": 140,
+        "percentage": -19.29,
+        "weighting": "physical-non-comment-source-lines",
+        "measurementMode": "static-frozen-candidate-revision"
+      },
+      {
+        "candidateId": "sdk-s3",
+        "versusCandidateId": "raw-s3",
+        "numeratorLinesRemoved": -25,
+        "denominatorGenericLines": 142,
+        "percentage": -17.61,
+        "weighting": "physical-non-comment-source-lines",
+        "measurementMode": "static-frozen-candidate-revision"
+      }
+    ],
+    "responsibilityReductions": [
+      {
+        "candidateId": "sdk-s3",
+        "versusCandidateId": "raw-tus",
+        "numeratorRemoved": 12,
+        "denominatorGeneric": 14,
+        "metric": "applicationResponsibilityCount",
+        "percentage": 85.71,
+        "weighting": "unweighted-count",
+        "measurementMode": "static-frozen-candidate-revision"
+      },
+      {
+        "candidateId": "sdk-s3",
+        "versusCandidateId": "raw-s3",
+        "numeratorRemoved": 12,
+        "denominatorGeneric": 14,
+        "metric": "applicationResponsibilityCount",
+        "percentage": 85.71,
+        "weighting": "unweighted-count",
+        "measurementMode": "static-frozen-candidate-revision"
+      }
+    ],
+    "configurationDecisionReductions": [
+      {
+        "candidateId": "sdk-s3",
+        "versusCandidateId": "raw-tus",
+        "numeratorRemoved": 7,
+        "denominatorGeneric": 12,
+        "metric": "configurationDecisionCount",
+        "percentage": 58.33,
+        "weighting": "unweighted-count",
+        "measurementMode": "static-frozen-candidate-revision"
+      },
+      {
+        "candidateId": "sdk-s3",
+        "versusCandidateId": "raw-s3",
+        "numeratorRemoved": 7,
+        "denominatorGeneric": 12,
+        "metric": "configurationDecisionCount",
+        "percentage": 58.33,
+        "weighting": "unweighted-count",
+        "measurementMode": "static-frozen-candidate-revision"
+      }
+    ]
+  },
+  "claims": [
+    {
+      "id": "application-lines-raw-tus",
+      "text": "The SDK reference binding used 19.29% more application-owned non-comment source lines than the raw-tus reference composition.",
+      "reportField": "aggregates.implementationLineChanges[0]",
+      "boundary": "Frozen TIFF ingest journey and repository reference candidates only.",
+      "principalLimitation": "Source lines and responsibility ownership measure maintenance surface, not production outcomes or engineering quality."
+    },
+    {
+      "id": "application-lines-raw-s3",
+      "text": "The SDK reference binding used 17.61% more application-owned non-comment source lines than the raw-s3 reference composition.",
+      "reportField": "aggregates.implementationLineChanges[1]",
+      "boundary": "Frozen TIFF ingest journey and repository reference candidates only.",
+      "principalLimitation": "Source lines and responsibility ownership measure maintenance surface, not production outcomes or engineering quality."
+    },
+    {
+      "id": "application-responsibilities-raw-tus",
+      "text": "The SDK reference binding required 85.71% fewer application-owned lifecycle responsibilities than the raw-tus reference composition.",
+      "reportField": "aggregates.responsibilityReductions[0]",
+      "boundary": "Fourteen frozen lifecycle responsibilities in the common ingest journey.",
+      "principalLimitation": "Responsibility count measures coordination surface and does not assign equal effort to every responsibility."
+    },
+    {
+      "id": "application-responsibilities-raw-s3",
+      "text": "The SDK reference binding required 85.71% fewer application-owned lifecycle responsibilities than the raw-s3 reference composition.",
+      "reportField": "aggregates.responsibilityReductions[1]",
+      "boundary": "Fourteen frozen lifecycle responsibilities in the common ingest journey.",
+      "principalLimitation": "Responsibility count measures coordination surface and does not assign equal effort to every responsibility."
+    },
+    {
+      "id": "configuration-decisions-raw-tus",
+      "text": "The SDK reference binding required 58.33% fewer explicit configuration decisions than the raw-tus reference composition.",
+      "reportField": "aggregates.configurationDecisionReductions[0]",
+      "boundary": "Frozen reference candidate configuration for the common ingest journey.",
+      "principalLimitation": "Configuration decisions differ in complexity and are counted without effort weighting."
+    },
+    {
+      "id": "configuration-decisions-raw-s3",
+      "text": "The SDK reference binding required 58.33% fewer explicit configuration decisions than the raw-s3 reference composition.",
+      "reportField": "aggregates.configurationDecisionReductions[1]",
+      "boundary": "Frozen reference candidate configuration for the common ingest journey.",
+      "principalLimitation": "Configuration decisions differ in complexity and are counted without effort weighting."
+    },
+    {
+      "id": "controlled-scenario-coverage",
+      "text": "The report records safe outcomes for the controlled candidate-scenario matrix.",
+      "reportField": "aggregates.observedSafeScenarioCoverage",
+      "boundary": "Fourteen credential-free injected scenarios across three frozen candidates.",
+      "principalLimitation": "Controlled scenario coverage does not estimate production behavior outside the stated matrix."
+    }
+  ],
+  "limitations": [
+    "The generic candidates are representative reference compositions, not measurements of every tus or object-storage client.",
+    "The in-memory target makes lifecycle boundaries deterministic and does not model provider latency, policy, or service behavior.",
+    "Application source lines and ownership counts are maintenance-surface indicators only.",
+    "Developer elapsed time is intentionally omitted from this initial evidence set.",
+    "The four timing-sensitive injections are repeated deterministically to prove result retention, not to estimate field frequency."
+  ],
+  "inputsDigest": {
+    "algorithm": "sha256",
+    "value": "75bfa62acf71f2eb308420cf4eeefd6954e28f76d0bdfed4a5f1dc978367b78c"
+  },
+  "staleness": {
+    "status": "current",
+    "causes": [
+      "protocol",
+      "candidate-revision",
+      "journey",
+      "counting-policy",
+      "scenario-invariant"
+    ]
+  }
+}

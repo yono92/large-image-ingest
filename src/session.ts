@@ -1,6 +1,10 @@
 ﻿import { planChunks } from "./chunks.js";
 import { createManifest } from "./manifest.js";
 import {
+  domainProfileReferencesEqual,
+  validateDomainProfileSessionBinding
+} from "./profiles.js";
+import {
   ResumeConflictError,
   UploadCanceledError,
   UploadPausedError,
@@ -120,6 +124,7 @@ export class LargeImageIngestSession {
     try {
       this.throwIfStopped();
       manifest = this.options.manifest ?? await createManifest(this.file, this.createManifestOptions());
+      this.validateDomainProfileBinding(manifest);
       this.emit({ type: "validated", manifest });
 
       if (!manifest.validation.ok) {
@@ -325,6 +330,17 @@ export class LargeImageIngestSession {
     };
   }
 
+  private validateDomainProfileBinding(manifest: IngestManifest): void {
+    const binding = this.options.domainProfile;
+    if (binding && !validateDomainProfileSessionBinding(binding, manifest.id)) {
+      throw createIngestError(
+        "profile.binding_invalid",
+        "The domain profile binding is invalid for this manifest.",
+        false
+      );
+    }
+  }
+
   private async prepareContentSourceIdentity(
     manifest: IngestManifest
   ): Promise<ContentSourceIdentityV1> {
@@ -387,7 +403,10 @@ export class LargeImageIngestSession {
       file: await createResumeFileIdentity(this.file),
       contentIdentity,
       chunking: createResumeChunkingIdentity(this.file.size, this.options.chunking),
-      transport: this.createTransportState(session)
+      transport: this.createTransportState(session),
+      ...(this.options.domainProfile
+        ? { domainProfile: this.options.domainProfile.profile }
+        : {})
     });
 
     const persisted = await this.putResumeRecord(record);
@@ -423,6 +442,9 @@ export class LargeImageIngestSession {
       transport: snapshot.transportSession
         ? this.createTransportState(snapshot.transportSession)
         : { uploadId: `snapshot_${snapshot.manifestId}` },
+      ...(this.options.domainProfile
+        ? { domainProfile: this.options.domainProfile.profile }
+        : {}),
       receipts: snapshot.completedChunks.map(cloneReceipt),
       progress: {
         status: "active",
@@ -474,6 +496,15 @@ export class LargeImageIngestSession {
       );
     }
 
+    const activeProfile = this.options.domainProfile?.profile;
+    if (!domainProfileReferencesEqual(record.domainProfile, activeProfile)) {
+      throw this.emitResumeConflict(
+        "resume.profile_mismatch",
+        "The stored resume profile does not match the configured domain profile.",
+        record.id
+      );
+    }
+
     const fileIdentity = await createResumeFileIdentity(this.file);
     if (!fileIdentityMatches(record.file, fileIdentity)) {
       throw this.emitResumeConflict(
@@ -498,7 +529,8 @@ export class LargeImageIngestSession {
       ...(this.options.transport.capabilities
         ? { capabilities: this.options.transport.capabilities }
         : {}),
-      sourceIdentity
+      sourceIdentity,
+      ...(activeProfile ? { domainProfile: activeProfile } : {})
     });
     if (classification.status !== "resumable" && classification.status !== "upgradeable") {
       const code = classification.status === "restart_only"
@@ -1339,6 +1371,7 @@ function compatibilityConflictCode(
     case "chunking_mismatch": return "resume.chunking_mismatch";
     case "transport_unsupported": return "resume.transport_unsupported";
     case "transport_mismatch": return "resume.transport_mismatch";
+    case "profile_mismatch": return "resume.profile_mismatch";
     case "receipt_missing": return "resume.receipt_missing";
     case "expired": return "resume.expired";
     case "terminal": return "resume.record_not_found";
@@ -1355,6 +1388,7 @@ function compatibilityConflictMessage(reason: ResumeCompatibilityResult["reason"
     case "chunking_mismatch": return "The active chunking options do not match the stored resume record.";
     case "transport_unsupported": return "The configured upload transport does not support persistent resume.";
     case "transport_mismatch": return "The stored resume transport does not match the configured transport.";
+    case "profile_mismatch": return "The stored resume profile does not match the configured domain profile.";
     case "receipt_missing": return "The stored resume record lacks required durable provider receipts.";
     case "expired": return "The stored remote resume handle has expired.";
     case "terminal": return "The resume record is terminal and cannot be resumed.";
