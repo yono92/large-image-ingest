@@ -212,6 +212,41 @@ describe("React ingest controller", () => {
     await expect(canceled).rejects.toMatchObject({ code: "transport.canceled" });
     expect(canceledController.getState().status).toBe("canceled");
   });
+
+  it("cancels identity preparation and never accepts its late result", async () => {
+    let settle: (() => void) | undefined;
+    const controller = createIngestController(createFile(), {
+      checksum: {
+        executor: {
+          calculate(_file, options) {
+            return new Promise((resolve, reject) => {
+              options.signal?.addEventListener("abort", () => reject(options.signal?.reason), {
+                once: true
+              });
+              settle = () => resolve({
+                algorithm: "sha256",
+                calculatedAt: new Date().toISOString(),
+                chunkSizeBytes: options.chunkSize,
+                scope: "whole-file",
+                value: "a".repeat(64)
+              });
+            });
+          }
+        }
+      },
+      chunking: { chunkSize },
+      transport: createTransport()
+    });
+
+    const start = controller.start();
+    expect(controller.getState().preparation?.phase).toBe("preparing_identity");
+    await controller.cancel();
+    settle?.();
+    await expect(start).rejects.toMatchObject({ code: "transport.canceled" });
+    expect(controller.getState()).toMatchObject({ status: "canceled" });
+    expect(controller.getState().preparation).toBeUndefined();
+    expect(controller.getState().manifest).toBeUndefined();
+  });
 });
 
 function createFile(): File {

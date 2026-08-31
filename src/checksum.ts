@@ -1,4 +1,11 @@
-import type { ChecksumOptions, FileChecksum, IngestFileLike } from "./types.js";
+import { ChecksumCanceledError, ChecksumExecutionError } from "./errors.js";
+import type {
+  ChecksumExecutionOptions,
+  ChecksumOptions,
+  ChecksumProgress,
+  FileChecksum,
+  IngestFileLike
+} from "./types.js";
 
 const DEFAULT_CHECKSUM_CHUNK_SIZE = 4 * 1024 * 1024;
 const MIN_CHECKSUM_CHUNK_SIZE = 64 * 1024;
@@ -29,6 +36,76 @@ export async function calculateChecksum(
   file: IngestFileLike,
   options: ChecksumOptions = {}
 ): Promise<FileChecksum> {
+  const execution = normalizeExecutionOptions(file, options);
+  const reportProgress = createProgressReporter(file, execution.chunkSize, options);
+  const executionOptions: ChecksumExecutionOptions = {
+    algorithm: execution.algorithm,
+    chunkSize: execution.chunkSize,
+    ...(options.signal ? { signal: options.signal } : {}),
+    onProgress: reportProgress
+  };
+
+  throwIfAborted(options.signal);
+
+  if (options.executor) {
+    try {
+      const result = await options.executor.calculate(file, executionOptions);
+      throwIfAborted(options.signal);
+      return validateChecksumResult(result, execution);
+    } catch (error) {
+      if (isAbort(error, options.signal)) {
+        throw new ChecksumCanceledError();
+      }
+      if (options.fallback !== "inline") {
+        if (error instanceof ChecksumExecutionError) {
+          throw error;
+        }
+        throw new ChecksumExecutionError();
+      }
+    }
+  }
+
+  return calculateChecksumInline(file, executionOptions);
+}
+
+async function calculateChecksumInline(
+  file: IngestFileLike,
+  options: ChecksumExecutionOptions
+): Promise<FileChecksum> {
+  const totalChunks = file.size === 0 ? 0 : Math.ceil(file.size / options.chunkSize);
+  const hasher = new Sha256();
+  let loadedBytes = 0;
+
+  throwIfAborted(options.signal);
+
+  if (file.size === 0) {
+    options.onProgress?.({ loadedBytes: 0, totalBytes: 0, chunkIndex: 0, totalChunks: 0 });
+  }
+
+  for (let start = 0, chunkIndex = 0; start < file.size; start += options.chunkSize, chunkIndex += 1) {
+    throwIfAborted(options.signal);
+    const end = Math.min(start + options.chunkSize, file.size);
+    const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
+    throwIfAborted(options.signal);
+    hasher.update(bytes);
+    loadedBytes += bytes.byteLength;
+    options.onProgress?.({ loadedBytes, totalBytes: file.size, chunkIndex, totalChunks });
+  }
+
+  throwIfAborted(options.signal);
+  return {
+    algorithm: options.algorithm,
+    calculatedAt: new Date().toISOString(),
+    chunkSizeBytes: options.chunkSize,
+    scope: "whole-file",
+    value: toHex(hasher.digest())
+  };
+}
+
+function normalizeExecutionOptions(
+  file: IngestFileLike,
+  options: ChecksumOptions
+): { algorithm: "sha256"; chunkSize: number } {
   const algorithm = options.algorithm ?? "sha256";
   if (algorithm !== "sha256") {
     throw new RangeError(`Unsupported checksum algorithm: ${algorithm}`);
@@ -38,31 +115,72 @@ export async function calculateChecksum(
   if (!Number.isSafeInteger(chunkSize) || chunkSize < MIN_CHECKSUM_CHUNK_SIZE) {
     throw new RangeError(`checksum chunkSize must be at least ${MIN_CHECKSUM_CHUNK_SIZE} bytes.`);
   }
-
-  const totalChunks = file.size === 0 ? 0 : Math.ceil(file.size / chunkSize);
-  const hasher = new Sha256();
-  let loadedBytes = 0;
-
-  for (let start = 0, chunkIndex = 0; start < file.size; start += chunkSize, chunkIndex += 1) {
-    const end = Math.min(start + chunkSize, file.size);
-    const bytes = new Uint8Array(await file.slice(start, end).arrayBuffer());
-    hasher.update(bytes);
-    loadedBytes += bytes.byteLength;
-    options.onProgress?.({
-      loadedBytes,
-      totalBytes: file.size,
-      chunkIndex,
-      totalChunks
-    });
+  if (!Number.isSafeInteger(file.size) || file.size < 0) {
+    throw new RangeError("checksum source size must be a non-negative safe integer.");
   }
 
-  return {
-    algorithm,
-    calculatedAt: new Date().toISOString(),
-    chunkSizeBytes: chunkSize,
-    scope: "whole-file",
-    value: toHex(hasher.digest())
+  return { algorithm, chunkSize };
+}
+
+function createProgressReporter(
+  file: IngestFileLike,
+  chunkSize: number,
+  options: ChecksumOptions
+): (progress: ChecksumProgress) => void {
+  const totalChunks = file.size === 0 ? 0 : Math.ceil(file.size / chunkSize);
+  let lastLoadedBytes = -1;
+
+  return (progress) => {
+    if (options.signal?.aborted || !Number.isFinite(progress.loadedBytes)) {
+      return;
+    }
+    const loadedBytes = Math.max(0, Math.min(file.size, Math.floor(progress.loadedBytes)));
+    if (loadedBytes < lastLoadedBytes) {
+      return;
+    }
+    lastLoadedBytes = loadedBytes;
+    const chunkIndex = totalChunks === 0
+      ? 0
+      : Math.max(0, Math.min(totalChunks - 1, Math.floor(progress.chunkIndex)));
+    try {
+      options.onProgress?.({ loadedBytes, totalBytes: file.size, chunkIndex, totalChunks });
+    } catch (error) {
+      try {
+        options.onObserverError?.({ observer: "progress", error });
+      } catch {
+        // Observer-error reporting cannot participate in checksum authority.
+      }
+    }
   };
+}
+
+function validateChecksumResult(
+  value: FileChecksum,
+  execution: { algorithm: "sha256"; chunkSize: number }
+): FileChecksum {
+  if (
+    !value ||
+    value.algorithm !== execution.algorithm ||
+    value.scope !== "whole-file" ||
+    value.chunkSizeBytes !== execution.chunkSize ||
+    !/^[a-f0-9]{64}$/.test(value.value) ||
+    !Number.isFinite(Date.parse(value.calculatedAt))
+  ) {
+    throw new ChecksumExecutionError("Checksum executor returned malformed evidence.");
+  }
+  return { ...value };
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new ChecksumCanceledError();
+  }
+}
+
+function isAbort(error: unknown, signal: AbortSignal | undefined): boolean {
+  return signal?.aborted === true || error instanceof ChecksumCanceledError || (
+    error instanceof DOMException && error.name === "AbortError"
+  );
 }
 
 class Sha256 {

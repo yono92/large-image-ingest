@@ -298,6 +298,10 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
   const redactions = ["resume.manifest"];
   const transport: RedactedResumeRecord["transport"] = {};
 
+  if (record.schemaVersion === "large-image-ingest.resume.v0.3") {
+    redactions.push("resume.file.contentIdentity");
+  }
+
   if (record.transport.name !== undefined) {
     transport.name = record.transport.name;
   }
@@ -314,7 +318,7 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
     redactions.push("resume.transport.data");
   }
 
-  if (record.schemaVersion === "large-image-ingest.resume.v0.2" && record.receipts.length > 0) {
+  if (record.schemaVersion !== "large-image-ingest.resume.v0.1" && record.receipts.length > 0) {
     redactions.push("resume.receipts");
   }
 
@@ -323,7 +327,10 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
     id: record.id,
     manifestId: record.manifest.id,
     file: {
-      ...record.file,
+      name: record.file.name,
+      sizeBytes: record.file.sizeBytes,
+      mediaType: record.file.mediaType,
+      ...(record.file.lastModified === undefined ? {} : { lastModified: record.file.lastModified }),
       fingerprint: { ...record.file.fingerprint }
     },
     chunking: { ...record.chunking },

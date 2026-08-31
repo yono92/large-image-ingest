@@ -1,8 +1,10 @@
 const assert = require("node:assert/strict");
 
 async function main() {
+  const packageVersion = require("../package.json").version;
   const esm = await import("large-image-ingest");
   const esmCore = await import("large-image-ingest/core");
+  const esmBrowser = await import("large-image-ingest/browser");
   const esmTus = await import("large-image-ingest/transport-tus");
   const esmS3 = await import("large-image-ingest/transport-s3");
   const esmNode = await import("large-image-ingest/node");
@@ -27,6 +29,7 @@ async function main() {
   assert.equal(typeof esm.attachDerivative, "function");
   assert.equal(typeof esm.createPreviewDerivative, "function");
   assert.equal(typeof esmCore.createIngestSession, "function");
+  assert.equal(typeof esmBrowser.createBrowserWorkerChecksumExecutor, "function");
   assert.equal(typeof esmCore.validateResumeRecord, "function");
   assert.equal(typeof esmCore.redactUploadSessionSnapshot, "function");
   assert.equal(typeof esmCore.validateManifestDerivatives, "function");
@@ -52,6 +55,7 @@ async function main() {
   assert.equal(typeof cjs.attachDerivative, "function");
   assert.equal(typeof cjs.createPreviewDerivative, "function");
   assert.equal(typeof cjsCore.createIngestSession, "function");
+  assert.equal(cjsCore.normalizeTransportRecoveryCapabilities(undefined).persistentResume, false);
   assert.equal(typeof cjsCore.validateResumeRecord, "function");
   assert.equal(typeof cjsCore.redactUploadSessionSnapshot, "function");
   assert.equal(typeof cjsCore.validateManifestDerivatives, "function");
@@ -76,6 +80,14 @@ async function main() {
   assert.deepEqual(cjs.planChunks(10, { chunkSize: 256 * 1024 }).chunks, [
     { index: 0, start: 0, end: 10, size: 10 }
   ]);
+  const source = new Blob(["producer-version"]);
+  Object.defineProperty(source, "name", { value: "producer-version.bin" });
+  const esmManifest = await esm.createManifest(source, { checksum: false });
+  const cjsManifest = await cjs.createManifest(source, { checksum: false });
+  assert.equal(esmManifest.library.version, packageVersion);
+  assert.equal(cjsManifest.library.version, packageVersion);
+  assert.equal(esmManifest.schemaVersion, "large-image-ingest.manifest.v1");
+  assert.equal(cjsManifest.schemaVersion, "large-image-ingest.manifest.v1");
 }
 
 main().catch((error) => {

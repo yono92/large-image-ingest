@@ -146,9 +146,10 @@ class DefaultIngestController implements IngestController {
       });
       return manifest;
     }).catch((error: unknown) => {
+      const { preparation: _finishedPreparation, ...currentState } = this.state;
       this.publish({
-        ...this.state,
-        status: this.state.snapshot?.status ?? "failed",
+        ...currentState,
+        status: this.state.snapshot?.status ?? statusFromOperationError(error),
         error
       });
       throw error;
@@ -270,6 +271,14 @@ class DefaultIngestController implements IngestController {
       }
     }
   }
+}
+
+function statusFromOperationError(error: unknown): UploadSessionStatus {
+  if (error && typeof error === "object" && "code" in error) {
+    if (error.code === "transport.canceled") return "canceled";
+    if (error.code === "transport.paused") return "paused";
+  }
+  return "failed";
 }
 
 export function createIngestController(

@@ -2,6 +2,17 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.5.0 Included - Persistent Source Identity And Responsive Checksum
+
+Spec Kit artifacts:
+
+- [Persistent source identity and responsive checksum](../specs/013-persistent-source-identity/spec.md)
+
+- [x] Bind persistent resume to exact whole-file content identity before remote recovery or acknowledged-byte skipping.
+- [x] Add cancelable bounded checksum execution and an official ESM browser Worker subpath with explicit fallback.
+- [x] Preserve safe v0.1/v0.2 discovery, deterministic compatibility outcomes, and checkpoint-only migration to v0.3.
+- [x] Align manifest producer release metadata and conservative transport recovery capabilities without breaking ordinary custom uploads.
+
 ## 1.4.0 Included - First-Party Inspection Upload UI
 
 Spec Kit artifacts:
@@ -84,10 +95,7 @@ Spec Kit artifacts:
 
 ## Future TODO - Remaining Ingest Integrity
 
-- [ ] Harden source-file content identity for persistent resume.
-- [ ] Add cancelable worker-based browser checksum execution.
 - [ ] Replace provider preflight checks with complete opt-in integration scenarios.
-- [ ] Align manifest producer version and transport capability reporting.
 
 ## Future TODO - Advanced Upload Modes
 
@@ -99,5 +107,4 @@ Spec Kit artifacts:
 ## Parking Lot
 
 - [ ] Provider-specific AWS S3 package if the generic S3-compatible multipart adapter becomes too broad.
-- [ ] Web Worker checksum helper if checksum work causes main-thread pressure in real applications.
 - [ ] Dedicated migration guide if subpath exports move to scoped packages.

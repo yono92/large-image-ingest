@@ -10,9 +10,10 @@ npm run build
 npm run test:reference
 npm run test:integration
 npm run smoke:exports
+npm run test:browser-checksum
 ```
 
-The default unit suite uses in-memory fakes, mocked `fetch`, and temporary directories. The credential-free `npm run test:reference` gate additionally uses a real loopback HTTP server, durable JSON resume state, and temporary filesystem storage to prove an interrupted upload can resume and verify its stored checksum. It must not require a real tus server, cloud credentials, object storage buckets, or mounted NAS paths. `npm run test:integration` stays safe by default: without target-specific environment variables it prints skip messages and performs no target preflight.
+The default unit suite uses in-memory fakes, mocked `fetch`, Worker protocol fakes, and temporary directories. `npm run test:browser-checksum` consumes the built ESM browser entrypoint and its packaged Worker runtime without provider credentials. The credential-free `npm run test:reference` gate additionally uses a real loopback HTTP server, durable JSON resume state, and temporary filesystem storage to prove an interrupted upload can resume and verify its stored checksum. It must not require a real tus server, cloud credentials, object storage buckets, or mounted NAS paths. `npm run test:integration` stays safe by default: without target-specific environment variables it prints skip messages and performs no target preflight.
 
 The reference methodology and recorded result are documented in [benchmarks.md](benchmarks.md). Executable harness code lives under `benchmarks/` in the repository and is intentionally excluded from the npm tarball.
 
@@ -41,6 +42,7 @@ Infrastructure tests should:
 - Generate object keys and target paths from test-owned prefixes only.
 - Avoid logging credentials, presigned URLs, raw customer metadata, or full manifests.
 - Avoid logging raw endpoint values, mounted storage paths, full resume records, or opaque transport state.
+- Avoid logging whole-file source identity or checksum values in default recovery diagnostics.
 - Clean up incomplete multipart uploads, staged NAS sessions, and server-side tus uploads after each run.
 - Be excluded from default CI unless the CI job is explicitly configured for that target.
 

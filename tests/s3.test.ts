@@ -233,7 +233,7 @@ describe("createS3MultipartTransport", () => {
 
     const [record] = await store.list();
     expect(record).toMatchObject({
-      schemaVersion: "large-image-ingest.resume.v0.2",
+      schemaVersion: "large-image-ingest.resume.v0.3",
       receipts: [{
         chunkIndex: 0,
         transport: { partNumber: 1, etag: "\"etag-1\"" }

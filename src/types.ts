@@ -6,6 +6,8 @@ export type ResumeConflictCode =
   | "resume.schema_unsupported"
   | "resume.receipt_missing"
   | "resume.receipt_invalid"
+  | "resume.identity_missing"
+  | "resume.restart_required"
   | "resume.file_mismatch"
   | "resume.chunking_mismatch"
   | "resume.transport_unsupported"
@@ -36,6 +38,8 @@ export type IngestIssueCode =
   | "file.extension_not_allowed"
   | "metadata.required_missing"
   | "checksum.mismatch"
+  | "checksum.canceled"
+  | "checksum.execution_failed"
   | "image.dimensions_unavailable"
   | "image.width_too_small"
   | "image.width_too_large"
@@ -174,8 +178,28 @@ export interface ChecksumOptions {
   algorithm?: FileChecksumAlgorithm;
   chunkSize?: number;
   expected?: string;
+  executor?: ChecksumExecutor;
+  fallback?: "error" | "inline";
   onProgress?: (progress: ChecksumProgress) => void;
+  onObserverError?: (failure: ChecksumObserverFailure) => void;
   required?: boolean;
+  signal?: AbortSignal;
+}
+
+export interface ChecksumExecutionOptions {
+  algorithm: FileChecksumAlgorithm;
+  chunkSize: number;
+  signal?: AbortSignal;
+  onProgress?: (progress: ChecksumProgress) => void;
+}
+
+export interface ChecksumExecutor {
+  calculate(file: IngestFileLike, options: ChecksumExecutionOptions): Promise<FileChecksum>;
+}
+
+export interface ChecksumObserverFailure {
+  observer: "progress";
+  error: unknown;
 }
 
 export interface FileChecksum {
@@ -329,7 +353,7 @@ export interface IngestManifest {
   createdAt: string;
   library: {
     name: "large-image-ingest";
-    version: "1.0.0";
+    version: string;
   };
   original: OriginalImageManifest;
   image: ImageInspectionManifest;
@@ -443,6 +467,12 @@ export interface TransportCapabilities {
   partNumberBase?: 0 | 1;
 }
 
+export interface TransportRecoveryCapabilities {
+  resumable: boolean;
+  snapshotResume: boolean;
+  persistentResume: boolean;
+}
+
 export interface TransportSession {
   uploadId: string;
   transportName: string;
@@ -509,7 +539,19 @@ export interface UploadSessionSnapshot {
 
 export type ResumeRecordSchemaVersion =
   | "large-image-ingest.resume.v0.1"
-  | "large-image-ingest.resume.v0.2";
+  | "large-image-ingest.resume.v0.2"
+  | "large-image-ingest.resume.v0.3";
+
+export type ContentSourceIdentitySchemaVersion =
+  "large-image-ingest.source-identity.v1";
+
+export interface ContentSourceIdentityV1 {
+  schemaVersion: ContentSourceIdentitySchemaVersion;
+  algorithm: "sha256";
+  scope: "whole-file";
+  sizeBytes: number;
+  value: string;
+}
 
 export type ResumeRecordStatus =
   | "active"
@@ -578,7 +620,46 @@ export interface ResumeRecordV0_2 extends ResumeRecordBase {
   receipts: UploadChunkReceipt[];
 }
 
-export type ResumeRecord = ResumeRecordV0_1 | ResumeRecordV0_2;
+export interface ResumeRecordV0_3 extends ResumeRecordBase {
+  schemaVersion: "large-image-ingest.resume.v0.3";
+  file: ResumeFileIdentity & {
+    contentIdentity: ContentSourceIdentityV1;
+  };
+  receipts: UploadChunkReceipt[];
+}
+
+export type ResumeRecord = ResumeRecordV0_1 | ResumeRecordV0_2 | ResumeRecordV0_3;
+
+export type ResumeCompatibilityStatus =
+  | "resumable"
+  | "upgradeable"
+  | "restart_only"
+  | "expired"
+  | "incompatible";
+
+export type ResumeCompatibilityReason =
+  | "compatible"
+  | "legacy_upgrade_available"
+  | "source_mismatch"
+  | "identity_missing"
+  | "chunking_mismatch"
+  | "transport_unsupported"
+  | "transport_mismatch"
+  | "receipt_missing"
+  | "expired"
+  | "terminal";
+
+export interface ResumeCompatibilityResult {
+  status: ResumeCompatibilityStatus;
+  reason: ResumeCompatibilityReason;
+  recordId: string;
+}
+
+export interface PersistentResumeClassificationOptions extends ChunkPlanOptions {
+  capabilities?: TransportCapabilities;
+  checksum?: ChecksumOptions;
+  sourceIdentity?: ContentSourceIdentityV1;
+}
 
 export interface ResumeRecordValidationIssue {
   code:
@@ -654,7 +735,7 @@ export type IngestEvent =
   | { type: "failed"; manifestId?: string; error: unknown };
 
 export interface IngestObserverFailure {
-  observer: "event" | "snapshot";
+  observer: "event" | "snapshot" | "checksum";
   eventType?: IngestEvent["type"];
   error: unknown;
 }
@@ -730,6 +811,7 @@ export interface CreateIngestSessionOptions {
   retryPolicy?: RetryPolicy | undefined;
   resume?: ResumeOptions;
   resumeFrom?: UploadSessionSnapshot;
+  sourceIdentity?: ChecksumOptions;
   storage?: StorageTargetManifest;
   transport: UploadTransport;
   validation?: ValidationRules;

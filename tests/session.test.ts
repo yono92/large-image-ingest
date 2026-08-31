@@ -177,7 +177,7 @@ describe("LargeImageIngestSession", () => {
     };
 
     const transport: UploadTransport = {
-      capabilities: fakeCapabilities,
+      capabilities: { ...fakeCapabilities, supportsSnapshotResume: true },
       async createSession(): Promise<TransportSession> {
         throw new Error("createSession should not be called when resuming.");
       },

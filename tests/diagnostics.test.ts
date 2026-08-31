@@ -167,8 +167,9 @@ describe("diagnostics helpers", () => {
         lotId: "LOT-SECRET"
       }
     });
+    const contentIdentityValue = "a".repeat(64);
     const record: ResumeRecord = {
-      schemaVersion: "large-image-ingest.resume.v0.2",
+      schemaVersion: "large-image-ingest.resume.v0.3",
       id: "record-1",
       manifest,
       file: {
@@ -176,7 +177,14 @@ describe("diagnostics helpers", () => {
         sizeBytes: 128,
         mediaType: "image/tiff",
         lastModified: Date.UTC(2026, 0, 1),
-        fingerprint: manifest.original.fingerprint
+        fingerprint: manifest.original.fingerprint,
+        contentIdentity: {
+          schemaVersion: "large-image-ingest.source-identity.v1",
+          algorithm: "sha256",
+          scope: "whole-file",
+          sizeBytes: 128,
+          value: contentIdentityValue
+        }
       },
       chunking: {
         strategy: "fixed-size",
@@ -230,6 +238,7 @@ describe("diagnostics helpers", () => {
     expect(redacted.transport.uploadId).toBeUndefined();
     expect(redacted.redactions?.fields).toEqual([
       "resume.manifest",
+      "resume.file.contentIdentity",
       "resume.transport.uploadId",
       "resume.transport.resumeToken",
       "resume.transport.data",
@@ -238,6 +247,7 @@ describe("diagnostics helpers", () => {
     expect(JSON.stringify(redacted)).not.toContain("LOT-SECRET");
     expect(JSON.stringify(redacted)).not.toContain("https://secret.example");
     expect(JSON.stringify(redacted)).not.toContain("secret-etag");
+    expect(JSON.stringify(redacted)).not.toContain(contentIdentityValue);
   });
 
   it("summarizes verification results without copying issue details", () => {

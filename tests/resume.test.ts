@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   classifyResumeRecordForFile,
+  classifyPersistentResume,
+  contentSourceIdentityMatches,
+  createContentSourceIdentity,
+  createPersistentResumeRecord,
   createResumeChunkingIdentity,
   createResumeFileIdentity,
   createResumeRecord,
@@ -11,7 +15,11 @@ import {
 } from "../src/index";
 import { createManifest } from "../src/manifest";
 import type { ResumeRecord, ResumeRecordStatus } from "../src/types";
-import { createLargeTestFile } from "./resume-fixtures";
+import {
+  createLargeTestFile,
+  createMetadataEqualVariant,
+  toV0_2ResumeRecord
+} from "./resume-fixtures";
 
 async function createRecord(status: ResumeRecordStatus = "active"): Promise<ResumeRecord> {
   const file = createLargeTestFile();
@@ -167,5 +175,85 @@ describe("resume helpers", () => {
     expect(() => parseResumeRecord(record)).toThrow(expect.objectContaining({
       code: "resume.record_invalid"
     }));
+  });
+
+  it("derives identity from every byte and rejects metadata-equal variants", async () => {
+    const original = createLargeTestFile();
+    const expected = await createContentSourceIdentity(original, { chunkSize: 64 * 1024 });
+    expect(expected).toMatchObject({
+      schemaVersion: "large-image-ingest.source-identity.v1",
+      algorithm: "sha256",
+      scope: "whole-file",
+      sizeBytes: original.size
+    });
+    for (const position of ["first", "middle", "last"] as const) {
+      const actual = await createContentSourceIdentity(
+        createMetadataEqualVariant(position),
+        { chunkSize: 64 * 1024 }
+      );
+      expect(contentSourceIdentityMatches(expected, actual)).toBe(false);
+    }
+  });
+
+  it("validates v0.3 identity and classifies current and legacy evidence", async () => {
+    const file = createLargeTestFile();
+    const manifest = await createManifest(file, { chunking: { chunkSize: 256 * 1024 } });
+    const current = createPersistentResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      contentIdentity: await createContentSourceIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize: 256 * 1024 }),
+      transport: { name: "fake", uploadId: "upload-current" }
+    });
+    expect(validateResumeRecord(current)).toMatchObject({ ok: true });
+    await expect(classifyPersistentResume(current, file, {
+      chunkSize: 256 * 1024
+    })).resolves.toMatchObject({ status: "resumable", reason: "compatible" });
+
+    const legacy = toV0_2ResumeRecord(current);
+    await expect(classifyPersistentResume(legacy, file, {
+      chunkSize: 256 * 1024
+    })).resolves.toMatchObject({ status: "upgradeable" });
+
+    const weakProgressed = toV0_2ResumeRecord(current, { keepManifestChecksum: false });
+    weakProgressed.receipts = [{
+      chunkIndex: 0,
+      sizeBytes: 256 * 1024,
+      completedAt: "2026-08-31T00:00:00.000Z",
+      transport: { name: "fake" }
+    }];
+    weakProgressed.progress = {
+      status: "failed",
+      uploadedBytes: 256 * 1024,
+      completedChunkRanges: [{ startIndex: 0, endIndexInclusive: 0 }],
+      nextChunkIndex: 1
+    };
+    await expect(classifyPersistentResume(weakProgressed, file, {
+      chunkSize: 256 * 1024
+    })).resolves.toMatchObject({ status: "incompatible", reason: "identity_missing" });
+
+    const weakZero = toV0_2ResumeRecord(current, { keepManifestChecksum: false });
+    await expect(classifyPersistentResume(weakZero, file, {
+      chunkSize: 256 * 1024
+    })).resolves.toMatchObject({ status: "restart_only", reason: "identity_missing" });
+  });
+
+  it("rejects malformed v0.3 content identity without disclosing its value", async () => {
+    const file = createLargeTestFile();
+    const manifest = await createManifest(file, { chunking: { chunkSize: 256 * 1024 } });
+    const record = createPersistentResumeRecord({
+      manifest,
+      file: await createResumeFileIdentity(file),
+      contentIdentity: await createContentSourceIdentity(file),
+      chunking: createResumeChunkingIdentity(file.size, { chunkSize: 256 * 1024 }),
+      transport: { uploadId: "upload-malformed" }
+    });
+    record.file.contentIdentity.value = "SECRET-NOT-A-DIGEST";
+    const result = validateResumeRecord(record);
+    expect(result).toMatchObject({
+      ok: false,
+      issues: [expect.objectContaining({ path: "file.contentIdentity" })]
+    });
+    expect(JSON.stringify(result)).not.toContain("SECRET-NOT-A-DIGEST");
   });
 });

@@ -9,6 +9,18 @@ import {
 import type { UploadChunkReceipt } from "../src/types";
 
 describe("verification helpers", () => {
+  it("keeps manifest schema validation independent from producer release metadata", async () => {
+    const manifest = await createManifest(new File(["abc"], "wafer.tif", {
+      type: "image/tiff"
+    }));
+
+    expect(manifest).toMatchObject({
+      schemaVersion: "large-image-ingest.manifest.v1",
+      library: { name: "large-image-ingest", version: "1.5.0" }
+    });
+    await expect(verifyManifest(manifest)).resolves.toMatchObject({ ok: true });
+  });
+
   it("verifies a manifest, file identity, checksum, and complete receipt set", async () => {
     const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
       type: "image/tiff",

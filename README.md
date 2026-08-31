@@ -19,14 +19,14 @@ The repository reference harness exercises the built package through real loopba
 | Scenario | Result |
 | --- | ---: |
 | Source size | 3 GiB |
-| SHA-256 and manifest | 55.60 MiB/s |
-| HTTP transfer including resume | 51.91 MiB/s |
-| Peak JavaScript heap / RSS | 12.95 MiB / 185.64 MiB |
+| SHA-256 and manifest | 144.51 MiB/s |
+| HTTP transfer including resume | 113.95 MiB/s |
+| Peak JavaScript heap / RSS | 10.75 MiB / 267.48 MiB |
 | Acknowledged bytes retransmitted | 0 |
 | Remote completion calls | 1 |
 | Stored-file SHA-256 | Verified |
 
-This July 13, 2026 measurement used Node.js 24.17.0 on Windows with a 64 MiB upload chunk. The client and local reference server shared one process; loopback throughput is not a remote-provider guarantee. See the [methodology, full memory metrics, limitations, and reproduction commands](docs/benchmarks.md).
+This August 31, 2026 Feature 013 verification used Node.js 22.14.0 on macOS 26.6.2 arm64 with a 64 MiB upload chunk. The client and local reference server shared one process; loopback throughput is not a remote-provider or browser-responsiveness guarantee. See the [methodology, historical results, limitations, and reproduction commands](docs/benchmarks.md).
 
 ## Quick Start
 
@@ -103,10 +103,10 @@ More examples are in [docs/quickstart.md](docs/quickstart.md).
 
 - Original-preserving manifest schema `large-image-ingest.manifest.v1`
 - File validation for size, MIME type, extension, metadata, dimensions, and checksum mismatch
-- Whole-file SHA-256 checksums using bounded `Blob.slice` reads
+- Whole-file SHA-256 checksums using bounded `Blob.slice` reads, cancellation, and an optional browser Worker executor
 - Deterministic chunk planning for large files
 - Upload sessions with progress, retry, pause, cancel, failure, completion, and resume events
-- Versioned persistent resume records with durable chunk receipts and redacted session snapshots
+- Content-bound v0.3 persistent resume records with durable chunk receipts and safe v0.1/v0.2 readers
 - Safe diagnostics helpers for logs, telemetry, support traces, and recovery UI
 - Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs
 - Browser-safe tus and S3 multipart transport helpers
@@ -121,6 +121,7 @@ The first-party UI never decodes, previews, resizes, recompresses, or strips met
 ```txt
 large-image-ingest
 large-image-ingest/core
+large-image-ingest/browser
 large-image-ingest/transport-tus
 large-image-ingest/transport-s3
 large-image-ingest/node
@@ -131,6 +132,7 @@ large-image-ingest/tiff
 ```
 
 - Use `large-image-ingest/core` for framework-agnostic browser-safe core APIs.
+- Use the ESM-only `large-image-ingest/browser` subpath for the packaged Worker checksum executor.
 - Use `large-image-ingest/transport-tus` for the raw `fetch` tus transport.
 - Use `large-image-ingest/transport-s3` for broker-backed S3 multipart uploads.
 - Use `large-image-ingest/node` for server-only NAS gateway, metadata derivative, tile descriptor, and stored-file verification APIs.
@@ -139,6 +141,33 @@ large-image-ingest/tiff
 - Import `large-image-ingest/react-ui/styles.css` only when the default theme is wanted.
 - Use `large-image-ingest/tiff` for optional bounded TIFF and BigTIFF structural metadata probing.
 - Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.
+
+## Browser Checksum And Persistent Identity
+
+Persistent resume records created by 1.5.0 are `large-image-ingest.resume.v0.3`. They bind acknowledged ranges to a whole-file SHA-256 source identity; filename, size, media type, modification time, and metadata remain preliminary filters only. A metadata-equal file with different bytes is rejected before remote recovery or upload work. The identity is reused from the manifest checksum when possible, so the normal checksum-enabled path reads the source once. If manifest checksum output is disabled while a persistent store is configured, the SDK still calculates a separate strong resume identity.
+
+Browser applications can move sustained checksum work off the interactive path:
+
+```ts
+import { createBrowserWorkerChecksumExecutor } from "large-image-ingest/browser";
+import { createIngestSession } from "large-image-ingest/core";
+
+const checksumExecutor = createBrowserWorkerChecksumExecutor();
+const session = createIngestSession(file, {
+  checksum: {
+    executor: checksumExecutor,
+    fallback: "inline"
+  },
+  resume: { store: resumeStore },
+  transport
+});
+```
+
+Fallback is explicit: omit `fallback` to receive `checksum.execution_failed` when Worker execution cannot start or returns invalid evidence, or choose `"inline"` to retain bounded reads and cancellation on the caller's execution path. Abort signals stop acceptance of canceled results. Progress is monotonic and bounded, and callback failures are isolated through `onObserverError`.
+
+The reader continues to validate v0.1 and v0.2 records. Legacy records with trustworthy manifest whole-file SHA-256 evidence can resume or promote at the next authoritative checkpoint. Weak zero-progress records are restart-only; weak progressed records and progressed v0.1 S3 records are incompatible. They remain stored until explicit cleanup. Never log full records or content identities; use `redactResumeRecord()` and safe UI summaries.
+
+Transport recovery support is conservative. `resumable`, `supportsSnapshotResume`, and `supportsPersistentResume` describe different behaviors. Missing detailed capability flags do not block ordinary upload, but they are not treated as proof that snapshot or durable recovery is safe. Manifest schema remains `large-image-ingest.manifest.v1`; `manifest.library.version` identifies the actual producing package release independently.
 
 ## First-Party React UI
 
@@ -151,7 +180,12 @@ import { createIngestController } from "large-image-ingest/react";
 
 <InspectionUploadPanel
   createController={(file) => createIngestController(file, options)}
-  recovery={{ store: resumeStore, chunking: options.chunking }}
+  recovery={{
+    store: resumeStore,
+    chunking: options.chunking,
+    capabilities: options.transport.capabilities,
+    sourceIdentity: options.sourceIdentity
+  }}
   verifier={storedObjectVerifier}
   accept=".tif,.tiff,.png,.jpg,.jpeg"
 />
@@ -316,9 +350,9 @@ The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a fi
 
 NAS gateway instances that share a staging root coordinate same-session staging, finalization, cancellation, and expired cleanup. Session metadata is promoted atomically from unique same-directory candidates so concurrent or interrupted updates preserve the last committed state without changing the v0.1 session schema.
 
-Persistent resume records created by 1.2.0 use schema `large-image-ingest.resume.v0.2` and retain acknowledged chunk receipts. This allows S3 multipart uploads to resume after a page or process restart without relying on an in-memory snapshot. Legacy v0.1 records remain readable when the transport can recover safely; progressed S3 v0.1 records are rejected because their ETags cannot be reconstructed safely.
+Persistent resume records created by 1.5.0 use schema `large-image-ingest.resume.v0.3`, bind durable receipts to whole-file content identity, and remain recoverable after a page or process restart without relying on an in-memory snapshot. v0.1/v0.2 records remain readable when their whole-file and transport evidence is trustworthy; progressed S3 v0.1 records are rejected because their ETags cannot be reconstructed safely.
 
-Full resume records can contain upload identifiers, tus upload URLs, customer metadata, object keys, and provider receipt evidence. Store them according to application security policy and use the diagnostic redaction helpers for logs and support output.
+Full resume records can contain source digests, upload identifiers, tus upload URLs, customer metadata, object keys, and provider receipt evidence. Store them according to application security policy and use the diagnostic redaction helpers for logs and support output.
 
 Starting in 1.3.0, successful transport completion remains authoritative even when local resume-record cleanup fails. The session still resolves with a completed snapshot and emits a non-fatal `resume:cleanup-failed` event so applications can inspect or remove stale local state without retrying remote completion.
 

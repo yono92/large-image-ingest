@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 1.5.0
+
+- Bind new durable resume records to mandatory whole-file SHA-256 source identity in `large-image-ingest.resume.v0.3`, rejecting metadata-equal altered sources before remote recovery.
+- Preserve validated v0.1/v0.2 readers with deterministic resumable, upgradeable, restart-only, expired, and incompatible outcomes and checkpoint-only safe promotion.
+- Add cancelable checksum executors, monotonic bounded progress, isolated observers, and the ESM-only `large-image-ingest/browser` Worker executor with explicit inline fallback.
+- Keep strong persistent identity when manifest checksum output is disabled and reuse one traversal when manifest checksum evidence is available.
+- Report manifest producer version 1.5.0 independently from manifest schema v1 and enforce package/source version synchronization during build.
+- Interpret snapshot and persistent recovery capabilities conservatively while preserving ordinary upload compatibility for custom transports without detailed flags.
+- Redact v0.3 content identity, full recovery state, receipts, and provider evidence from safe diagnostics and first-party UI projections.
+
 ## 1.4.0
 
 - Classify preflight policy rejection with the existing `validation.failed` error code.

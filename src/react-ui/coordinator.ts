@@ -1,10 +1,17 @@
 import {
-  classifyResumeRecordForFile,
+  classifyPersistentResume,
+  createContentSourceIdentity,
   isResumeRecordExpired,
+  normalizeTransportRecoveryCapabilities,
   validateResumeRecord
 } from "../resume.js";
 import type { IngestController, IngestControllerState } from "../react-controller.js";
-import type { IngestManifest, ResumeRecord } from "../types.js";
+import type {
+  ContentSourceIdentityV1,
+  IngestManifest,
+  ResumeCompatibilityResult,
+  ResumeRecord
+} from "../types.js";
 import { mergeInspectionUploadLabels } from "./labels.js";
 import { toSafeUiError } from "./safe-error.js";
 import type {
@@ -52,6 +59,7 @@ export class InspectionUploadCoordinator {
   private safeError: SafeUiError | undefined;
   private verification: VerificationPresentation = { status: "not_configured" };
   private verificationAbort: AbortController | undefined;
+  private recoveryIdentityAbort: AbortController | undefined;
   private completedManifest: IngestManifest | undefined;
   private lastControllerError: unknown;
   private lastObserverError: unknown;
@@ -91,6 +99,7 @@ export class InspectionUploadCoordinator {
   }
 
   dispose(): void {
+    this.recoveryIdentityAbort?.abort();
     this.verificationAbort?.abort();
     this.unsubscribeController?.();
     this.unsubscribeController = undefined;
@@ -104,6 +113,7 @@ export class InspectionUploadCoordinator {
       throw new Error("Cancel the active ingest before replacing its source.");
     }
 
+    this.recoveryIdentityAbort?.abort();
     this.generation += 1;
     this.verificationAbort?.abort();
     this.unsubscribeController?.();
@@ -129,6 +139,7 @@ export class InspectionUploadCoordinator {
     if (!this.state.controls.canRemove) {
       throw new Error("Cancel the active ingest before removing its source.");
     }
+    this.recoveryIdentityAbort?.abort();
     this.generation += 1;
     this.verificationAbort?.abort();
     this.unsubscribeController?.();
@@ -355,11 +366,41 @@ export class InspectionUploadCoordinator {
     const source = this.source;
     const recovery = this.configuration.recovery;
     if (!recovery) return;
+    const capabilities = recovery.capabilities;
 
+    if (!capabilities || !normalizeTransportRecoveryCapabilities(capabilities).persistentResume) {
+      this.recoveryChoices = this.recoveryChoices.map((choice) => (
+        choice.compatibility === "expired"
+          ? choice
+          : { ...choice, compatibility: "incompatible" }
+      ));
+      this.selectedRecoveryKey = undefined;
+      this.publish();
+      return;
+    }
+
+    this.recoveryIdentityAbort?.abort();
+    const abortController = new AbortController();
+    this.recoveryIdentityAbort = abortController;
+    const configuredIdentity = recovery.sourceIdentity ?? {};
+    let sourceIdentity: ContentSourceIdentityV1;
+    try {
+      sourceIdentity = await createContentSourceIdentity(source.file, {
+        ...configuredIdentity,
+        signal: combineSignals(abortController.signal, configuredIdentity.signal)
+      });
+    } catch (error) {
+      if (abortController.signal.aborted || generation !== this.generation || source !== this.source) return;
+      throw error;
+    }
     const classified = await Promise.all(this.recoveryChoices.map(async (choice) => {
       const record = this.recoveryRecords.get(choice.key);
       if (!record || choice.compatibility === "expired") return choice;
-      const result = await classifyResumeRecordForFile(record, source.file, recovery.chunking);
+      const result = await classifyPersistentResume(record, source.file, {
+        ...recovery.chunking,
+        capabilities,
+        sourceIdentity
+      });
       return {
         ...choice,
         compatibility: normalizeCompatibility(result)
@@ -509,10 +550,27 @@ function projectRecoveryChoice(
   return record.transport.name ? { ...choice, transportLabel: record.transport.name } : choice;
 }
 
-function normalizeCompatibility(
-  compatibility: Awaited<ReturnType<typeof classifyResumeRecordForFile>>
-): RecoveryCompatibility {
-  return compatibility === "not_recoverable" ? "expired" : compatibility;
+function normalizeCompatibility(result: ResumeCompatibilityResult): RecoveryCompatibility {
+  if (result.status === "resumable" || result.status === "upgradeable") return "compatible";
+  if (result.status === "expired") return "expired";
+  if (result.status === "restart_only") return "restart_only";
+  if (result.reason === "source_mismatch") return "file_mismatch";
+  if (result.reason === "chunking_mismatch") return "chunking_mismatch";
+  return "incompatible";
+}
+
+function combineSignals(primary: AbortSignal, secondary?: AbortSignal): AbortSignal {
+  if (!secondary || secondary === primary) return primary;
+  if (typeof AbortSignal.any === "function") return AbortSignal.any([primary, secondary]);
+  const controller = new AbortController();
+  const abort = (signal: AbortSignal) => {
+    if (!controller.signal.aborted) controller.abort(signal.reason);
+  };
+  if (primary.aborted) abort(primary);
+  else primary.addEventListener("abort", () => abort(primary), { once: true });
+  if (secondary.aborted) abort(secondary);
+  else secondary.addEventListener("abort", () => abort(secondary), { once: true });
+  return controller.signal;
 }
 
 function isRecoverableStatus(status: ResumeRecord["progress"]["status"]): boolean {
