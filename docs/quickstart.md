@@ -82,13 +82,29 @@ import { calculateChecksum } from "large-image-ingest";
 
 const checksum = await calculateChecksum(file, {
   chunkSize: 4 * 1024 * 1024,
+  signal: abortController.signal,
   onProgress(progress) {
     console.log(progress.loadedBytes, progress.totalBytes);
   }
 });
 ```
 
-For specialized workflows where checksum calculation is handled elsewhere, pass `checksum: false` to `createManifest()` or `createIngestSession()`.
+For sustained work in a browser, use the ESM-only Worker executor:
+
+```ts
+import { createBrowserWorkerChecksumExecutor } from "large-image-ingest/browser";
+
+const executor = createBrowserWorkerChecksumExecutor();
+const checksum = await calculateChecksum(file, {
+  executor,
+  fallback: "inline",
+  signal: abortController.signal
+});
+```
+
+Worker startup, termination, or malformed output produces `checksum.execution_failed` unless the caller explicitly selects `fallback: "inline"`. Inline fallback keeps the same bounded slice and cancellation contract but can use the interactive execution path. Cancellation produces `checksum.canceled`; a late Worker result is ignored. Progress is clamped to the source size and cannot regress. Exceptions from progress observers do not change checksum authority and can be reported with `onObserverError`.
+
+For specialized workflows where checksum calculation is handled elsewhere, pass `checksum: false` to `createManifest()` or `createIngestSession()`. If persistent resume is also configured, the SDK still computes a separate whole-file identity because acknowledged bytes cannot be safely reused from metadata alone.
 
 ## Persistent Resume
 
@@ -100,7 +116,7 @@ Transient retry and persistent resume are separate behaviors:
 ```ts
 import {
   WebStorageResumeStore,
-  classifyResumeRecordForFile,
+  classifyPersistentResume,
   createIngestSession,
   listRecoverableResumeRecords
 } from "large-image-ingest";
@@ -122,8 +138,14 @@ await session.start();
 
 const records = listRecoverableResumeRecords(await resumeStore.list());
 const record = records[0];
+const compatibility = record
+  ? await classifyPersistentResume(record, file, {
+      chunkSize: 64 * 1024 * 1024,
+      capabilities: transport.capabilities
+    })
+  : undefined;
 
-if (record && (await classifyResumeRecordForFile(record, file)) === "compatible") {
+if (record && (compatibility?.status === "resumable" || compatibility?.status === "upgradeable")) {
   const resumed = createIngestSession(file, {
     resume: { store: resumeStore },
     transport
@@ -132,9 +154,9 @@ if (record && (await classifyResumeRecordForFile(record, file)) === "compatible"
 }
 ```
 
-Browser resume still requires the application to ask the user for the same original file again. The SDK stores upload metadata, chunk checkpoints, manifest identity, and transport resume handles; it does not store original image bytes.
+Browser resume still requires the application to ask the user for the same original file again. The SDK stores upload metadata, chunk checkpoints, a whole-file content identity, and transport resume handles; it does not store original image bytes. v0.3 identity comparison occurs before `resumeSession`, chunk skipping, upload, or completion.
 
-Records created by 1.2.0 use `large-image-ingest.resume.v0.2`. Each acknowledged chunk stores its validated receipt together with derived progress, so a new S3 multipart session object can restore the original part numbers and ETags after all in-memory state is gone.
+Records created by 1.5.0 use `large-image-ingest.resume.v0.3`. Each record retains mandatory whole-file SHA-256 identity plus validated receipts and derived progress. The reader also supports v0.1 and v0.2: trustworthy manifest SHA-256 evidence permits exact-source recovery and checkpoint promotion; zero-progress weak records are restart-only; progressed weak records remain incompatible and stored. Progressed v0.1 S3 records fail with `resume.receipt_missing` because authoritative ETags cannot be invented.
 
 ## React Headless State
 
@@ -157,11 +179,11 @@ Use `toTiffImageMetadata` to map one directory to the existing `image` option. D
 
 The probe does not decode raster pixels or generate display assets. BigTIFF identification is complete, but parsing support remains limited by GeoTIFF.js and unsafe 64-bit offsets are rejected.
 
-The reader also recognizes legacy `large-image-ingest.resume.v0.1` records. tus and zero-progress S3 records can continue after remote validation. A progressed S3 v0.1 record fails with `resume.receipt_missing` because inventing or reconstructing authoritative ETags would be unsafe.
+Capability flags are interpreted independently. `resumable` is not proof of caller-managed snapshot or durable persistent recovery. A custom transport that omits `supportsSnapshotResume` or `supportsPersistentResume` remains usable for ordinary upload, while the omitted recovery mode is treated as unsupported.
 
 `WebStorageResumeStore` validates stored JSON on read, list, and write. Custom stores are validated again by `resume(recordId)` before range hydration or transport calls. Invalid records fail with typed `resume.record_invalid`, `resume.receipt_invalid`, or `resume.schema_unsupported` conflicts without including raw record contents in default events.
 
-Full resume records are sensitive persistence objects. They may contain customer metadata, remote upload IDs, tus upload URLs, object keys, ETags, locations, or opaque provider evidence. Do not log them directly; use `redactResumeRecord()` or `createSafeEventSummary()`.
+Full resume records are sensitive persistence objects. They may contain content-identity digests, customer metadata, remote upload IDs, tus upload URLs, object keys, ETags, locations, or opaque provider evidence. Do not log them directly; use `redactResumeRecord()` or `createSafeEventSummary()`.
 
 ## Verification
 

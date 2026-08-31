@@ -27,7 +27,11 @@ function readRetryable(error: unknown): boolean {
 function categorize(code: string | undefined): SafeUiErrorCategory {
   if (!code) return "unknown";
   if (code === "transport.paused") return "transport";
-  if (code === "transport.canceled" || code === "session.aborted") return "cancellation";
+  if (
+    code === "transport.canceled" ||
+    code === "session.aborted" ||
+    code === "checksum.canceled"
+  ) return "cancellation";
   if (code === "resume.store_failed") return "cleanup";
   if (code.startsWith("resume.")) return "compatibility";
   if (code.startsWith("verification.")) return "verification";
@@ -36,7 +40,8 @@ function categorize(code: string | undefined): SafeUiErrorCategory {
     code.startsWith("file.") ||
     code.startsWith("metadata.") ||
     code.startsWith("image.") ||
-    code === "checksum.mismatch"
+    code === "checksum.mismatch" ||
+    code === "checksum.execution_failed"
   ) return "validation";
   if (code.startsWith("transport.")) return "transport";
   return "unknown";

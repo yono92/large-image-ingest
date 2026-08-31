@@ -6,6 +6,22 @@ The harness is validation infrastructure, not a production upload server. Execut
 
 ## Recorded Runs
 
+Feature 013 completion verification on August 31, 2026 used the 1.5.0 dirty working tree, Node.js 22.14.0, macOS 26.6.2 arm64, 10 logical CPUs, and 32 GiB system memory:
+
+| Item | 1 GiB run | 3 GiB run |
+| --- | ---: | ---: |
+| Upload chunk size | 8 MiB | 64 MiB |
+| SHA-256 and manifest | 6,825.30 ms / 150.03 MiB/s | 21,257.44 ms / 144.51 MiB/s |
+| HTTP transfer including resume | 9,847.04 ms / 103.99 MiB/s | 26,959.10 ms / 113.95 MiB/s |
+| Peak JavaScript heap | 10.31 MiB | 10.75 MiB |
+| Peak RSS | 194.34 MiB | 267.48 MiB |
+| Acknowledged bytes retransmitted | 0 | 0 |
+| Stored-file SHA-256 verification | Passed | Passed |
+
+These completion runs were recorded from command output and did not retain generated fixtures or raw JSON result files. They validate current v0.3 identity, interruption/recovery, fixed-size checksum reads, and stored-original verification on the Node reference path. They do not measure a real browser event loop or prove the browser-specific 100 ms responsiveness target.
+
+### Historical 1.3.0 Baseline
+
 Measured on July 13, 2026 from the `1.3.0` working tree:
 
 | Item | 1 GiB run | 3 GiB run |
@@ -34,6 +50,8 @@ Environment:
 - 15.56 GiB system memory
 
 The raw [1 GiB](https://github.com/yono92/large-image-ingest/blob/main/benchmarks/results/2026-07-local-1g.json) and [3 GiB](https://github.com/yono92/large-image-ingest/blob/main/benchmarks/results/2026-07-local-3g.json) results use schema `large-image-ingest.benchmark.v1` and record timing, memory, recovery, integrity, configuration, and environment values.
+
+These historical runs predate the 1.5.0 browser Worker and v0.3 source-identity release. They prove bounded Node slice processing and stored-file integrity for their recorded version, but they are not evidence for browser main-thread responsiveness or Feature 013 cancellation. A browser qualification must separately record 1 GiB and 3 GiB Worker runs, input/cancel responsiveness, maximum task blocking below 100 ms, monotonic progress, bounded slice size, and rejection of late results. No such browser measurement is claimed by either table.
 
 ## Reproduce
 

@@ -5,6 +5,7 @@ export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   resolve: {
     alias: [
+      { find: "large-image-ingest/browser", replacement: fileURLToPath(new URL("../../src/browser.ts", import.meta.url)) },
       { find: "large-image-ingest/react-ui/styles.css", replacement: fileURLToPath(new URL("../../styles/react-ui.css", import.meta.url)) },
       { find: "large-image-ingest/react-ui", replacement: fileURLToPath(new URL("../../src/react-ui.ts", import.meta.url)) },
       { find: "large-image-ingest/react", replacement: fileURLToPath(new URL("../../src/react.ts", import.meta.url)) },

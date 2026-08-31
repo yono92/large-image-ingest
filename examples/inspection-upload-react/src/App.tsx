@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { WebStorageResumeStore, type IngestManifest } from "large-image-ingest/core";
+import { createBrowserWorkerChecksumExecutor } from "large-image-ingest/browser";
 import { createIngestController } from "large-image-ingest/react";
 import {
   InspectionErrorNotice,
@@ -21,9 +22,11 @@ const MAX_BYTES = 10 * 1024 * 1024 * 1024;
 export function App() {
   const [composed, setComposed] = useState(false);
   const resumeStore = useMemo(() => new WebStorageResumeStore(localStorage), []);
+  const checksumExecutor = useMemo(() => createBrowserWorkerChecksumExecutor(), []);
   const transport = useMemo(() => createLocalReferenceTransport(), []);
   const uploadIds = useRef(new Map<string, string>());
   const createController = useCallback((file: File) => createIngestController(file, {
+    checksum: { executor: checksumExecutor, fallback: "inline" },
     chunking: { chunkSize: CHUNK_SIZE },
     metadata: { example: "first-party-inspection-ui" },
     resume: { store: resumeStore, cleanup: "mark-complete" },
@@ -40,7 +43,7 @@ export function App() {
       const uploadId = snapshot.transportSession?.uploadId;
       if (uploadId) uploadIds.current.set(snapshot.manifestId, uploadId);
     }
-  }), [resumeStore, transport]);
+  }), [checksumExecutor, resumeStore, transport]);
   const verifier = useMemo<CompletionVerificationAdapter>(() => ({
     async verify(manifest: IngestManifest) {
       const uploadId = uploadIds.current.get(manifest.id);
@@ -53,7 +56,12 @@ export function App() {
   }), [transport]);
   const configuration = {
     createController,
-    recovery: { store: resumeStore, chunking: { chunkSize: CHUNK_SIZE } },
+    recovery: {
+      store: resumeStore,
+      chunking: { chunkSize: CHUNK_SIZE },
+      capabilities: transport.capabilities!,
+      sourceIdentity: { executor: checksumExecutor, fallback: "inline" }
+    },
     verifier
   } as const;
 

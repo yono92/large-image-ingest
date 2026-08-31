@@ -29,7 +29,7 @@ import { createIngestController } from "large-image-ingest/react";
 
 `createController` receives the exact selected object. Create one controller configured with the application's validation, checksum, metadata, resume, and transport policies. The UI does not accept credentials or construct transports.
 
-Recovery configuration uses the same `ResumeStore` and chunking identity as the controller. The UI immediately projects records to filename, size, checkpoint time, acknowledged bytes, optional non-secret transport label, and compatibility. Full records and record IDs remain private.
+Recovery configuration uses the same `ResumeStore`, chunking identity, transport capabilities, and checksum execution policy as the controller. Pass `transport.capabilities`; omitted or false `supportsPersistentResume` disables recovery without blocking ordinary upload. In browsers, pass the same `createBrowserWorkerChecksumExecutor()` through `recovery.sourceIdentity` so reselection classification stays responsive. The UI immediately projects records to filename, size, checkpoint time, acknowledged bytes, optional non-secret transport label, and compatibility. Full records, record IDs, and content-identity values remain private.
 
 The optional verifier receives the completed manifest only after transfer completion. It returns `verified`, safe `failed` issue codes, or `unavailable`. Without an adapter the panel says verification is not configured; transfer completion never means stored-original verification.
 
@@ -37,7 +37,7 @@ The optional verifier receives the completed manifest only after transfer comple
 
 Wrap official primitives in `InspectionUploadProvider` and read the immutable presentation snapshot through `useInspectionUploadUi`. Available primitives cover file selection, source identity, validation, preparation, acknowledged progress, controls, recovery, verification, and safe errors. Rendering a stateful primitive outside the provider throws a clear usage error.
 
-Upload, retry, receipt, pause, resume, cancellation, and completion authority remains in the existing controller. UI action intent is temporary presentation state only. A generation guard discards late recovery and verification results after source replacement.
+Upload, retry, receipt, pause, resume, cancellation, and completion authority remains in the existing controller. UI action intent is temporary presentation state only. A generation guard aborts identity preparation and discards late recovery and verification results after source replacement or removal.
 
 ## Original And Preview Boundaries
 
@@ -57,7 +57,7 @@ The default CSS uses a one-column narrow layout, wrapping actions, visible focus
 
 ## Recovery And Multi-Tab Safety
 
-Browser storage retains recovery evidence, not original bytes. After reload the operator must reselect the source; Resume remains unavailable until public compatibility checks pass. Mismatched and expired choices trigger no remote work and remain available until application-authorized discard.
+Browser storage retains recovery evidence, not original bytes. After reload the operator must reselect the source; Resume remains unavailable until whole-file identity and transport evidence checks pass. `restart_only`, mismatched, incompatible, and expired choices trigger no remote work and remain available until application-authorized discard. A zero-progress legacy record can guide a new ingest but is never silently represented as resumed.
 
 Cross-tab locking is not part of this release. Applications should allow one controlling tab per recoverable upload until a separate coordination contract exists.
 

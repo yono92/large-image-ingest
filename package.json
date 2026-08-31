@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -43,6 +43,11 @@
       "require": "./dist/cjs/core.js",
       "default": "./dist/esm/core.js"
     },
+    "./browser": {
+      "types": "./dist/esm/browser.d.ts",
+      "import": "./dist/esm/browser.js",
+      "default": "./dist/esm/browser.js"
+    },
     "./transport-s3": {
       "types": "./dist/esm/s3.d.ts",
       "import": "./dist/esm/s3.js",
@@ -83,6 +88,7 @@
   },
   "types": "./dist/esm/index.d.ts",
   "scripts": {
+    "prebuild": "node scripts/verify-package-version.cjs",
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
     "benchmark:local": "npm run build && node benchmarks/run-local.cjs",
     "clean": "node scripts/clean-dist.cjs",
@@ -91,9 +97,10 @@
     "example:inspection-ui": "node scripts/run-inspection-ui-example.cjs",
     "example:inspection-ui:fixture": "node examples/reference-local/create-fixture.cjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && npm run test:reference && npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && npm run test:browser-checksum && npm run test:reference && npm audit --audit-level=moderate",
     "smoke:exports": "node scripts/verify-package-consumption.cjs",
     "test:integration": "node scripts/run-integration-tests.cjs",
+    "test:browser-checksum": "node scripts/verify-browser-checksum.cjs",
     "test:reference": "node benchmarks/run-local.cjs --size-mib 64",
     "test:ui": "npm run test:ui:unit && npm run test:ui:browser",
     "test:ui:browser": "node scripts/run-ui-tests.cjs",

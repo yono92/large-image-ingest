@@ -25,6 +25,10 @@ describe("package exports", () => {
         import: "./dist/esm/core.js",
         require: "./dist/cjs/core.js"
       },
+      "./browser": {
+        types: "./dist/esm/browser.d.ts",
+        import: "./dist/esm/browser.js"
+      },
       "./transport-s3": {
         types: "./dist/esm/s3.d.ts",
         import: "./dist/esm/s3.js",
@@ -75,7 +79,7 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.4.0");
+    expect(packageJson.version).toBe("1.5.0");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./node");

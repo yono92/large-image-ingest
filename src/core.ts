@@ -12,7 +12,12 @@ export {
   validateDerivativeReference,
   validateManifestDerivatives
 } from "./derivatives.js";
-export { LargeImageIngestError, isLargeImageIngestError } from "./errors.js";
+export {
+  ChecksumCanceledError,
+  ChecksumExecutionError,
+  LargeImageIngestError,
+  isLargeImageIngestError
+} from "./errors.js";
 export { createFastFingerprint } from "./fingerprint.js";
 export { createManifest } from "./manifest.js";
 export { createPreviewDerivative } from "./preview.js";
@@ -21,11 +26,16 @@ export {
   UploadCanceledError,
   UploadPausedError,
   chunkingIdentityMatches,
+  classifyPersistentResume,
   classifyResumeRecordForFile,
+  contentSourceIdentityMatches,
+  createContentSourceIdentity,
+  createContentSourceIdentityFromChecksum,
   createResumeChunkingIdentity,
   createResumeConflict,
   createResumeFileIdentity,
   createResumeRecord,
+  createPersistentResumeRecord,
   fileIdentityMatches,
   getNextIncompleteChunkIndex,
   isChunkCompleted,
@@ -36,6 +46,7 @@ export {
   mergeCompletedChunkRange,
   mergeTransportState,
   normalizeCompletedChunkRanges,
+  normalizeTransportRecoveryCapabilities,
   parseResumeRecord,
   validateResumeRecord
 } from "./resume.js";
@@ -49,6 +60,9 @@ export {
 export { WebStorageResumeStore } from "./web-storage-resume-store.js";
 export type {
   ChecksumAlgorithm,
+  ChecksumExecutionOptions,
+  ChecksumExecutor,
+  ChecksumObserverFailure,
   ChecksumOptions,
   ChecksumProgress,
   ChecksumReceipt,
@@ -56,6 +70,8 @@ export type {
   ChunkPlan,
   ChunkPlanOptions,
   CompletedChunkRange,
+  ContentSourceIdentitySchemaVersion,
+  ContentSourceIdentityV1,
   AttachDerivativeOptions,
   CreateDerivativeReferenceInput,
   CreateMetadataDerivativeInput,
@@ -92,6 +108,9 @@ export type {
   ManifestIdentityOverride,
   OriginalImageManifest,
   ResumeChunkingIdentity,
+  ResumeCompatibilityReason,
+  ResumeCompatibilityResult,
+  ResumeCompatibilityStatus,
   ResumeCleanupPolicy,
   ResumeCleanupOperation,
   ResumeConflictCode,
@@ -104,6 +123,7 @@ export type {
   ResumeRecordStatus,
   ResumeRecordV0_1,
   ResumeRecordV0_2,
+  ResumeRecordV0_3,
   ResumeRecordValidationIssue,
   ResumeRecordValidationResult,
   ResumeSessionContext,
@@ -111,9 +131,11 @@ export type {
   ResumeTransportState,
   RetryDecisionContext,
   RetryPolicy,
+  PersistentResumeClassificationOptions,
   TilePyramidDescriptor,
   TilePyramidLevelDescriptor,
   TransportCapabilities,
+  TransportRecoveryCapabilities,
   TransportSession,
   UploadChunkContext,
   UploadChunkReceipt,

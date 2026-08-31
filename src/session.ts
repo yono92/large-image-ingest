@@ -5,9 +5,13 @@ import {
   UploadCanceledError,
   UploadPausedError,
   chunkingIdentityMatches,
+  classifyPersistentResume,
+  createContentSourceIdentity,
+  createContentSourceIdentityFromChecksum,
   createResumeChunkingIdentity,
   createResumeConflict,
   createResumeFileIdentity,
+  createPersistentResumeRecord,
   createResumeRecord,
   fileIdentityMatches,
   getNextIncompleteChunkIndex,
@@ -15,12 +19,14 @@ import {
   isResumeRecordExpired,
   mergeCompletedChunkRange,
   mergeTransportState,
+  normalizeTransportRecoveryCapabilities,
   parseResumeRecord
 } from "./resume.js";
 import type {
   ChunkDescriptor,
   ChunkPlan,
   CompletedChunkRange,
+  ContentSourceIdentityV1,
   CreateIngestSessionOptions,
   IngestError,
   IngestErrorCode,
@@ -30,6 +36,8 @@ import type {
   IngestManifest,
   IngestObserverFailure,
   ResumeRecord,
+  ResumeCompatibilityResult,
+  ResumeConflictCode,
   ResumeRecordStatus,
   ResumeStore,
   ResumeTransportState,
@@ -44,7 +52,7 @@ import type {
   UploadSessionStatus
 } from "./types.js";
 
-const CURRENT_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.2";
+const CURRENT_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.3";
 
 interface NormalizedUploadChunkResult {
   receipt: UploadChunkReceipt;
@@ -67,6 +75,7 @@ export class LargeImageIngestSession {
   private currentSnapshot: UploadSessionSnapshot | undefined;
   private currentTransportSession: TransportSession | undefined;
   private lifecycleAction: "pause" | "cancel" | undefined;
+  private resumeSourceIdentity: ContentSourceIdentityV1 | undefined;
   private readonly completedReceipts = new Map<number, UploadChunkReceipt>();
 
   constructor(
@@ -105,11 +114,12 @@ export class LargeImageIngestSession {
   async start(): Promise<IngestManifest> {
     let manifest: IngestManifest | undefined;
     let chunkPlan: ChunkPlan | undefined;
+    let contentIdentity: ContentSourceIdentityV1 | undefined;
     const snapshotCreatedAt = this.options.resumeFrom?.createdAt ?? nowIso();
 
     try {
       this.throwIfStopped();
-      manifest = this.options.manifest ?? await createManifest(this.file, this.options);
+      manifest = this.options.manifest ?? await createManifest(this.file, this.createManifestOptions());
       this.emit({ type: "validated", manifest });
 
       if (!manifest.validation.ok) {
@@ -123,6 +133,9 @@ export class LargeImageIngestSession {
       chunkPlan = planChunks(this.file.size, this.options.chunking);
       validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
       this.validateRequestedResumeCapability();
+      if (this.options.resume && !this.options.resumeFrom) {
+        contentIdentity = await this.prepareContentSourceIdentity(manifest);
+      }
       this.hydrateResumeSnapshot(manifest, chunkPlan);
 
       const session = await this.createOrResumeSnapshotSession(manifest, chunkPlan);
@@ -140,7 +153,7 @@ export class LargeImageIngestSession {
 
       let record = this.options.resumeFrom
         ? undefined
-        : await this.createInitialResumeRecord(manifest, session);
+        : await this.createInitialResumeRecord(manifest, session, contentIdentity);
 
       if (this.options.resumeFrom) {
         this.updateSnapshot({
@@ -174,8 +187,6 @@ export class LargeImageIngestSession {
       this.emit({ type: "validated", manifest });
       this.throwIfStopped();
 
-      await this.validateResumeRecord(record, store);
-
       if (!this.options.transport.resumeSession) {
         throw this.emitResumeConflict(
           "resume.transport_unsupported",
@@ -183,6 +194,8 @@ export class LargeImageIngestSession {
           record.id
         );
       }
+
+      this.resumeSourceIdentity = await this.validateResumeRecord(record, store);
 
       let session: TransportSession;
       try {
@@ -302,18 +315,77 @@ export class LargeImageIngestSession {
     );
   }
 
+  private createManifestOptions(): CreateIngestSessionOptions {
+    if (this.options.checksum === false) {
+      return this.options;
+    }
+    return {
+      ...this.options,
+      checksum: this.withSessionChecksumAuthority(this.options.checksum ?? {})
+    };
+  }
+
+  private async prepareContentSourceIdentity(
+    manifest: IngestManifest
+  ): Promise<ContentSourceIdentityV1> {
+    if (manifest.original.checksum) {
+      return createContentSourceIdentityFromChecksum(
+        manifest.original.sizeBytes,
+        manifest.original.checksum
+      );
+    }
+    return this.calculateSelectedSourceIdentity();
+  }
+
+  private calculateSelectedSourceIdentity(): Promise<ContentSourceIdentityV1> {
+    const configured = this.options.sourceIdentity ?? (
+      this.options.checksum === false ? {} : this.options.checksum ?? {}
+    );
+    return createContentSourceIdentity(
+      this.file,
+      this.withSessionChecksumAuthority(configured)
+    );
+  }
+
+  private withSessionChecksumAuthority(
+    options: NonNullable<CreateIngestSessionOptions["sourceIdentity"]>
+  ): NonNullable<CreateIngestSessionOptions["sourceIdentity"]> {
+    const userObserver = options.onObserverError;
+    return {
+      ...options,
+      signal: combineAbortSignals(this.abortController.signal, options.signal),
+      onObserverError: (failure) => {
+        this.reportObserverFailure({ observer: "checksum", error: failure.error });
+        try {
+          userObserver?.(failure);
+        } catch {
+          // Checksum observer reporting is isolated from ingest authority.
+        }
+      }
+    };
+  }
+
   private async createInitialResumeRecord(
     manifest: IngestManifest,
-    session: TransportSession
+    session: TransportSession,
+    contentIdentity: ContentSourceIdentityV1 | undefined
   ): Promise<ResumeRecord | undefined> {
     const store = this.options.resume?.store;
     if (!store) {
       return undefined;
     }
 
-    const record = createResumeRecord({
+    if (!contentIdentity) {
+      throw createIngestError(
+        "resume.identity_missing",
+        "Persistent resume requires whole-file source identity.",
+        false
+      );
+    }
+    const record = createPersistentResumeRecord({
       manifest,
       file: await createResumeFileIdentity(this.file),
+      contentIdentity,
       chunking: createResumeChunkingIdentity(this.file.size, this.options.chunking),
       transport: this.createTransportState(session)
     });
@@ -338,7 +410,7 @@ export class LargeImageIngestSession {
     const now = nowIso();
 
     return {
-      schemaVersion: CURRENT_RESUME_SCHEMA_VERSION,
+      schemaVersion: "large-image-ingest.resume.v0.2",
       id: `snapshot_${snapshot.manifestId}`,
       manifest,
       file: await createResumeFileIdentity(this.file),
@@ -363,7 +435,10 @@ export class LargeImageIngestSession {
     };
   }
 
-  private async validateResumeRecord(record: ResumeRecord, store: ResumeStore): Promise<void> {
+  private async validateResumeRecord(
+    record: ResumeRecord,
+    store: ResumeStore
+  ): Promise<ContentSourceIdentityV1> {
     if (isResumeRecordExpired(record)) {
       const expired = await this.putResumeRecord(this.withStatus(record, "expired", "resume.expired"));
       this.emit({ type: "resume:expired", recordId: expired.id });
@@ -371,6 +446,31 @@ export class LargeImageIngestSession {
         "resume.expired",
         "The stored remote resume handle has expired.",
         expired.id
+      );
+    }
+
+    if (record.progress.status === "completed" || record.progress.status === "canceled") {
+      throw this.emitResumeConflict(
+        "resume.record_not_found",
+        "The resume record is terminal and cannot be resumed.",
+        record.id
+      );
+    }
+
+    if (!normalizeTransportRecoveryCapabilities(this.options.transport.capabilities).persistentResume) {
+      throw this.emitResumeConflict(
+        "resume.transport_unsupported",
+        "The configured upload transport does not support persistent resume.",
+        record.id
+      );
+    }
+
+    const activeTransportName = this.options.transport.capabilities?.name;
+    if (activeTransportName && record.transport.name && activeTransportName !== record.transport.name) {
+      throw this.emitResumeConflict(
+        "resume.transport_mismatch",
+        "The stored resume transport does not match the configured transport.",
+        record.id
       );
     }
 
@@ -392,37 +492,28 @@ export class LargeImageIngestSession {
       );
     }
 
-    if (this.options.transport.capabilities?.supportsPersistentResume === false) {
+    const sourceIdentity = await this.calculateSelectedSourceIdentity();
+    const classification = await classifyPersistentResume(record, this.file, {
+      ...this.options.chunking,
+      ...(this.options.transport.capabilities
+        ? { capabilities: this.options.transport.capabilities }
+        : {}),
+      sourceIdentity
+    });
+    if (classification.status !== "resumable" && classification.status !== "upgradeable") {
+      const code = classification.status === "restart_only"
+        ? "resume.restart_required"
+        : compatibilityConflictCode(classification.reason);
       throw this.emitResumeConflict(
-        "resume.transport_unsupported",
-        "The configured upload transport does not support persistent resume.",
-        record.id
-      );
-    }
-
-    const activeTransportName = this.options.transport.capabilities?.name;
-    if (
-      activeTransportName &&
-      record.transport.name &&
-      activeTransportName !== record.transport.name
-    ) {
-      throw this.emitResumeConflict(
-        "resume.transport_mismatch",
-        "The stored resume transport does not match the configured transport.",
-        record.id
-      );
-    }
-
-    if (record.progress.status === "completed" || record.progress.status === "canceled") {
-      throw this.emitResumeConflict(
-        "resume.record_not_found",
-        "The resume record is terminal and cannot be resumed.",
+        code,
+        compatibilityConflictMessage(classification.reason),
         record.id
       );
     }
 
     this.currentRecord = record;
     void store;
+    return sourceIdentity;
   }
 
   private async uploadRemainingChunks(
@@ -494,20 +585,39 @@ export class LargeImageIngestSession {
 
     const transport = result ? mergeTransportState(record.transport, result) : record.transport;
     const updatedAt = nowIso();
-    const nextRecord: ResumeRecord = record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION
-      ? {
-          ...record,
-          transport,
-          receipts: this.sortedReceipts().map(cloneReceipt),
-          progress,
-          updatedAt
-        }
-      : {
-          ...record,
-          transport,
-          progress,
-          updatedAt
-        };
+    let nextRecord: ResumeRecord;
+    if (record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION) {
+      nextRecord = {
+        ...record,
+        transport,
+        receipts: this.sortedReceipts().map(cloneReceipt),
+        progress,
+        updatedAt
+      };
+    } else if (
+      this.resumeSourceIdentity &&
+      (record.schemaVersion === "large-image-ingest.resume.v0.2" || record.progress.uploadedBytes === 0)
+    ) {
+      nextRecord = {
+        ...record,
+        schemaVersion: CURRENT_RESUME_SCHEMA_VERSION,
+        file: {
+          ...record.file,
+          contentIdentity: { ...this.resumeSourceIdentity }
+        },
+        transport,
+        receipts: this.sortedReceipts().map(cloneReceipt),
+        progress,
+        updatedAt
+      };
+    } else {
+      nextRecord = {
+        ...record,
+        transport,
+        progress,
+        updatedAt
+      };
+    }
     const next = await this.putResumeRecord(nextRecord);
 
     this.emit({
@@ -725,7 +835,10 @@ export class LargeImageIngestSession {
     chunkPlan: ChunkPlan,
     session: TransportSession
   ): void {
-    if (record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION) {
+    if (
+      record.schemaVersion === "large-image-ingest.resume.v0.2" ||
+      record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION
+    ) {
       for (const receipt of record.receipts) {
         const chunk = chunkPlan.chunks[receipt.chunkIndex];
         if (!chunk) {
@@ -1022,9 +1135,10 @@ export class LargeImageIngestSession {
   }
 
   private validateRequestedResumeCapability(): void {
+    const recovery = normalizeTransportRecoveryCapabilities(this.options.transport.capabilities);
     if (
       this.options.resume &&
-      this.options.transport.capabilities?.supportsPersistentResume === false
+      !recovery.persistentResume
     ) {
       throw this.emitResumeConflict(
         "resume.transport_unsupported",
@@ -1034,7 +1148,7 @@ export class LargeImageIngestSession {
 
     if (
       this.options.resumeFrom &&
-      this.options.transport.capabilities?.supportsSnapshotResume === false
+      !recovery.snapshotResume
     ) {
       throw createIngestError(
         "transport.resume_failed",
@@ -1197,6 +1311,56 @@ export class LargeImageIngestSession {
     } catch {
       // Observer error reporting is isolated from upload control flow too.
     }
+  }
+}
+
+function combineAbortSignals(primary: AbortSignal, secondary?: AbortSignal): AbortSignal {
+  if (!secondary || secondary === primary) return primary;
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any([primary, secondary]);
+  }
+  const controller = new AbortController();
+  const abort = (signal: AbortSignal) => {
+    if (!controller.signal.aborted) controller.abort(signal.reason);
+  };
+  if (primary.aborted) abort(primary);
+  else primary.addEventListener("abort", () => abort(primary), { once: true });
+  if (secondary.aborted) abort(secondary);
+  else secondary.addEventListener("abort", () => abort(secondary), { once: true });
+  return controller.signal;
+}
+
+function compatibilityConflictCode(
+  reason: ResumeCompatibilityResult["reason"]
+): ResumeConflictCode {
+  switch (reason) {
+    case "source_mismatch": return "resume.file_mismatch";
+    case "identity_missing": return "resume.identity_missing";
+    case "chunking_mismatch": return "resume.chunking_mismatch";
+    case "transport_unsupported": return "resume.transport_unsupported";
+    case "transport_mismatch": return "resume.transport_mismatch";
+    case "receipt_missing": return "resume.receipt_missing";
+    case "expired": return "resume.expired";
+    case "terminal": return "resume.record_not_found";
+    case "compatible":
+    case "legacy_upgrade_available":
+      return "resume.record_invalid";
+  }
+}
+
+function compatibilityConflictMessage(reason: ResumeCompatibilityResult["reason"]): string {
+  switch (reason) {
+    case "source_mismatch": return "The selected file does not match the stored resume record.";
+    case "identity_missing": return "The stored resume record lacks trustworthy whole-file source identity.";
+    case "chunking_mismatch": return "The active chunking options do not match the stored resume record.";
+    case "transport_unsupported": return "The configured upload transport does not support persistent resume.";
+    case "transport_mismatch": return "The stored resume transport does not match the configured transport.";
+    case "receipt_missing": return "The stored resume record lacks required durable provider receipts.";
+    case "expired": return "The stored remote resume handle has expired.";
+    case "terminal": return "The resume record is terminal and cannot be resumed.";
+    case "compatible":
+    case "legacy_upgrade_available":
+      return "The resume record is not compatible.";
   }
 }
 

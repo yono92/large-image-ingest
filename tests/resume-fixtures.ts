@@ -1,6 +1,7 @@
 import type {
   ResumeRecord,
   ResumeRecordV0_1,
+  ResumeRecordV0_2,
   ResumeStore,
   ResumeTransportState,
   UploadChunkContext,
@@ -39,9 +40,30 @@ export function toLegacyResumeRecord(record: ResumeRecord): ResumeRecordV0_1 {
   }
 
   const { receipts: _receipts, ...base } = cloned;
+  const { contentIdentity: _contentIdentity, ...file } = base.file;
   return {
     ...base,
+    file,
     schemaVersion: "large-image-ingest.resume.v0.1"
+  };
+}
+
+export function toV0_2ResumeRecord(
+  record: ResumeRecord,
+  options: { keepManifestChecksum?: boolean } = {}
+): ResumeRecordV0_2 {
+  if (record.schemaVersion === "large-image-ingest.resume.v0.1") {
+    throw new TypeError("A receipt-bearing record is required for v0.2 conversion.");
+  }
+  const cloned = structuredClone(record);
+  const { contentIdentity: _contentIdentity, ...file } = cloned.file;
+  if (options.keepManifestChecksum === false) {
+    delete cloned.manifest.original.checksum;
+  }
+  return {
+    ...cloned,
+    schemaVersion: "large-image-ingest.resume.v0.2",
+    file
   };
 }
 
@@ -52,6 +74,16 @@ export interface FakeTransportOptions {
 }
 
 export class FakeTransport implements UploadTransport {
+  readonly capabilities = {
+    name: "fake",
+    resumable: true,
+    abortable: false,
+    expires: false,
+    supportsParallelChunks: false,
+    supportsChunkChecksum: false,
+    supportsSnapshotResume: true,
+    supportsPersistentResume: true
+  } as const;
   readonly created: UploadSessionContext[] = [];
   readonly resumed: ResumeSessionContext[] = [];
   readonly uploadedChunks: number[] = [];
@@ -109,6 +141,19 @@ export class FakeTransport implements UploadTransport {
 
 export function createLargeTestFile(name = "wafer-aoi-001.tif", bytes = 800 * 1024): File {
   return new File([new Uint8Array(bytes)], name, {
+    type: "image/tiff",
+    lastModified: Date.UTC(2026, 0, 1)
+  });
+}
+
+export function createMetadataEqualVariant(
+  position: "first" | "middle" | "last",
+  bytes = 800 * 1024
+): File {
+  const contents = new Uint8Array(bytes);
+  const index = position === "first" ? 0 : position === "last" ? bytes - 1 : Math.floor(bytes / 2);
+  if (index >= 0) contents[index] = 1;
+  return new File([contents], "wafer-aoi-001.tif", {
     type: "image/tiff",
     lastModified: Date.UTC(2026, 0, 1)
   });

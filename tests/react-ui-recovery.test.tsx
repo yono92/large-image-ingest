@@ -1,13 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { createManifest } from "../src/manifest";
 import {
+  createContentSourceIdentity,
+  createPersistentResumeRecord,
   createResumeChunkingIdentity,
-  createResumeFileIdentity,
-  createResumeRecord
+  createResumeFileIdentity
 } from "../src/resume";
 import { InspectionUploadCoordinator } from "../src/react-ui/coordinator";
-import type { ResumeRecord, ResumeStore } from "../src/types";
+import type { FileChecksum, ResumeRecord, ResumeStore } from "../src/types";
 import { FakeController } from "./react-ui-fixtures";
+
+const recoveryCapabilities = {
+  name: "local-reference",
+  resumable: true,
+  abortable: true,
+  expires: false,
+  supportsParallelChunks: false,
+  supportsChunkChecksum: false,
+  supportsSnapshotResume: true,
+  supportsPersistentResume: true
+} as const;
 
 describe("first-party React UI recovery", () => {
   it("projects safe summaries and resumes only a compatible reselected source", async () => {
@@ -21,7 +33,7 @@ describe("first-party React UI recovery", () => {
         controllers.push(controller);
         return controller;
       },
-      recovery: { store, chunking: { chunkSize: 256 * 1024 } }
+      recovery: { store, chunking: { chunkSize: 256 * 1024 }, capabilities: recoveryCapabilities }
     });
 
     await coordinator.actions.refreshRecovery();
@@ -58,7 +70,7 @@ describe("first-party React UI recovery", () => {
     };
     const coordinator = new InspectionUploadCoordinator({
       createController: (file) => new FakeController(file),
-      recovery: { store }
+      recovery: { store, capabilities: recoveryCapabilities }
     });
     const oldRecord = await createRecord(createFile("old.tif"));
     const newRecord = await createRecord(createFile("new.tif"));
@@ -73,6 +85,50 @@ describe("first-party React UI recovery", () => {
     expect(coordinator.getValue().state.recoveryChoices.map((choice) => choice.fileName)).toEqual(["new.tif"]);
   });
 
+  it("cancels and ignores stale source identity when the selected file changes", async () => {
+    const firstFile = createFile("first.tif");
+    const secondFile = createFile("second.tif");
+    const record = await createRecord(secondFile);
+    const firstChecksum = (await createManifest(firstFile)).original.checksum;
+    const secondChecksum = record.manifest.original.checksum;
+    if (!firstChecksum || !secondChecksum) throw new Error("Expected checksum fixtures.");
+    const delayed = createDeferred<FileChecksum>();
+    let firstSignal: AbortSignal | undefined;
+    const coordinator = new InspectionUploadCoordinator({
+      createController: (file) => new FakeController(file),
+      recovery: {
+        store: new TestResumeStore([record]),
+        chunking: { chunkSize: 256 * 1024 },
+        capabilities: recoveryCapabilities,
+        sourceIdentity: {
+          executor: {
+            async calculate(source, options) {
+              if (source === firstFile) {
+                firstSignal = options.signal;
+                return delayed.promise;
+              }
+              return secondChecksum;
+            }
+          }
+        }
+      }
+    });
+    await coordinator.actions.refreshRecovery();
+
+    const firstSelection = coordinator.actions.selectFile(firstFile);
+    await Promise.resolve();
+    expect(firstSignal?.aborted).toBe(false);
+    await coordinator.actions.selectFile(secondFile);
+    expect(firstSignal?.aborted).toBe(true);
+    expect(coordinator.getValue().state.source?.file).toBe(secondFile);
+    expect(coordinator.getValue().state.recoveryChoices[0]?.compatibility).toBe("compatible");
+
+    delayed.resolve(firstChecksum);
+    await expect(firstSelection).resolves.toBeUndefined();
+    expect(coordinator.getValue().state.source?.file).toBe(secondFile);
+    expect(coordinator.getValue().state.recoveryChoices[0]?.compatibility).toBe("compatible");
+  });
+
   it("keeps multiple matches explicit and classifies chunking mismatch and expiry safely", async () => {
     const file = createFile("same.tif");
     const first = await createRecord(file, "first");
@@ -84,6 +140,7 @@ describe("first-party React UI recovery", () => {
       recovery: {
         store,
         chunking: { chunkSize: 256 * 1024 },
+        capabilities: recoveryCapabilities,
         clock: () => new Date("2026-01-01T00:00:00.000Z"),
         confirmDiscard: () => true
       }
@@ -102,7 +159,11 @@ describe("first-party React UI recovery", () => {
 
     const mismatchCoordinator = new InspectionUploadCoordinator({
       createController: (selected) => new FakeController(selected),
-      recovery: { store: new TestResumeStore([second]), chunking: { chunkSize: 512 * 1024 } }
+      recovery: {
+        store: new TestResumeStore([second]),
+        chunking: { chunkSize: 512 * 1024 },
+        capabilities: recoveryCapabilities
+      }
     });
     await mismatchCoordinator.actions.refreshRecovery();
     await mismatchCoordinator.actions.selectFile(file);
@@ -131,6 +192,20 @@ describe("first-party React UI recovery", () => {
     expect(coordinator.getValue().state.error).toMatchObject({ category: "cleanup", code: "resume.store_failed" });
     expect(JSON.stringify(coordinator.getValue().state.error)).not.toContain("secret browser record failed");
   });
+
+  it("keeps recovery unavailable when persistent capability is omitted", async () => {
+    const file = createFile("unsupported.tif");
+    const coordinator = new InspectionUploadCoordinator({
+      createController: (selected) => new FakeController(selected),
+      recovery: { store: new TestResumeStore([await createRecord(file)]) }
+    });
+
+    await coordinator.actions.refreshRecovery();
+    await coordinator.actions.selectFile(file);
+
+    expect(coordinator.getValue().state.recoveryChoices[0]?.compatibility).toBe("incompatible");
+    expect(coordinator.getValue().state.controls.canResume).toBe(false);
+  });
 });
 
 class TestResumeStore implements ResumeStore {
@@ -146,11 +221,12 @@ async function createRecord(
   suffix = file.name,
   expiresAt?: string
 ): Promise<ResumeRecord> {
-  const manifest = await createManifest(file, { checksum: false, chunking: { chunkSize: 256 * 1024 } });
-  return createResumeRecord({
+  const manifest = await createManifest(file, { chunking: { chunkSize: 256 * 1024 } });
+  return createPersistentResumeRecord({
     id: `resume-${suffix}`,
     manifest,
     file: await createResumeFileIdentity(file),
+    contentIdentity: await createContentSourceIdentity(file),
     chunking: createResumeChunkingIdentity(file.size, { chunkSize: 256 * 1024 }),
     transport: {
       name: "local-reference",

@@ -15,7 +15,14 @@ import type {
   UploadSessionResult,
   UploadTransport
 } from "../src/types";
-import { FakeTransport, MemoryResumeStore, createLargeTestFile } from "./resume-fixtures";
+import { CountingFile } from "./checksum-fixtures";
+import {
+  FakeTransport,
+  MemoryResumeStore,
+  createLargeTestFile,
+  createMetadataEqualVariant,
+  toV0_2ResumeRecord
+} from "./resume-fixtures";
 
 const chunking = { chunkSize: 256 * 1024 };
 
@@ -90,7 +97,7 @@ describe("persistent session resume", () => {
     ]);
     expect(interrupted.progress.nextChunkIndex).toBe(2);
     expect(interrupted).toMatchObject({
-      schemaVersion: "large-image-ingest.resume.v0.2",
+      schemaVersion: "large-image-ingest.resume.v0.3",
       receipts: [
         expect.objectContaining({ chunkIndex: 0 }),
         expect.objectContaining({ chunkIndex: 1 })
@@ -431,6 +438,138 @@ describe("persistent session resume", () => {
     expect(manifest.id).toBe(completed.manifest.id);
     expect(transport.resumed).toHaveLength(0);
     expect(transport.uploadedChunks).toHaveLength(0);
+  });
+
+  it("rejects metadata-equal first, middle, and final byte changes before remote recovery", async () => {
+    for (const position of ["first", "middle", "last"] as const) {
+      const file = createLargeTestFile();
+      const store = new MemoryResumeStore();
+      await expect(
+        createIngestSession(
+          file,
+          createOptions(new FakeTransport({ failChunkIndexes: [1] }), store)
+        ).start()
+      ).rejects.toThrow("Chunk 1 failed.");
+      const record = await firstRecord(store);
+      const transport = new FakeTransport();
+      await expect(
+        createIngestSession(
+          createMetadataEqualVariant(position),
+          createOptions(transport, store)
+        ).resume(record.id)
+      ).rejects.toMatchObject({ code: "resume.file_mismatch" });
+      expect(transport.resumed).toHaveLength(0);
+      expect(transport.uploadedChunks).toHaveLength(0);
+      expect(transport.completed).toHaveLength(0);
+      await expect(store.get(record.id)).resolves.toBeDefined();
+    }
+  });
+
+  it("creates strong durable identity when manifest checksum output is disabled", async () => {
+    const file = createLargeTestFile();
+    const store = new MemoryResumeStore();
+    await expect(createIngestSession(file, createOptions(
+      new FakeTransport({ failChunkIndexes: [0] }),
+      store,
+      [],
+      { checksum: false, sourceIdentity: { chunkSize: 64 * 1024 } }
+    )).start()).rejects.toThrow("Chunk 0 failed.");
+    const record = await firstRecord(store);
+    expect(record.manifest.original.checksum).toBeUndefined();
+    expect(record.schemaVersion).toBe("large-image-ingest.resume.v0.3");
+    if (record.schemaVersion === "large-image-ingest.resume.v0.3") {
+      expect(record.file.contentIdentity.value).toHaveLength(64);
+    }
+  });
+
+  it("reuses one whole-file traversal for manifest checksum and durable identity", async () => {
+    const file = new CountingFile([new Uint8Array(128 * 1024)], "wafer-aoi-001.tif", {
+      type: "image/tiff"
+    });
+    const store = new MemoryResumeStore();
+    await createIngestSession(file, createOptions(new FakeTransport(), store, [], {
+      checksum: { chunkSize: 64 * 1024 },
+      resume: { store, cleanup: "mark-complete" }
+    })).start();
+    expect(file.arrayBufferReads).toBe(2);
+    expect(file.maxReadBytes).toBe(64 * 1024);
+  });
+
+  it("isolates checksum progress callback failures through the observer boundary", async () => {
+    const store = new MemoryResumeStore();
+    const observerFailures: unknown[] = [];
+    await createIngestSession(createLargeTestFile(), createOptions(new FakeTransport(), store, [], {
+      checksum: {
+        chunkSize: 64 * 1024,
+        onProgress() {
+          throw new Error("progress observer failed");
+        }
+      },
+      onObserverError(failure) {
+        observerFailures.push(failure);
+      }
+    })).start();
+    expect(observerFailures).toContainEqual(expect.objectContaining({ observer: "checksum" }));
+  });
+
+  it("preserves weak legacy records and promotes safe v0.2 at a checkpoint", async () => {
+    const file = createLargeTestFile();
+    const store = new MemoryResumeStore();
+    await expect(createIngestSession(
+      file,
+      createOptions(new FakeTransport({ failChunkIndexes: [1] }), store)
+    ).start()).rejects.toThrow("Chunk 1 failed.");
+    const current = await firstRecord(store);
+
+    const safeLegacy = toV0_2ResumeRecord(current);
+    await store.put(safeLegacy);
+    const safeTransport = new FakeTransport();
+    await createIngestSession(file, createOptions(safeTransport, store, [], {
+      resume: { store, cleanup: "mark-complete" }
+    })).resume(safeLegacy.id);
+    const promoted = await store.get(safeLegacy.id);
+    expect(promoted).toMatchObject({
+      schemaVersion: "large-image-ingest.resume.v0.3",
+      id: safeLegacy.id,
+      manifest: { id: safeLegacy.manifest.id },
+      transport: { uploadId: safeLegacy.transport.uploadId },
+      progress: { status: "completed" }
+    });
+
+    const weakStore = new MemoryResumeStore();
+    const weak = toV0_2ResumeRecord(current, { keepManifestChecksum: false });
+    await weakStore.put(weak);
+    const weakTransport = new FakeTransport();
+    await expect(createIngestSession(
+      file,
+      createOptions(weakTransport, weakStore)
+    ).resume(weak.id)).rejects.toMatchObject({ code: "resume.identity_missing" });
+    expect(weakTransport.resumed).toHaveLength(0);
+    await expect(weakStore.get(weak.id)).resolves.toEqual(weak);
+  });
+
+  it("treats missing detailed capabilities as unsupported only for recovery", async () => {
+    let createCalls = 0;
+    const transport: UploadTransport = {
+      async createSession() {
+        createCalls += 1;
+        return { uploadId: "custom-upload" };
+      },
+      async uploadChunk() {},
+      async completeSession() {}
+    };
+    await createIngestSession(createLargeTestFile(), {
+      chunking,
+      transport
+    }).start();
+    expect(createCalls).toBe(1);
+
+    const store = new MemoryResumeStore();
+    await expect(createIngestSession(
+      createLargeTestFile(),
+      createOptions(transport, store)
+    ).start()).rejects.toMatchObject({ code: "resume.transport_unsupported" });
+    expect(createCalls).toBe(1);
   });
 });
 

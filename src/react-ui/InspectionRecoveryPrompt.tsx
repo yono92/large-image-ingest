@@ -40,6 +40,8 @@ function compatibilityLabel(compatibility: string): string {
     case "compatible": return "Compatible source";
     case "file_mismatch": return "This source does not match";
     case "chunking_mismatch": return "Chunking configuration does not match";
+    case "restart_only": return "Start a new ingest or discard this recovery record";
+    case "incompatible": return "This recovery record cannot safely resume";
     case "expired": return "Recovery record expired";
     default: return "Reselect the original to check compatibility";
   }

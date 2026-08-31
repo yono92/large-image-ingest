@@ -2,9 +2,11 @@ import type { CSSProperties, ReactNode } from "react";
 import type { IngestController, IngestControllerState } from "../react-controller.js";
 import type {
   ChunkPlanOptions,
+  ChecksumOptions,
   IngestErrorCode,
   IngestManifest,
-  ResumeStore
+  ResumeStore,
+  TransportCapabilities
 } from "../types.js";
 
 export type InspectionUiPhase =
@@ -41,6 +43,8 @@ export type RecoveryCompatibility =
   | "compatible"
   | "file_mismatch"
   | "chunking_mismatch"
+  | "restart_only"
+  | "incompatible"
   | "expired";
 
 export interface RecoveryChoiceSummary {
@@ -118,7 +122,9 @@ export interface CompletionVerificationAdapter {
 export interface InspectionRecoveryOptions {
   readonly store: ResumeStore;
   readonly chunking?: ChunkPlanOptions;
+  readonly capabilities?: TransportCapabilities;
   readonly clock?: () => Date;
+  readonly sourceIdentity?: ChecksumOptions;
   readonly confirmDiscard?: (choice: RecoveryChoiceSummary) => boolean | Promise<boolean>;
 }
 
