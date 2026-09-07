@@ -7,7 +7,7 @@ const protocol = require("../benchmarks/adoption/protocol.cjs") as {
   inspectSafeValue(value: unknown): { safe: boolean };
   validateReport(report: any): { ok: boolean; errors: string[] };
 };
-const report = JSON.parse(readFileSync(new URL("../benchmarks/results/2026-08-adoption-evidence.json", import.meta.url), "utf8"));
+const report = JSON.parse(readFileSync(new URL("../benchmarks/results/2026-09-workflow-adoption-evidence.json", import.meta.url), "utf8"));
 
 describe("adoption evidence disclosure and claim policy", () => {
   it("rejects secret URLs and local filesystem roots", () => {

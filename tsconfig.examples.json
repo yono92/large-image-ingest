@@ -10,6 +10,7 @@
       "large-image-ingest/provenance": ["./src/provenance.ts"],
       "large-image-ingest/preservation": ["./src/preservation.ts"],
       "large-image-ingest/profiles": ["./src/profiles.ts"],
+      "large-image-ingest/workflow": ["./src/workflow.ts"],
       "large-image-ingest/node": ["./src/nas.ts"],
       "large-image-ingest/react": ["./src/react.ts"],
       "large-image-ingest/react-ui": ["./src/react-ui.ts"],

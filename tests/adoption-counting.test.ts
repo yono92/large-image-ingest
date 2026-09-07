@@ -27,7 +27,7 @@ describe("adoption evidence counting", () => {
   });
 
   it("keeps application, test, and shared harness boundaries separate", () => {
-    const report = JSON.parse(readFileSync(new URL("../benchmarks/results/2026-08-adoption-evidence.json", import.meta.url), "utf8"));
+    const report = JSON.parse(readFileSync(new URL("../benchmarks/results/2026-09-workflow-adoption-evidence.json", import.meta.url), "utf8"));
     for (const candidate of report.candidates) {
       expect(candidate.artifacts.application).toHaveLength(candidate.implementation.applicationFileCount);
       expect(candidate.artifacts.candidateTests).toHaveLength(candidate.implementation.testFileCount);

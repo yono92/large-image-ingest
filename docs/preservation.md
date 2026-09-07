@@ -77,8 +77,18 @@ Blob hashing uses bounded `slice()` reads and file output uses streams. Neither 
 
 Validators return safe typed issue codes and counts. Routine mappings, results, exceptions, and validation reports omit filesystem roots, filenames, metadata values, credentials, secret URLs, object keys, recovery records, and provider receipts.
 
+## Verified Workflow Handoff
+
+Preservation is optional in `createVerifiedIngestWorkflow()`. When absent, durable evidence revision 1 is terminal success. When configured, the evidence sink first commits revision 1 with `preservation: pending`; only then does the workflow invoke the application adapter. Revision 2 records the exact final success or permanent failure.
+
+Transient preflight/materialization failure retains revision 1 and may retry under the same preservation operation ID. If handoff succeeds but revision 2 persistence fails or is ambiguous, only evidence finalization is retried or reconciled; the handoff is not repeated.
+
+The Node `createFilesystemPreservationHandoff()` helper wraps the existing mapping and new-output exporters. Trusted application resolvers provide both the verified stored-original path and a destination. Its public result contains an opaque reference rather than either path.
+
 ## Non-goals
 
 Preservation export does not decode pixels, create derivatives, recompress images, resize images, remove EXIF, edit the source manifest, or make provenance actor trust authoritative. It is a packaging and fixity boundary, not a preservation repository.
+
+It also does not append OCFL versions, import existing objects, operate a repository, enforce retention or legal hold, replicate content, or provide disaster recovery.
 
 Standards references: [RFC 8493: The BagIt File Packaging Format](https://www.rfc-editor.org/rfc/rfc8493.html) and [OCFL 1.1](https://ocfl.io/1.1/spec/).

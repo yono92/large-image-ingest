@@ -49,6 +49,11 @@ describe("package exports", () => {
         import: "./dist/esm/profiles.js",
         require: "./dist/cjs/profiles.js"
       },
+      "./workflow": {
+        types: "./dist/esm/workflow.d.ts",
+        import: "./dist/esm/workflow.js",
+        require: "./dist/cjs/workflow.js"
+      },
       "./transport-s3": {
         types: "./dist/esm/s3.d.ts",
         import: "./dist/esm/s3.js",
@@ -99,12 +104,13 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.6.0");
+    expect(packageJson.version).toBe("1.7.0");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./provenance");
     expect(packageJson.exports).toHaveProperty("./preservation");
     expect(packageJson.exports).toHaveProperty("./profiles");
+    expect(packageJson.exports).toHaveProperty("./workflow");
     expect(packageJson.exports).toHaveProperty("./node");
     expect(packageJson.exports).toHaveProperty("./react");
     expect(packageJson.exports).toHaveProperty("./react-ui");

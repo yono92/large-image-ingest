@@ -9,6 +9,8 @@ export default defineConfig({
       { find: "large-image-ingest/react-ui/styles.css", replacement: fileURLToPath(new URL("../../styles/react-ui.css", import.meta.url)) },
       { find: "large-image-ingest/react-ui", replacement: fileURLToPath(new URL("../../src/react-ui.ts", import.meta.url)) },
       { find: "large-image-ingest/react", replacement: fileURLToPath(new URL("../../src/react.ts", import.meta.url)) },
+      { find: "large-image-ingest/profiles", replacement: fileURLToPath(new URL("../../src/profiles.ts", import.meta.url)) },
+      { find: "large-image-ingest/workflow", replacement: fileURLToPath(new URL("../../src/workflow.ts", import.meta.url)) },
       { find: "large-image-ingest/core", replacement: fileURLToPath(new URL("../../src/core.ts", import.meta.url)) }
     ]
   },

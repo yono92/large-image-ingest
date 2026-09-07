@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -72,6 +72,12 @@
       "require": "./dist/cjs/profiles.js",
       "default": "./dist/esm/profiles.js"
     },
+    "./workflow": {
+      "types": "./dist/esm/workflow.d.ts",
+      "import": "./dist/esm/workflow.js",
+      "require": "./dist/cjs/workflow.js",
+      "default": "./dist/esm/workflow.js"
+    },
     "./transport-s3": {
       "types": "./dist/esm/s3.d.ts",
       "import": "./dist/esm/s3.js",
@@ -129,11 +135,11 @@
     "test:integration": "node scripts/run-integration-tests.cjs",
     "test:browser-checksum": "node scripts/verify-browser-checksum.cjs && node benchmarks/run-browser-checksum.cjs --size-mib 64",
     "test:adoption-evidence": "npm run build && vitest run tests/adoption-counting.test.ts tests/adoption-report.test.ts tests/adoption-runner.test.ts tests/adoption-security.test.ts",
-    "test:conformance": "npm run build && node scripts/run-conformance.cjs",
+    "test:conformance": "npm run build && node scripts/run-conformance.cjs && vitest run tests/workflow-conformance.test.ts",
     "test:reference": "node benchmarks/run-local.cjs --size-mib 64",
     "test:ui": "npm run test:ui:unit && npm run test:ui:browser",
     "test:ui:browser": "node scripts/run-ui-tests.cjs",
-    "test:ui:unit": "vitest run tests/react-ui-coordinator.test.ts tests/react-ui-recovery.test.tsx tests/react-ui-components.test.tsx tests/react-ui-accessibility.test.tsx tests/react-ui-css.test.ts",
+    "test:ui:unit": "vitest run tests/react-ui-coordinator.test.ts tests/react-ui-recovery.test.tsx tests/react-ui-components.test.tsx tests/react-ui-accessibility.test.tsx tests/react-ui-css.test.ts tests/react-workflow-controller.test.ts tests/react-ui-workflow.test.tsx",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.cjs.json --noEmit",
     "typecheck:examples": "tsc -p tsconfig.examples.json",
     "typecheck:inspection-ui-example": "tsc -p tsconfig.inspection-ui-example.json",

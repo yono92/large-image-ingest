@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 1.7.0 - 2026-09-08
+
+- Add the opt-in browser-safe `large-image-ingest/workflow` facade that orders explicit domain-policy evaluation, the existing authoritative resumable session, independent stored-original verification, provenance sealing, durable evidence persistence, and optional preservation.
+- Add typed cross-stage states, terminal/recoverable results, compare-and-set workflow checkpoints, stable operation IDs, restart recovery, reconciliation, and stage-specific retry without duplicating upload authority.
+- Add immutable `large-image-ingest.evidence-bundle.v1` dossier revisions with whole-file source identity, profile/transfer/verification/provenance/preservation references, exact-key validation, RFC 8785 SHA-256 integrity, safe summaries, and explicit disclosure exports.
+- Add Node stored-file verification and new-output BagIt/OCFL workflow adapters with application-owned path resolution; no repository operation, OCFL append, retention, signing, or trusted-time claim is added.
+- Add headless React workflow projections and a distinct verified-ingest panel/status/actions surface while preserving the existing controller and `InspectionUploadPanel` behavior.
+- Add versioned workflow conformance, browser import/bounded-read gates, refreshed 1 GiB/3 GiB Node and Chromium evidence, and a workflow-based adoption candidate retaining adverse physical-line results.
+
 ## 1.6.0
 
 - Add a versioned official transport-conformance catalog and safe qualification reports that compare S3 multipart, tus, and NAS by recovery and stored-integrity outcomes rather than protocol receipt shape.

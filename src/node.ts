@@ -18,3 +18,11 @@ export type {
   NodeChecksumOptions,
   VerifyNodeFileManifestOptions
 } from "./node-verification.js";
+export {
+  createFilesystemPreservationHandoff,
+  createNodeStoredFileVerifier
+} from "./node-workflow.js";
+export type {
+  CreateFilesystemPreservationHandoffOptions,
+  CreateNodeStoredFileVerifierOptions
+} from "./node-workflow.js";

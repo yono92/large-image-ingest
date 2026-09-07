@@ -113,3 +113,11 @@ Resume and provenance retention are separate:
 - the SDK does not define legal holds, mandatory retention, archival storage, or erase workflows.
 
 Preservation package mapping is handled by the separate preservation-interoperability feature.
+
+## Verified Workflow Relationship
+
+The workflow reuses `createIngestProvenanceRecorder()` as the lifecycle evidence authority. It records the selected policy evaluation, forwards existing core session events, records the independent stored-verification result, and seals only after those facts are authoritative.
+
+The workflow evidence sink is a distinct transaction boundary that persists the sealed provenance artifact together with an immutable evidence-bundle revision. It does not replace the existing `ProvenanceSink`; applications using the lower-level recorder can continue to persist provenance independently. Resume records, workflow checkpoints, provenance artifacts, and evidence bundles remain separate artifacts with different sensitivity and retention.
+
+The bundle references provenance ID and integrity but does not upgrade self-hash integrity into actor or time trust. External attestations remain application-owned and are reported separately.

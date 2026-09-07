@@ -15,12 +15,13 @@ import {
   type CompletionVerificationAdapter
 } from "large-image-ingest/react-ui";
 import { createLocalReferenceTransport } from "../../reference-local/local-reference-transport";
+import { VerifiedWorkflowDemo } from "./VerifiedWorkflowDemo";
 
 const CHUNK_SIZE = 4 * 1024 * 1024;
 const MAX_BYTES = 10 * 1024 * 1024 * 1024;
 
 export function App() {
-  const [composed, setComposed] = useState(false);
+  const [mode, setMode] = useState<"default" | "composed" | "verified">("default");
   const resumeStore = useMemo(() => new WebStorageResumeStore(localStorage), []);
   const checksumExecutor = useMemo(() => createBrowserWorkerChecksumExecutor(), []);
   const transport = useMemo(() => createLocalReferenceTransport(), []);
@@ -68,10 +69,11 @@ export function App() {
   return (
     <main className="example-shell">
       <nav className="example-nav" aria-label="Reference layout">
-        <button type="button" onClick={() => setComposed(false)} aria-pressed={!composed}>Default panel</button>
-        <button type="button" onClick={() => setComposed(true)} aria-pressed={composed}>Composed theme</button>
+        <button type="button" onClick={() => setMode("default")} aria-pressed={mode === "default"}>Default panel</button>
+        <button type="button" onClick={() => setMode("composed")} aria-pressed={mode === "composed"}>Composed theme</button>
+        <button type="button" onClick={() => setMode("verified")} aria-pressed={mode === "verified"}>Verified workflow</button>
       </nav>
-      {composed ? (
+      {mode === "verified" ? <VerifiedWorkflowDemo /> : mode === "composed" ? (
         <InspectionUploadProvider {...configuration}>
           <article className="lii-panel example-composed">
             <header><p className="eyebrow">FAB INTAKE / LOCAL REFERENCE</p><h1>Original evidence transfer</h1></header>

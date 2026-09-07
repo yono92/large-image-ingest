@@ -26,6 +26,35 @@ import {
 } from "large-image-ingest/core";
 ```
 
+## Verified Ingest Workflow
+
+Use `large-image-ingest/workflow` when the application wants one authoritative path from explicit profile selection through durable evidence:
+
+```ts
+import { loadBundledDomainProfile } from "large-image-ingest/profiles";
+import { createVerifiedIngestWorkflow } from "large-image-ingest/workflow";
+
+const profile = await loadBundledDomainProfile("semiconductor-inspection");
+const workflow = createVerifiedIngestWorkflow(file, {
+  profile: { definition: profile, structuralEvidence },
+  session: {
+    transport,
+    resume: { store: resumeStore },
+    metadata,
+    image: structuralEvidence
+  },
+  verifier: storedObjectVerifier,
+  checkpointStore,
+  evidenceSink
+});
+
+const result = await workflow.start();
+```
+
+`start()`, `resume(workflowId)`, and `retry()` can return a terminal result or a typed recoverable boundary. Inspect `status`, `allowedActions`, and `lastAuthoritativeState`; do not treat `uploaded_unverified` as verified. See [Verified Ingest Workflow](verified-ingest-workflow.md) for the state, adapter, checkpoint, evidence, trust, and migration contracts.
+
+The lower-level APIs below remain supported when an application intentionally owns orchestration.
+
 ## Manifest Creation
 
 ```ts
