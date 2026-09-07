@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "large-image-ingest.benchmark.v1",
+  "createdAt": "2026-09-07T07:55:09.562Z",
+  "packageVersion": "1.6.0",
+  "sourceCommit": "d8bfca6a1467",
+  "environment": {
+    "platform": "darwin",
+    "release": "25.6.0",
+    "architecture": "arm64",
+    "nodeVersion": "v22.14.0",
+    "cpuModel": "Apple M5",
+    "logicalCpuCount": 10,
+    "totalMemoryBytes": 34359738368
+  },
+  "configuration": {
+    "sizeBytes": 1073741824,
+    "sizeMiB": 1024,
+    "chunkSizeBytes": 8388608,
+    "chunkSizeMiB": 8,
+    "checksumChunkSizeBytes": 4194304,
+    "failAfterChunks": 2
+  },
+  "timingsMs": {
+    "fixtureGeneration": 611.95,
+    "checksumAndManifest": 8213.45,
+    "interruptedUpload": 78.69,
+    "resumedUpload": 11418.45,
+    "transferTotal": 11497.15,
+    "total": 20727.91
+  },
+  "throughputMiBPerSecond": {
+    "checksumAndManifest": 124.67,
+    "transfer": 89.07,
+    "endToEnd": 49.4
+  },
+  "memoryPeakBytes": {
+    "rss": 203669504,
+    "heapUsed": 11439120,
+    "external": 53911402,
+    "arrayBuffers": 50471310
+  },
+  "recovery": {
+    "interruptionObserved": true,
+    "durableRecordStatusAfterFailure": "failed",
+    "acknowledgedBytesBeforeResume": 16777216,
+    "acknowledgedChunksBeforeResume": 2,
+    "totalReceivedBytes": 1073741824,
+    "duplicateReceivedBytes": 0,
+    "completeCalls": 1,
+    "finalRecordStatus": "completed"
+  },
+  "integrity": {
+    "generatedChecksumMatchedManifest": true,
+    "targetVerifiedBeforePromotion": true,
+    "targetVerifiedAfterPromotion": true,
+    "sourceAndTargetSizeMatched": true
+  },
+  "reproduction": "npm run benchmark:local -- --size-mib 1024 --chunk-mib 8",
+  "limitations": [
+    "Measurements use a local loopback HTTP target and local filesystem, not a remote provider.",
+    "Process memory includes the benchmark client and reference server in one Node.js process.",
+    "The local Node file-backed Blob harness rejects sizes of 4 GiB or larger because current runtime sizes and offsets are truncated.",
+    "Throughput varies by CPU, filesystem, runtime, power policy, and other system load."
+  ]
+}

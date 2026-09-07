@@ -1,6 +1,10 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
-import * as sdk from "../src/core.js";
+import * as core from "../src/core.js";
+import * as profiles from "../src/profiles.js";
+import * as workflow from "../src/workflow.js";
+
+const sdk = { ...core, ...profiles, ...workflow };
 
 const require = createRequire(import.meta.url);
 const { runEvidence } = require("../benchmarks/run-adoption-evidence.cjs") as {

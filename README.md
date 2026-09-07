@@ -19,89 +19,47 @@ The repository reference harness exercises the built package through real loopba
 | Scenario | Result |
 | --- | ---: |
 | Source size | 3 GiB |
-| SHA-256 and manifest | 144.51 MiB/s |
-| HTTP transfer including resume | 113.95 MiB/s |
-| Peak JavaScript heap / RSS | 10.75 MiB / 267.48 MiB |
+| SHA-256 and manifest | 128.46 MiB/s |
+| HTTP transfer including resume | 100.14 MiB/s |
+| Peak JavaScript heap / RSS | 11.07 MiB / 270.69 MiB |
 | Acknowledged bytes retransmitted | 0 |
 | Remote completion calls | 1 |
 | Stored-file SHA-256 | Verified |
 
-This August 31, 2026 Feature 013 verification used Node.js 22.14.0 on macOS 26.6.2 arm64 with a 64 MiB upload chunk. The client and local reference server shared one process; loopback throughput is not a remote-provider or browser-responsiveness guarantee. See the [methodology, historical results, limitations, and reproduction commands](docs/benchmarks.md).
+This September 7, 2026 verification used Node.js 22.14.0 on macOS 26.6 arm64 with a 64 MiB upload chunk. The client and local reference server shared one process; loopback throughput is not a remote-provider or browser-responsiveness guarantee. See the [methodology, historical results, limitations, and reproduction commands](docs/benchmarks.md).
 
-The separately retained Chromium Worker qualification hashed real 1 GiB and 3 GiB `File` inputs at 266.58 and 267.06 MiB/s. Both digests matched, cancellation returned `checksum.canceled` with no late progress, and the maximum measured main-thread delay was 2.00 ms with no observed long task. These are machine-specific qualification results, not universal performance guarantees.
+The separately retained Chromium Worker qualification hashed real 1 GiB and 3 GiB `File` inputs at 234.78 and 258.88 MiB/s. Both digests matched, cancellation returned `checksum.canceled` with no late progress, and the maximum measured main-thread delay was 1.70 ms with no observed long task. These are machine-specific qualification results, not universal performance guarantees.
 
-The credential-free adoption comparison also records three equivalent reference integrations across 14 injected scenarios. The SDK binding reduced application-owned lifecycle responsibilities from 14 to 2 (85.71%) and explicit configuration decisions from 12 to 5 (58.33%), while the honest physical-line result was adverse: 167 SDK-binding lines versus 140 and 142 in the two generic fixtures. All candidates passed 14/14 controlled scenarios, so this evidence demonstrates coordination ownership reduction—not a lower real-world incident rate. See [the method, raw report, and claim limits](docs/adoption-evidence.md).
+The refreshed credential-free adoption comparison uses the verified-workflow facade for the SDK candidate across 14 injected scenarios. The SDK binding retained 2 of 14 application-owned lifecycle responsibilities and 5 explicit configuration decisions, while its physical-line result became more adverse: 249 lines versus 140 and 142 in the two generic fixtures. All candidates passed 14/14 controlled scenarios. This demonstrates coordination ownership and end-to-end authority, not less code or a lower real-world incident rate. See [the method, raw report, and claim limits](docs/adoption-evidence.md).
 
 ## Quick Start
 
 ```ts
-import { createIngestSession } from "large-image-ingest/core";
+import { loadBundledDomainProfile } from "large-image-ingest/profiles";
+import { createVerifiedIngestWorkflow } from "large-image-ingest/workflow";
 
-const session = createIngestSession(file, {
-  chunking: {
-    chunkSize: 64 * 1024 * 1024
+const profile = await loadBundledDomainProfile("semiconductor-inspection");
+const workflow = createVerifiedIngestWorkflow(file, {
+  profile: { definition: profile, structuralEvidence },
+  session: {
+    transport,
+    resume: { store: resumeStore, cleanup: "delete-on-complete" },
+    metadata: { lotId, waferId, inspectionTimestamp },
+    image: structuralEvidence
   },
-  validation: {
-    maxBytes: 10 * 1024 * 1024 * 1024,
-    acceptedMimeTypes: ["image/tiff", "image/png", "image/jpeg"],
-    acceptedExtensions: ["tif", "tiff", "png", "jpg", "jpeg"],
-    requiredMetadata: ["lotId", "waferId"]
-  },
-  image: {
-    format: "tiff",
-    width: 4096,
-    height: 4096,
-    colorDepth: 16
-  },
-  metadata: {
-    lotId: "LOT-2026-001",
-    waferId: "W12"
-  },
-  transport: {
-    capabilities: {
-      name: "app-api",
-      resumable: true,
-      abortable: true,
-      expires: false,
-      supportsParallelChunks: false,
-      supportsChunkChecksum: false
-    },
-    async createSession({ manifest }) {
-      return {
-        uploadId: `upload-${manifest.id}`,
-        transportName: "app-api",
-        createdAt: new Date().toISOString()
-      };
-    },
-    async uploadChunk({ chunk, body }) {
-      await fetch(`/api/uploads/chunks/${chunk.index}`, {
-        method: "PUT",
-        body
-      });
-
-      return {
-        chunkIndex: chunk.index,
-        sizeBytes: body.size,
-        completedAt: new Date().toISOString(),
-        transport: { name: "app-api" }
-      };
-    },
-    async completeSession({ manifest, uploadId, receipts }) {
-      await fetch(`/api/uploads/${uploadId}/complete`, {
-        method: "POST",
-        body: JSON.stringify({ manifest, receipts })
-      });
-    }
-  },
-  onEvent(event) {
-    console.log(event.type);
-  }
+  verifier: storedObjectVerifier,
+  checkpointStore,
+  evidenceSink,
+  onEvent: (event) => publishSafeStatus(event)
 });
 
-const manifest = await session.start();
+const result = await workflow.start();
+if (result.status === "evidence_persisted") {
+  retainEvidenceReference(result.evidenceReference);
+}
 ```
 
-More examples are in [docs/quickstart.md](docs/quickstart.md).
+The application owns transport credentials/broker policy, stored verification, checkpoint storage, and evidence persistence. The workflow owns their safe order and keeps transfer completion distinct from stored verification. See the [verified workflow guide](docs/verified-ingest-workflow.md) or the [low-level modular session examples](docs/quickstart.md).
 
 ## What It Provides
 
@@ -119,6 +77,8 @@ More examples are in [docs/quickstart.md](docs/quickstart.md).
 - Opt-in integrity-protected ingest provenance with safe summaries, explicit exports, and application-owned persistence
 - Node-only BagIt 1.0 and OCFL 1.1 preflight, streaming export, and independent fixity validation
 - Explicit versioned semiconductor, microscopy, and satellite validation profiles with safe derived-policy and resume binding
+- Opt-in verified-ingest workflow joining profile, authoritative resumable upload, stored verification, provenance, evidence persistence, and optional preservation
+- Versioned self-hashed evidence dossier with safe summaries, explicit export, immutable revisions, and separate actor/time trust
 - Optional first-party React panel, provider, hook, composable primitives, and opt-in static CSS
 - ESM, CommonJS, and TypeScript declaration entrypoints
 
@@ -134,6 +94,7 @@ large-image-ingest/conformance
 large-image-ingest/provenance
 large-image-ingest/preservation
 large-image-ingest/profiles
+large-image-ingest/workflow
 large-image-ingest/transport-tus
 large-image-ingest/transport-s3
 large-image-ingest/node
@@ -149,11 +110,12 @@ large-image-ingest/tiff
 - Use `large-image-ingest/provenance` for durable lifecycle evidence that remains separate from sensitive resume state.
 - Use `large-image-ingest/preservation` to map and export one verified ingest as a new BagIt 1.0 package or OCFL 1.1 v1 object.
 - Use `large-image-ingest/profiles` for explicitly selected domain baselines, derived organization policies, and safe profile evaluation.
+- Use `large-image-ingest/workflow` for the official one-file verifiable ingest control-plane facade and evidence bundle.
 - Use `large-image-ingest/transport-tus` for the raw `fetch` tus transport.
 - Use `large-image-ingest/transport-s3` for broker-backed S3 multipart uploads.
-- Use `large-image-ingest/node` for server-only NAS gateway, metadata derivative, tile descriptor, and stored-file verification APIs.
-- Use `large-image-ingest/react` for optional headless React state and upload controls.
-- Use `large-image-ingest/react-ui` for the official ready-made panel or composable inspection UI.
+- Use `large-image-ingest/node` for server-only NAS gateway, metadata derivative, tile descriptor, stored-file verification, and optional workflow preservation adapters.
+- Use `large-image-ingest/react` for optional headless session or verified-workflow projections.
+- Use `large-image-ingest/react-ui` for the official ready-made session or verified-workflow panels.
 - Import `large-image-ingest/react-ui/styles.css` only when the default theme is wanted.
 - Use `large-image-ingest/tiff` for optional bounded TIFF and BigTIFF structural metadata probing.
 - Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.

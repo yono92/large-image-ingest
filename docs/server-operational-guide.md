@@ -72,6 +72,21 @@ NAS session metadata is committed from a unique candidate beside `metadata.json`
 
 If a process terminates while holding a lock, configure and test the existing stale-lock policy for the deployment environment. A later coordinated mutation removes recognized abandoned metadata and chunk candidates; read-only session inspection ignores candidates and reads only committed `metadata.json`. Expired cleanup skips sessions with a live mutation lock rather than deleting active work.
 
+## Verified Workflow Adapters
+
+The workflow facade keeps server policy application-owned. A deployment normally supplies four boundaries:
+
+- the existing transport/broker adapter, which alone sees credentials and object keys;
+- `StoredObjectVerificationAdapter`, which compares stored byte count and whole-file SHA-256 after transport completion;
+- a compare-and-set `WorkflowCheckpointStore` containing only safe coordination references;
+- an immutable `WorkflowEvidenceSink` that persists sealed provenance and bundle revisions under stable operation IDs.
+
+Evidence sinks must enforce `expectedRevision`, reject replacement content under the same evidence ID/revision, and reconcile an ambiguous write by operation ID before allowing a repeat. Return a safe opaque reference, not a URL, object key, database connection string, provider receipt, or filesystem path.
+
+`createNodeStoredFileVerifier()` wraps `verifyNodeFileManifest()` and receives its path from the application's trusted resolver. `createFilesystemPreservationHandoff()` similarly resolves the stored original and a new destination, then uses the existing BagIt or OCFL exporter. It does not derive either path from the uploaded filename or customer metadata.
+
+The filesystem preservation adapter creates a new output only. A valid existing output for the same operation can be reconciled; an invalid or unrelated existing destination is failure. Operating an OCFL storage root, appending object versions, retention/hold policy, replication, backup, and disaster recovery remain server responsibilities outside this SDK.
+
 ## Logging
 
 Log stable IDs, status, progress counters, and typed error codes. Do not log full manifests, raw metadata, resume records, presigned URLs, bearer tokens, credentials, or mounted storage paths.

@@ -2,6 +2,19 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.7.0 Included - Verified Ingest Control Plane
+
+Spec Kit artifacts:
+
+- [Verified ingest workflow](../specs/019-verified-ingest-workflow/spec.md)
+
+- [x] Add one browser-safe orchestration facade over explicit profile evaluation, manifest creation, the authoritative resumable session, stored-original verification, provenance sealing, and durable evidence persistence.
+- [x] Add typed authority states, process-restart checkpoints, stable operation IDs, reconciliation, and stage-specific retry without a second upload state machine.
+- [x] Add immutable evidence-bundle v1 revisions with safe summaries, explicit export, mutation validation, and separate integrity/actor/time trust.
+- [x] Add optional preservation handoff after durable evidence, with revision-2 finalization that never repeats a completed handoff.
+- [x] Add thin Node verification/preservation adapters and React headless/ready-made projections while preserving existing subpaths.
+- [x] Retain credential-free conformance, 1 GiB/3 GiB Node/Chromium measurements, adoption evidence, and explicit scope/non-claim documentation.
+
 ## 1.6.0 Included - Official Transport Conformance
 
 Spec Kit artifacts:

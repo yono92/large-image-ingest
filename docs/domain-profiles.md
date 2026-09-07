@@ -91,3 +91,9 @@ Untrusted reconstructed derived profiles must be validated with their exact base
 Evaluation records contain the safe profile reference and rule outcomes, not metadata values, source checksums, filenames, full rules, private exception text, storage locations, credentials, resume tokens, or provider receipts. Applications can map the evaluation to provenance policy codes and retain the full profile separately in an authorized policy registry.
 
 Timestamp syntax follows [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339.html). Baseline media declarations reference [RFC 3302 for TIFF](https://www.rfc-editor.org/rfc/rfc3302.html), [W3C PNG](https://www.w3.org/TR/png-3/), and [IANA image/jpeg](https://www.iana.org/assignments/media-types/image/jpeg).
+
+## Verified Workflow Relationship
+
+`createVerifiedIngestWorkflow()` requires one explicit profile definition and performs manifest creation, profile evaluation, and session binding in that order. Applications no longer need to manually pass the binding between layers. A failed evaluation is terminal preparation failure and occurs before transport creation.
+
+The evidence bundle records the safe profile reference and evaluation result. It does not embed the full profile, rule implementation, customer metadata values, or exception prose. Resume still compares the exact profile reference before source hashing or remote recovery. Existing direct profile evaluation and `createIngestSession({ domainProfile })` remain supported.

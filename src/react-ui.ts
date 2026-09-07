@@ -13,4 +13,8 @@ export { InspectionUploadControls } from "./react-ui/InspectionUploadControls.js
 export { InspectionRecoveryPrompt } from "./react-ui/InspectionRecoveryPrompt.js";
 export { InspectionVerificationStatus } from "./react-ui/InspectionVerificationStatus.js";
 export { InspectionErrorNotice } from "./react-ui/InspectionErrorNotice.js";
+export { VerifiedIngestPanel } from "./react-ui/verified-workflow/VerifiedIngestPanel.js";
+export { VerifiedIngestStatus } from "./react-ui/verified-workflow/VerifiedIngestStatus.js";
+export { VerifiedIngestActions } from "./react-ui/verified-workflow/VerifiedIngestActions.js";
+export type { VerifiedIngestPanelProps } from "./react-ui/verified-workflow/types.js";
 export type * from "./react-ui/types.js";

@@ -6,9 +6,41 @@ The harness is validation infrastructure, not a production upload server. Execut
 
 ## Comparative Adoption Evidence
 
-The separate adoption-evidence runner compares the built SDK binding with raw tus-style and raw S3-style reference compositions over one frozen, credential-free ingest journey. Its retained August 31, 2026 report contains three verified happy paths, 42/42 safe controlled candidate-scenario outcomes, and all 150 raw trials.
+The separate adoption-evidence runner compares the built verified-workflow binding with raw tus-style and raw S3-style reference compositions over one frozen, credential-free ingest journey. Its retained September 7, 2026 report contains three verified happy paths, 42/42 safe controlled candidate-scenario outcomes, and all 150 raw trials.
 
-The SDK fixture owns 2 of 14 lifecycle responsibilities and 5 explicit configuration decisions, versus 14 responsibilities and 12 decisions in each generic fixture: reductions of 85.71% and 58.33% under unweighted frozen counts. The physical source-line result goes the other way and is retained: 167 SDK-binding lines versus 140 raw-tus and 142 raw-S3 lines. See [Comparative adoption evidence](adoption-evidence.md) and the [raw report](../benchmarks/results/2026-08-adoption-evidence.json) for boundaries, numerators, denominators, revisions, and limitations.
+The SDK fixture owns 2 of 14 lifecycle responsibilities and 5 explicit configuration decisions, versus 14 responsibilities and 12 decisions in each generic fixture: reductions of 85.71% and 58.33% under unweighted frozen counts. The physical source-line result goes the other way and is retained: 249 workflow-binding lines versus 140 raw-tus and 142 raw-S3 lines. See [Comparative adoption evidence](adoption-evidence.md) and the [raw report](../benchmarks/results/2026-09-workflow-adoption-evidence.json) for boundaries, numerators, denominators, revisions, and limitations.
+
+## September 2026 Rerun
+
+Feature 019 verification on September 7, 2026 used the pre-release Feature 019 working tree based on 1.6.0, before the package metadata was advanced to 1.7.0. It ran on Node.js 22.14.0, macOS 26.6 arm64, Apple M5 with 10 logical CPUs, and 32 GiB system memory:
+
+| Item | 1 GiB run | 3 GiB run |
+| --- | ---: | ---: |
+| Upload chunk size | 8 MiB | 64 MiB |
+| SHA-256 and manifest | 8,213.45 ms / 124.67 MiB/s | 23,913.82 ms / 128.46 MiB/s |
+| HTTP transfer including resume | 11,497.15 ms / 89.07 MiB/s | 30,677.36 ms / 100.14 MiB/s |
+| Peak JavaScript heap | 10.91 MiB | 11.07 MiB |
+| Peak RSS | 194.23 MiB | 270.69 MiB |
+| Acknowledged bytes retransmitted | 0 | 0 |
+| Remote completion calls | 1 | 1 |
+| Stored-file SHA-256 verification | Passed | Passed |
+
+The retained [1 GiB](../benchmarks/results/2026-09-workflow-local-1g.json) and [3 GiB](../benchmarks/results/2026-09-workflow-local-3g.json) results exercise the existing authoritative session used by the workflow. The default no-preservation workflow adds no second whole-file read. Optional preservation was not enabled in these runs; its source read and destination validation are a separate Node-only handoff and are not included in the timing or memory values.
+
+The same host's refreshed Chromium 151 Worker results were:
+
+| Item | 1 GiB run | 3 GiB run |
+| --- | ---: | ---: |
+| Worker checksum | 4,361.60 ms / 234.78 MiB/s | 11,866.30 ms / 258.88 MiB/s |
+| Main-thread maximum interval delay | 1.60 ms | 1.70 ms |
+| Observed long tasks | 0 | 0 |
+| Main-page heap start / peak | 1.96 / 1.96 MiB | 1.95 / 1.95 MiB |
+| Chromium process-tree RSS start / peak | 290.48 / 437.88 MiB | 289.98 / 477.55 MiB |
+| Cancellation result | `checksum.canceled` | `checksum.canceled` |
+| Progress after cancellation | 0 events | 0 events |
+| Completed SHA-256 | Verified | Verified |
+
+Raw results: [1 GiB](../benchmarks/results/2026-09-workflow-browser-checksum-1g.json) and [3 GiB](../benchmarks/results/2026-09-workflow-browser-checksum-3g.json). These are environment observations, not universal browser guarantees.
 
 ## Recorded Runs
 

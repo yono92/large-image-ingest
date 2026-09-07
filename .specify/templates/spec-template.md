@@ -1,4 +1,4 @@
-﻿# Feature Specification: [FEATURE NAME]
+# Feature Specification: [FEATURE NAME]
 
 **Feature Branch**: `[###-feature-name]`
 
@@ -77,8 +77,6 @@
 
 - What happens when [boundary condition]?
 - How does system handle [error scenario]?
-- For ingest features, what prevents original file mutation, stale resume,
-  unsafe derivative handling, or sensitive upload data exposure?
 
 ## Requirements *(mandatory)*
 
@@ -94,9 +92,6 @@
 - **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
-- **FR-INGEST**: For ingest behavior, specify original preservation, derivative
-  boundaries, observable state, adapter boundaries, validation, typed errors,
-  sensitive data handling, and manifest or resume record versioning.
 
 *Example of marking unclear requirements:*
 

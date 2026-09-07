@@ -69,3 +69,11 @@ npm run example:inspection-ui
 ```
 
 The reference app uses public exports and the provider-neutral local service. It requires no credentials or Uppy and demonstrates selection, validation failure, acknowledged progress, pause, reload recovery, mismatch rejection, cancellation, transfer completion, stored verification, and an alternate token composition.
+
+## Verified Workflow Projection
+
+For the integrated control-plane path, create one `VerifiedIngestWorkflow`, wrap it with `createVerifiedIngestController()`, and render `VerifiedIngestPanel`. `VerifiedIngestProvider`, `useVerifiedIngestState()`, and `useVerifiedIngestActions()` support custom composition; `VerifiedIngestStatus` and `VerifiedIngestActions` are ready-made primitives.
+
+The controller caches workflow snapshots only so `useSyncExternalStore` receives stable references. It delegates `start`, `resume`, `retry`, `pause`, and `cancel` directly to the workflow and contains no upload, verification, evidence, or preservation state machine. The panel renders only typed issue codes and safe evidence status; it never renders raw adapter errors or evidence references.
+
+The existing `IngestProvider`, hooks, controller, `InspectionUploadPanel`, and completion-verifier integration are unchanged. Applications can migrate one ingest screen at a time.

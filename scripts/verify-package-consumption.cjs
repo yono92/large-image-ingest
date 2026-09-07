@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const { readFileSync } = require("node:fs");
 
 async function main() {
   const packageVersion = require("../package.json").version;
@@ -9,6 +10,7 @@ async function main() {
   const esmProvenance = await import("large-image-ingest/provenance");
   const esmPreservation = await import("large-image-ingest/preservation");
   const esmProfiles = await import("large-image-ingest/profiles");
+  const esmWorkflow = await import("large-image-ingest/workflow");
   const esmTus = await import("large-image-ingest/transport-tus");
   const esmS3 = await import("large-image-ingest/transport-s3");
   const esmNode = await import("large-image-ingest/node");
@@ -21,6 +23,7 @@ async function main() {
   const cjsProvenance = require("large-image-ingest/provenance");
   const cjsPreservation = require("large-image-ingest/preservation");
   const cjsProfiles = require("large-image-ingest/profiles");
+  const cjsWorkflow = require("large-image-ingest/workflow");
   const cjsTus = require("large-image-ingest/transport-tus");
   const cjsS3 = require("large-image-ingest/transport-s3");
   const cjsNode = require("large-image-ingest/node");
@@ -47,6 +50,8 @@ async function main() {
   assert.equal(typeof esmPreservation.exportOcflObject, "function");
   assert.equal(typeof esmProfiles.loadBundledDomainProfile, "function");
   assert.equal(typeof esmProfiles.evaluateDomainValidationProfile, "function");
+  assert.equal(typeof esmWorkflow.createVerifiedIngestWorkflow, "function");
+  assert.equal(esmWorkflow.INGEST_EVIDENCE_BUNDLE_SCHEMA_VERSION, "large-image-ingest.evidence-bundle.v1");
   assert.equal(typeof esmCore.validateResumeRecord, "function");
   assert.equal(typeof esmCore.redactUploadSessionSnapshot, "function");
   assert.equal(typeof esmCore.validateManifestDerivatives, "function");
@@ -54,12 +59,17 @@ async function main() {
   assert.equal(typeof esmS3.createS3MultipartTransport, "function");
   assert.equal(typeof esmNode.createNasGateway, "function");
   assert.equal(typeof esmNode.calculateNodeFileChecksum, "function");
+  assert.equal(typeof esmNode.createNodeStoredFileVerifier, "function");
+  assert.equal(typeof esmNode.createFilesystemPreservationHandoff, "function");
   assert.equal(typeof esmNode.createMetadataDerivative, "function");
   assert.equal(typeof esmNode.createTilePyramidDerivative, "function");
   assert.equal(typeof esmReact.createIngestController, "function");
+  assert.equal(typeof esmReact.createVerifiedIngestController, "function");
+  assert.equal(typeof esmReact.VerifiedIngestProvider, "function");
   assert.equal(typeof esmReact.IngestProvider, "function");
   assert.equal(typeof esmReact.useIngestSession, "function");
   assert.equal(typeof esmReactUi.InspectionUploadPanel, "function");
+  assert.equal(typeof esmReactUi.VerifiedIngestPanel, "function");
   assert.equal(typeof esmReactUi.InspectionUploadProvider, "function");
   assert.equal(typeof esmReactUi.useInspectionUploadUi, "function");
   assert.equal(typeof esmTiff.probeTiffMetadata, "function");
@@ -81,6 +91,8 @@ async function main() {
   assert.equal(typeof cjsPreservation.validateOcflObject, "function");
   assert.equal(typeof cjsProfiles.loadBundledDomainProfile, "function");
   assert.equal(typeof cjsProfiles.deriveDomainValidationProfile, "function");
+  assert.equal(typeof cjsWorkflow.createVerifiedIngestWorkflow, "function");
+  assert.equal(cjsWorkflow.WORKFLOW_CHECKPOINT_SCHEMA_VERSION, "large-image-ingest.workflow-checkpoint.v1");
   assert.equal(cjsCore.normalizeTransportRecoveryCapabilities(undefined).persistentResume, false);
   assert.equal(typeof cjsCore.validateResumeRecord, "function");
   assert.equal(typeof cjsCore.redactUploadSessionSnapshot, "function");
@@ -89,17 +101,24 @@ async function main() {
   assert.equal(typeof cjsS3.createS3MultipartTransport, "function");
   assert.equal(typeof cjsNode.createNasGateway, "function");
   assert.equal(typeof cjsNode.calculateNodeFileChecksum, "function");
+  assert.equal(typeof cjsNode.createNodeStoredFileVerifier, "function");
+  assert.equal(typeof cjsNode.createFilesystemPreservationHandoff, "function");
   assert.equal(typeof cjsNode.createMetadataDerivative, "function");
   assert.equal(typeof cjsNode.createTilePyramidDerivative, "function");
   assert.equal(typeof cjsReact.createIngestController, "function");
+  assert.equal(typeof cjsReact.createVerifiedIngestController, "function");
+  assert.equal(typeof cjsReact.VerifiedIngestProvider, "function");
   assert.equal(typeof cjsReact.IngestProvider, "function");
   assert.equal(typeof cjsReact.useIngestSession, "function");
   assert.equal(typeof cjsReactUi.InspectionUploadPanel, "function");
+  assert.equal(typeof cjsReactUi.VerifiedIngestPanel, "function");
   assert.equal(typeof cjsReactUi.InspectionUploadProvider, "function");
   assert.equal(typeof cjsReactUi.useInspectionUploadUi, "function");
   assert.equal(typeof cjsTiff.probeTiffMetadata, "function");
   assert.equal(typeof cjsTiff.toTiffImageMetadata, "function");
   assert.match(reactUiStyles, /styles[\\/]react-ui\.css$/);
+  const workflowSource = readFileSync(require.resolve("large-image-ingest/workflow"), "utf8");
+  assert.doesNotMatch(workflowSource, /node:|node-workflow|preservation\.js|react/i);
   assert.deepEqual(esm.planChunks(10, { chunkSize: 256 * 1024 }).chunks, [
     { index: 0, start: 0, end: 10, size: 10 }
   ]);

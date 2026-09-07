@@ -27,7 +27,9 @@ The runner records process-level peak RSS, JavaScript heap, external memory, and
 
 `results/2026-08-transport-conformance.json` retains the versioned ten-run credential-free S3 multipart, tus, and NAS conformance report used by the 1.6.0 release gate. See `docs/transport-conformance.md` for interpretation and limitations.
 
-`results/2026-08-adoption-evidence.json` retains the three-candidate comparative adoption report. Generate it with `npm run evidence:adoption`; validate it and rerun the frozen matrix twice with `npm run test:adoption-evidence`. It records 42 candidate-scenario results and 150 raw trials without credentials, provider receipts, full manifests, or recovery records. See `docs/adoption-evidence.md` for the exact implementation metrics and claim limits.
+`results/2026-09-workflow-adoption-evidence.json` retains the refreshed three-candidate comparison whose SDK candidate uses the verified-workflow facade. Generate it with `npm run evidence:adoption`; validate it and rerun the frozen matrix twice with `npm run test:adoption-evidence`. It records 42 candidate-scenario results and 150 raw trials without credentials, provider receipts, full manifests, or recovery records. See `docs/adoption-evidence.md` for exact metrics and claim limits.
+
+The September 2026 1 GiB/3 GiB reruns are retained as `2026-09-workflow-local-{1g,3g}.json` and `2026-09-workflow-browser-checksum-{1g,3g}.json`. Optional preservation was not enabled and its extra source/destination reads are reported separately rather than folded into the no-preservation path.
 
 For Feature 013, the 1 GiB and 3 GiB Node commands remain bounded integrity and one-traversal evidence only. They do not measure browser interaction. The separate browser Worker harness runs the packaged `large-image-ingest/browser` executor with a real `File`, records environment and slice size, verifies monotonic progress and fixed buffering, exercises cancellation, and fails when a measured main-thread task reaches 100 ms.
 

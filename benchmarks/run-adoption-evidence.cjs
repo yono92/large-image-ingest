@@ -58,7 +58,7 @@ async function runEvidence(options = {}) {
   const { implementationLineChanges, responsibilityReductions, configurationDecisionReductions } = computeImplementationAggregates(candidates);
   const report = {
     schemaVersion: REPORT_SCHEMA,
-    recordedAt: options.recordedAt ?? "2026-08-31T00:00:00.000Z",
+    recordedAt: options.recordedAt ?? "2026-09-07T00:00:00.000Z",
     protocol: { id: "large-image-ingest.adoption-evidence-protocol.v1", digest: { algorithm: "sha256", value: protocolDigest() } },
     environment: { nodeMajor: Number(process.versions.node.split(".")[0]), platform: process.platform, architecture: process.arch, target: "credential-free-in-memory-reference" },
     command: "npm run evidence:adoption",
@@ -114,12 +114,16 @@ async function runEvidence(options = {}) {
 function loadBuiltSdk() {
   const sdkPath = path.join(ROOT, "dist", "cjs", "index.js");
   if (!fs.existsSync(sdkPath)) throw new Error("Built SDK not found. Run npm run build first.");
-  return require(sdkPath);
+  return {
+    ...require(sdkPath),
+    ...require(path.join(ROOT, "dist", "cjs", "profiles.js")),
+    ...require(path.join(ROOT, "dist", "cjs", "workflow.js"))
+  };
 }
 
 function parseOutput(argv) {
   const index = argv.indexOf("--output");
-  return index >= 0 ? argv[index + 1] : "benchmarks/results/2026-08-adoption-evidence.json";
+  return index >= 0 ? argv[index + 1] : "benchmarks/results/2026-09-workflow-adoption-evidence.json";
 }
 
 async function main() {

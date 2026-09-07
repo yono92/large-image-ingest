@@ -21,5 +21,8 @@ describe("first-party React UI stylesheet", () => {
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("animation-duration: 0ms !important");
     expect(css).toContain("font-variant-numeric: tabular-nums");
+    expect(css).toContain(".lii-verified-panel[data-lii-workflow-state=\"preserved\"]");
+    expect(css).toContain(".lii-verified-panel[data-lii-workflow-state=\"reconciliation_required\"]");
+    expect(css).toContain(".lii-verified-details");
   });
 });

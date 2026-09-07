@@ -7,7 +7,7 @@ const protocol = require("../benchmarks/adoption/protocol.cjs") as {
   computeCoverage(candidates: unknown[]): unknown;
   validateReport(report: unknown, options?: { currentInputsDigest?: string }): { ok: boolean; errors: string[] };
 };
-const report = JSON.parse(readFileSync(new URL("../benchmarks/results/2026-08-adoption-evidence.json", import.meta.url), "utf8"));
+const report = JSON.parse(readFileSync(new URL("../benchmarks/results/2026-09-workflow-adoption-evidence.json", import.meta.url), "utf8"));
 
 describe("retained adoption evidence report", () => {
   it("is complete, current, and independently recomputable", () => {
@@ -62,5 +62,7 @@ describe("retained adoption evidence report", () => {
   it("retains line-count regressions alongside responsibility reductions", () => {
     expect(report.aggregates.implementationLineChanges.every((entry: any) => entry.percentage < 0)).toBe(true);
     expect(report.aggregates.responsibilityReductions.every((entry: any) => entry.percentage === 85.71)).toBe(true);
+    expect(report.candidates.find((candidate: any) => candidate.id === "sdk-s3").publicBoundaries)
+      .toContain("verified-workflow");
   });
 });
