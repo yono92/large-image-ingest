@@ -10,6 +10,7 @@ import { createS3MultipartTransport } from "../src/s3";
 import type {
   S3CompletedPart,
   S3MultipartBroker,
+  S3MultipartCreateContext,
   S3MultipartFetch,
   S3MultipartPartContext,
   UploadChunkReceipt,
@@ -44,8 +45,51 @@ describe("createS3MultipartTransport", () => {
     expect(transport.capabilities).toMatchObject({
       resumable: true,
       supportsSnapshotResume: true,
-      supportsPersistentResume: true
+      supportsPersistentResume: true,
+      supportsParallelChunks: true,
+      maxParallelChunks: 16,
+      attestsChunkChecksum: true
     });
+  });
+
+  it("uploads parts in parallel with matching SHA-256 attestations", async () => {
+    const fetch = createFakeS3Fetch();
+    const file = createLargeFile(objectSize);
+    const completed: S3CompletedPart[][] = [];
+    const created: S3MultipartCreateContext[] = [];
+    await createIngestSession(file, {
+      checksum: false,
+      chunking: { chunkSize },
+      parallel: { concurrency: 3 },
+      transport: createS3MultipartTransport({
+        broker: createFakeBroker({
+          onCreate(context) { created.push(context); },
+          onComplete(parts) { completed.push([...parts]); }
+        }),
+        fetch: fetch.fetch
+      })
+    }).start();
+    expect(fetch.requests).toHaveLength(3);
+    expect(fetch.requests.every((request) => request.headers.has("x-amz-checksum-sha256"))).toBe(true);
+    expect(created[0]?.checksum).toEqual({ algorithm: "sha256", mode: "composite" });
+    expect(completed[0]?.map((part) => part.partNumber)).toEqual([1, 2, 3]);
+    expect(completed[0]?.every((part) => part.checksum?.algorithm === "sha256")).toBe(true);
+  });
+
+  it("rejects a successful S3 part response with mismatched SHA-256 attestation", async () => {
+    const fetch: S3MultipartFetch = async () => new Response(null, {
+      status: 200,
+      headers: {
+        ETag: '"mismatch"',
+        "x-amz-checksum-sha256": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+      }
+    });
+    await expect(createIngestSession(createLargeFile(chunkSize), {
+      checksum: false,
+      chunking: { chunkSize },
+      parallel: { concurrency: 2 },
+      transport: createS3MultipartTransport({ broker: createFakeBroker(), fetch })
+    }).start()).rejects.toMatchObject({ code: "checksum.chunk_mismatch", retryable: false });
   });
 
   it("uploads multipart chunks with presigned part URLs and completes with ordered ETag receipts", async () => {
@@ -442,12 +486,12 @@ describe("createS3MultipartTransport", () => {
 function createFakeBroker(options: {
   onAbort?: (receipts: readonly UploadChunkReceipt[]) => void;
   onComplete?: (parts: readonly S3CompletedPart[]) => void;
-  onCreate?: () => void;
+  onCreate?: (context: S3MultipartCreateContext) => void;
   onPart?: (context: S3MultipartPartContext) => void;
 } = {}): S3MultipartBroker {
   return {
-    async createMultipartUpload() {
-      options.onCreate?.();
+    async createMultipartUpload(context) {
+      options.onCreate?.(context);
       return {
         uploadId: "s3-upload-1",
         bucket: "inspection-bucket",
@@ -502,13 +546,16 @@ function createFakeS3Fetch(options: FakeS3FetchOptions = {}): {
         return new Response(null, { status: 503 });
       }
 
+      const sha256 = headers.get("x-amz-checksum-sha256");
       return new Response(null, {
         status: 200,
         headers: options.missingEtag
           ? {}
           : {
               ETag: `"etag-${partNumber}"`,
-              "x-amz-checksum-crc32c": `checksum-${partNumber}`
+              ...(sha256
+                ? { "x-amz-checksum-sha256": sha256 }
+                : { "x-amz-checksum-crc32c": `checksum-${partNumber}` })
             }
       });
     }

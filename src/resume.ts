@@ -24,6 +24,8 @@ import type {
   ResumeRecordStatus,
   ResumeRecordV0_2,
   ResumeRecordV0_3,
+  ResumeRecordV0_4,
+  ParallelUploadState,
   ResumeRecordValidationIssue,
   ResumeRecordValidationResult,
   ResumeTransportState,
@@ -37,6 +39,7 @@ import type {
 const LEGACY_RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.1" as const;
 const RESUME_RECORD_SCHEMA_VERSION_V0_2 = "large-image-ingest.resume.v0.2" as const;
 const RESUME_RECORD_SCHEMA_VERSION = "large-image-ingest.resume.v0.3" as const;
+const RESUME_RECORD_SCHEMA_VERSION_V0_4 = "large-image-ingest.resume.v0.4" as const;
 const RESUME_RECORD_STATUSES = new Set<ResumeRecordStatus>([
   "active",
   "paused",
@@ -347,7 +350,7 @@ export async function classifyPersistentResume(
   ) {
     return compatibility(record, "incompatible", "receipt_missing");
   }
-  if (record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION) {
+  if (record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION || record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_4) {
     return compatibility(record, "resumable", "compatible");
   }
   if (
@@ -368,7 +371,7 @@ function compatibility(
 }
 
 function readTrustedContentIdentity(record: ResumeRecord): ContentSourceIdentityV1 | undefined {
-  if (record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION) {
+  if (record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION || record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_4) {
     return record.file.contentIdentity;
   }
   const checksum = record.manifest.original.checksum;
@@ -409,7 +412,7 @@ export function createResumeRecord(input: {
     ...(input.domainProfile ? { domainProfile: structuredClone(input.domainProfile) } : {}),
     receipts: [],
     progress: {
-      status: "active",
+      status: "active" as const,
       uploadedBytes: 0,
       completedChunkRanges: [],
       nextChunkIndex: 0
@@ -427,16 +430,16 @@ export function createPersistentResumeRecord(input: {
   chunking: ResumeChunkingIdentity;
   transport: ResumeTransportState;
   domainProfile?: DomainProfileReference;
+  parallel?: ParallelUploadState;
   now?: Date;
-}): ResumeRecordV0_3 {
+}): ResumeRecordV0_3 | ResumeRecordV0_4 {
   const now = input.now ?? new Date();
   const timestamp = now.toISOString();
   if (input.file.sizeBytes !== input.contentIdentity.sizeBytes) {
     throw new TypeError("Resume file size and content identity size must match.");
   }
 
-  return {
-    schemaVersion: RESUME_RECORD_SCHEMA_VERSION,
+  const base = {
     id: input.id ?? `resume_${input.manifest.id}`,
     manifest: input.manifest,
     file: {
@@ -448,7 +451,7 @@ export function createPersistentResumeRecord(input: {
     ...(input.domainProfile ? { domainProfile: structuredClone(input.domainProfile) } : {}),
     receipts: [],
     progress: {
-      status: "active",
+      status: "active" as const,
       uploadedBytes: 0,
       completedChunkRanges: [],
       nextChunkIndex: 0
@@ -456,6 +459,14 @@ export function createPersistentResumeRecord(input: {
     createdAt: timestamp,
     updatedAt: timestamp
   };
+  if (input.parallel) {
+    return {
+      schemaVersion: RESUME_RECORD_SCHEMA_VERSION_V0_4,
+      ...base,
+      parallel: structuredClone(input.parallel)
+    };
+  }
+  return { schemaVersion: RESUME_RECORD_SCHEMA_VERSION, ...base };
 }
 
 export function validateResumeRecord(value: unknown): ResumeRecordValidationResult {
@@ -468,7 +479,8 @@ export function validateResumeRecord(value: unknown): ResumeRecordValidationResu
     const record = structuredClone(value) as ResumeRecord;
     if (
       record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_2 ||
-      record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION
+      record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION ||
+      record.schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_4
     ) {
       record.receipts.sort((left, right) => left.chunkIndex - right.chunkIndex);
     }
@@ -549,7 +561,8 @@ function findResumeRecordIssue(value: unknown): ResumeRecordValidationIssue | un
   if (
     value.schemaVersion !== LEGACY_RESUME_RECORD_SCHEMA_VERSION &&
     value.schemaVersion !== RESUME_RECORD_SCHEMA_VERSION_V0_2 &&
-    value.schemaVersion !== RESUME_RECORD_SCHEMA_VERSION
+    value.schemaVersion !== RESUME_RECORD_SCHEMA_VERSION &&
+    value.schemaVersion !== RESUME_RECORD_SCHEMA_VERSION_V0_4
   ) {
     return {
       code: "resume.schema_unsupported",
@@ -608,6 +621,26 @@ function findResumeRecordIssue(value: unknown): ResumeRecordValidationIssue | un
     return progressIssue;
   }
 
+  if (value.schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_4) {
+    if (
+      !isRecord(value.parallel) ||
+      !isPositiveSafeInteger(value.parallel.requestedConcurrency) ||
+      value.parallel.requestedConcurrency < 2 ||
+      value.parallel.requestedConcurrency > 16 ||
+      !isPositiveSafeInteger(value.parallel.effectiveConcurrency) ||
+      value.parallel.effectiveConcurrency > value.parallel.requestedConcurrency ||
+      !isNonEmptyString(value.parallel.policyId) ||
+      !isNonEmptyString(value.parallel.integrityPolicyId) ||
+      !Array.isArray(value.parallel.ambiguousChunkIndexes) ||
+      value.parallel.ambiguousChunkIndexes.some((index) =>
+        !isNonNegativeSafeInteger(index) || index >= chunking.totalChunks
+      ) ||
+      new Set(value.parallel.ambiguousChunkIndexes).size !== value.parallel.ambiguousChunkIndexes.length
+    ) {
+      return invalidRecord("Resume parallel policy is invalid.", "parallel");
+    }
+  }
+
   const progress = value.progress as ResumeRecord["progress"];
   if (value.schemaVersion === LEGACY_RESUME_RECORD_SCHEMA_VERSION) {
     const expectedBytes = completedBytesForRanges(
@@ -651,6 +684,25 @@ function findResumeRecordIssue(value: unknown): ResumeRecordValidationIssue | un
       return invalidReceipt("Resume record contains duplicate chunk receipts.", `receipts[${index}].chunkIndex`);
     }
     receiptIndexes.add(typedReceipt.chunkIndex);
+    if (
+      value.schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_4 &&
+      (!typedReceipt.integrity || typedReceipt.integrity.policyId !== (value.parallel as ParallelUploadState).integrityPolicyId)
+    ) {
+      return invalidReceipt("Parallel resume receipt lacks matching integrity evidence.", `receipts[${index}].integrity`);
+    }
+    if (value.schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_4 && typedReceipt.integrity) {
+      const binding = typedReceipt.integrity.binding;
+      const expectedStart = typedReceipt.chunkIndex * chunking.chunkSizeBytes;
+      if (
+        binding.manifestId !== manifest.id ||
+        binding.uploadId !== (value.transport as ResumeTransportState).uploadId ||
+        binding.sourceIdentity !== (file as ResumeFileIdentity & { contentIdentity: ContentSourceIdentityV1 }).contentIdentity.value ||
+        binding.startByte !== expectedStart ||
+        binding.endByteExclusive !== expectedStart + typedReceipt.sizeBytes
+      ) {
+        return invalidReceipt("Parallel resume receipt integrity scope does not match the record.", `receipts[${index}].integrity.binding`);
+      }
+    }
     receipts.push(typedReceipt);
   }
 
@@ -705,7 +757,7 @@ function validatePersistedFileIdentity(
     return invalidRecord("Resume file lastModified must be a non-negative safe integer.", "file.lastModified");
   }
 
-  if (schemaVersion === RESUME_RECORD_SCHEMA_VERSION) {
+  if (schemaVersion === RESUME_RECORD_SCHEMA_VERSION || schemaVersion === RESUME_RECORD_SCHEMA_VERSION_V0_4) {
     const contentIssue = validatePersistedContentIdentity(value.contentIdentity, value.sizeBytes);
     if (contentIssue) return contentIssue;
   }
@@ -854,6 +906,18 @@ function validatePersistedReceipt(
     return invalidReceipt("Persisted receipt checksum is invalid.", `${path}.checksum`);
   }
 
+  if (value.integrity !== undefined) {
+    if (
+      !isRecord(value.integrity) ||
+      !isNonEmptyString(value.integrity.policyId) ||
+      !isValidChunkIntegrityBinding(value.integrity.binding, value.chunkIndex, value.sizeBytes) ||
+      !isValidChunkChecksumValue(value.integrity.local) ||
+      (value.integrity.remote !== undefined && !isValidChunkChecksumValue(value.integrity.remote))
+    ) {
+      return invalidReceipt("Persisted receipt integrity evidence is invalid.", `${path}.integrity`);
+    }
+  }
+
   if (value.transport.partNumber !== undefined && !isNonNegativeSafeInteger(value.transport.partNumber)) {
     return invalidReceipt("Persisted receipt part number is invalid.", `${path}.transport.partNumber`);
   }
@@ -873,6 +937,27 @@ function validatePersistedReceipt(
   }
 
   return undefined;
+}
+
+function isValidChunkChecksumValue(value: unknown): boolean {
+  return isRecord(value) &&
+    isNonEmptyString(value.algorithm) &&
+    (value.encoding === "hex" || value.encoding === "base64") &&
+    isNonEmptyString(value.value) &&
+    (value.role === "local-calculation" || value.role === "remote-attestation");
+}
+
+function isValidChunkIntegrityBinding(value: unknown, chunkIndex: unknown, sizeBytes: unknown): boolean {
+  return isRecord(value) &&
+    isNonEmptyString(value.manifestId) &&
+    isNonEmptyString(value.uploadId) &&
+    isNonEmptyString(value.sourceIdentity) &&
+    value.chunkIndex === chunkIndex &&
+    isNonNegativeSafeInteger(value.startByte) &&
+    isNonNegativeSafeInteger(value.endByteExclusive) &&
+    value.endByteExclusive >= value.startByte &&
+    value.endByteExclusive - value.startByte === sizeBytes &&
+    value.sizeBytes === sizeBytes;
 }
 
 function completedBytesForRanges(

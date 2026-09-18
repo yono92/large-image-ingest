@@ -51,6 +51,10 @@ The browser can use `large-image-ingest/transport-s3` with an application broker
 - multipart completion and abort
 - lifecycle cleanup for incomplete multipart uploads
 
+For parallel mode, create multipart state with SHA-256 composite checksum semantics, sign or return the `x-amz-checksum-sha256` part-header boundary, and return S3's matching checksum attestation. Completion must forward every consecutive part number and SHA-256 value in canonical order. Treat ETag as an opaque provider receipt. If completion response delivery is ambiguous, reconcile the object before permitting any repeat; never blindly call completion twice.
+
+Persist the SDK's v0.4 sparse receipts and exact transport session together. Same-part retransmission is safe only while the original multipart upload remains authoritative. Do not advertise parallel, sparse recovery, attestation, or completion reconciliation unless the deployed broker path implements and tests that behavior.
+
 Do not return cloud credentials to browser code.
 
 ## NAS Gateway Shape

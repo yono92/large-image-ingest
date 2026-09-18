@@ -2,6 +2,19 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.8.0 Included - Parallel Upload Integrity
+
+Spec Kit artifacts:
+
+- [Parallel upload integrity](../specs/020-parallel-upload-integrity/spec.md)
+
+- [x] Add opt-in bounded concurrency 2–16 with one authoritative lifecycle, unique progress, canonical receipts, and exactly-once completion.
+- [x] Define mandatory local SHA-256 chunk evidence and matching remote attestation for qualified transports without conflating it with whole-file verification.
+- [x] Add sparse content-bound resume v0.4 with parallel/integrity policy identity and pre-mutation validation.
+- [x] Settle pause, cancel, retry, and permanent-failure races before publishing stable outcomes.
+- [x] Qualify provider-neutral and S3 parallel behavior while retaining tus and NAS as explicit sequential paths.
+- [x] Add focused compatibility, integrity, resume, race, conformance, and deterministic 32-chunk latency evidence.
+
 ## 1.7.0 Included - Verified Ingest Control Plane
 
 Spec Kit artifacts:
@@ -131,10 +144,8 @@ Spec Kit artifacts:
 - [x] Add a credential-free HTTP interruption, durable resume, and stored-file verification release gate.
 - [x] Publish reproducible 1 GiB and 3 GiB timing, memory, retransmission, and integrity evidence.
 
-## Future TODO - Advanced Upload Modes
+## Future TODO - Package Evolution
 
-- [ ] Evaluate parallel upload support and its impact on chunk planning, receipt ordering, resume checkpoints, and transport capabilities.
-- [ ] Define per-chunk checksum policy for transports that require provider-specific integrity records.
 - [ ] Assess whether scoped packages are needed after 1.1 API growth.
 - [x] Promote styled upload components into formal scope after headless adapter usage stabilized; implementation is tracked by feature 012.
 

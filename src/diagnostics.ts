@@ -2,6 +2,8 @@ import type {
   IngestEvent,
   IngestIssueCode,
   IngestIssueSeverity,
+  ParallelChunkOutcomeCounts,
+  ParallelUploadState,
   ResumeChunkingIdentity,
   ResumeCleanupOperation,
   ResumeFileIdentity,
@@ -39,6 +41,8 @@ export interface SafeEventSummary {
   progress?: SafeProgressSummary | undefined;
   chunkIndex?: number | undefined;
   attempt?: number | undefined;
+  parallel?: ParallelUploadState | undefined;
+  chunkOutcomes?: ParallelChunkOutcomeCounts | undefined;
   cleanupOperation?: ResumeCleanupOperation | undefined;
   error?: SafeErrorSummary | undefined;
   redactions?: RedactionSummary | undefined;
@@ -60,6 +64,7 @@ export interface RedactedResumeRecord {
     uploadId?: string | undefined;
   };
   progress: ResumeProgress;
+  parallel?: ParallelUploadState | undefined;
   createdAt: string;
   updatedAt: string;
   redactions?: RedactionSummary | undefined;
@@ -99,7 +104,12 @@ export function createSafeEventSummary(event: IngestEvent): SafeEventSummary {
         progress: {
           uploadedBytes: redacted.snapshot.uploadedBytes,
           totalBytes: redacted.snapshot.totalBytes
-        }
+        },
+        ...(redacted.snapshot.parallel ? { parallel: {
+          ...redacted.snapshot.parallel,
+          ambiguousChunkIndexes: [...redacted.snapshot.parallel.ambiguousChunkIndexes]
+        } } : {}),
+        ...(redacted.snapshot.chunkOutcomes ? { chunkOutcomes: { ...redacted.snapshot.chunkOutcomes } } : {})
       }, redacted.redactions?.fields);
     }
 
@@ -113,7 +123,12 @@ export function createSafeEventSummary(event: IngestEvent): SafeEventSummary {
         progress: {
           uploadedBytes: redacted.snapshot.uploadedBytes,
           totalBytes: redacted.snapshot.totalBytes
-        }
+        },
+        ...(redacted.snapshot.parallel ? { parallel: {
+          ...redacted.snapshot.parallel,
+          ambiguousChunkIndexes: [...redacted.snapshot.parallel.ambiguousChunkIndexes]
+        } } : {}),
+        ...(redacted.snapshot.chunkOutcomes ? { chunkOutcomes: { ...redacted.snapshot.chunkOutcomes } } : {})
       }, redacted.redactions?.fields);
     }
 
@@ -222,12 +237,23 @@ export function redactUploadSessionSnapshot(snapshot: UploadSessionSnapshot): Re
     completedChunks: snapshot.completedChunks.map((receipt) => ({
       ...receipt,
       checksum: receipt.checksum ? { ...receipt.checksum } : undefined,
+      integrity: receipt.integrity ? {
+        ...receipt.integrity,
+        binding: { ...receipt.integrity.binding },
+        local: { ...receipt.integrity.local },
+        remote: receipt.integrity.remote ? { ...receipt.integrity.remote } : undefined
+      } : undefined,
       transport: {
         ...receipt.transport,
         opaque: receipt.transport.opaque ? { ...receipt.transport.opaque } : undefined
       }
     })),
     failedChunk: snapshot.failedChunk ? { ...snapshot.failedChunk } : undefined,
+    parallel: snapshot.parallel ? {
+      ...snapshot.parallel,
+      ambiguousChunkIndexes: [...snapshot.parallel.ambiguousChunkIndexes]
+    } : undefined,
+    chunkOutcomes: snapshot.chunkOutcomes ? { ...snapshot.chunkOutcomes } : undefined,
     error: snapshot.error ? { ...snapshot.error } : undefined,
     redactions: snapshot.redactions
       ? {
@@ -298,7 +324,7 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
   const redactions = ["resume.manifest"];
   const transport: RedactedResumeRecord["transport"] = {};
 
-  if (record.schemaVersion === "large-image-ingest.resume.v0.3") {
+  if (record.schemaVersion === "large-image-ingest.resume.v0.3" || record.schemaVersion === "large-image-ingest.resume.v0.4") {
     redactions.push("resume.file.contentIdentity");
   }
 
@@ -339,6 +365,12 @@ export function redactResumeRecord(record: ResumeRecord): RedactedResumeRecord {
       ...record.progress,
       completedChunkRanges: record.progress.completedChunkRanges.map((range) => ({ ...range }))
     },
+    ...(record.schemaVersion === "large-image-ingest.resume.v0.4"
+      ? { parallel: {
+          ...record.parallel,
+          ambiguousChunkIndexes: [...record.parallel.ambiguousChunkIndexes]
+        } }
+      : {}),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     redactions: {

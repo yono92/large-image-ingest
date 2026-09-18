@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.8.0 - 2026-09-18
+
+- Add opt-in bounded parallel upload with requested concurrency 2–16, transport ceilings, canonical receipts, unique acknowledged-byte progress, attempt identity, fail-fast sibling interruption, and settled pause/cancel behavior.
+- Add mandatory per-chunk SHA-256 evidence for parallel transfer, exact source/range/session bindings, Base64/hex normalization, typed integrity failures, and receipt verification that remains distinct from whole-file and stored-original verification.
+- Add content-bound sparse resume schema `large-image-ingest.resume.v0.4`, rejecting source, chunk-plan, parallel-policy, integrity-policy, and evidence mutations before remote resume calls while retaining v0.1–v0.3 sequential behavior.
+- Qualify S3 multipart parallel transfer with SHA-256 composite negotiation, signed part headers, matching response attestations, consecutive canonical completion, and credential-free conformance evidence; tus and NAS remain explicitly sequential.
+- Add focused scheduling, integrity, restart, lifecycle-race, S3, compatibility, and 32-chunk latency qualification coverage.
+
 ## 1.7.0 - 2026-09-08
 
 - Add the opt-in browser-safe `large-image-ingest/workflow` facade that orders explicit domain-policy evaluation, the existing authoritative resumable session, independent stored-original verification, provenance sealing, durable evidence persistence, and optional preservation.

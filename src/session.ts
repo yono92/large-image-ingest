@@ -1,5 +1,7 @@
 ﻿import { planChunks } from "./chunks.js";
 import { createManifest } from "./manifest.js";
+import { calculateBlobSha256, checksumValuesEqual } from "./checksum.js";
+import { ChunkIntegrityError } from "./errors.js";
 import {
   domainProfileReferencesEqual,
   validateDomainProfileSessionBinding
@@ -28,6 +30,7 @@ import {
 } from "./resume.js";
 import type {
   ChunkDescriptor,
+  ChunkIntegrityEvidence,
   ChunkPlan,
   CompletedChunkRange,
   ContentSourceIdentityV1,
@@ -57,10 +60,15 @@ import type {
 } from "./types.js";
 
 const CURRENT_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.3";
+const PARALLEL_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.4";
+const PARALLEL_POLICY_ID = "parallel-worker-pool-v1";
+const CHUNK_INTEGRITY_POLICY_ID = "chunk-sha256-base64-v1";
 
 interface NormalizedUploadChunkResult {
   receipt: UploadChunkReceipt;
   transportResult?: UploadChunkResult | undefined;
+  attemptId?: string | undefined;
+  attemptNumber?: number | undefined;
 }
 
 interface NormalizedRetryPolicy {
@@ -80,7 +88,12 @@ export class LargeImageIngestSession {
   private currentTransportSession: TransportSession | undefined;
   private lifecycleAction: "pause" | "cancel" | undefined;
   private resumeSourceIdentity: ContentSourceIdentityV1 | undefined;
+  private parallelSourceIdentity: ContentSourceIdentityV1 | undefined;
   private readonly completedReceipts = new Map<number, UploadChunkReceipt>();
+  private readonly inFlightChunks = new Set<number>();
+  private readonly retryableChunks = new Set<number>();
+  private readonly failedChunks = new Set<number>();
+  private readonly ambiguousChunks = new Set<number>();
 
   constructor(
     private readonly file: IngestFileLike,
@@ -106,9 +119,8 @@ export class LargeImageIngestSession {
       this.abortController.abort(reason ?? new UploadCanceledError(this.currentRecord?.id));
     }
 
-    if (this.currentRecord) {
-      this.currentRecord = await this.markRecordCanceled(this.currentRecord);
-    }
+    // The running authority publishes cancellation after every worker and
+    // serialized receipt commit has settled.
   }
 
   getSnapshot(): UploadSessionSnapshot | undefined {
@@ -137,10 +149,16 @@ export class LargeImageIngestSession {
 
       chunkPlan = planChunks(this.file.size, this.options.chunking);
       validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
+      this.validateParallelAdmission();
       this.validateRequestedResumeCapability();
       if (this.options.resume && !this.options.resumeFrom) {
         contentIdentity = await this.prepareContentSourceIdentity(manifest);
       }
+      if (this.options.parallel) {
+        contentIdentity ??= await this.prepareContentSourceIdentity(manifest);
+        this.parallelSourceIdentity = contentIdentity;
+      }
+      await this.validateParallelSnapshot(manifest, chunkPlan);
       this.hydrateResumeSnapshot(manifest, chunkPlan);
 
       const session = await this.createOrResumeSnapshotSession(manifest, chunkPlan);
@@ -200,7 +218,12 @@ export class LargeImageIngestSession {
         );
       }
 
+      chunkPlan = planChunks(this.file.size, this.options.chunking);
+      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
+      this.validateParallelAdmission();
+      this.validateParallelResume(record, chunkPlan);
       this.resumeSourceIdentity = await this.validateResumeRecord(record, store);
+      this.parallelSourceIdentity = this.resumeSourceIdentity;
 
       let session: TransportSession;
       try {
@@ -239,19 +262,18 @@ export class LargeImageIngestSession {
       }
 
       this.currentTransportSession = session;
+      this.hydrateResumeRecord(record, chunkPlan, session);
+      const reconciledRecord = await this.reconcileParallelResume(record, manifest, session, chunkPlan);
       manifest.upload.transport = { name: session.transportName };
       const activeRecord = await this.putResumeRecord(
         this.withTransport(
-          this.withStatus(record, "active"),
-          mergeTransportState(record.transport, this.createTransportState(session))
+          this.withStatus(reconciledRecord, "active"),
+          mergeTransportState(reconciledRecord.transport, this.createTransportState(session))
         )
       );
 
       this.emit({ type: "resume:started", recordId: activeRecord.id, manifestId: manifest.id });
 
-      chunkPlan = planChunks(this.file.size, this.options.chunking);
-      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
-      this.hydrateResumeRecord(activeRecord, chunkPlan, session);
       this.updateSnapshot({
         manifest,
         chunkPlan,
@@ -283,7 +305,8 @@ export class LargeImageIngestSession {
     const context = {
       manifest,
       file: this.file,
-      signal: this.abortController.signal
+      signal: this.abortController.signal,
+      ...(this.options.parallel ? { parallel: this.parallelState(chunkPlan) } : {})
     };
     const fallbackTransportName = this.transportName();
 
@@ -404,6 +427,9 @@ export class LargeImageIngestSession {
       contentIdentity,
       chunking: createResumeChunkingIdentity(this.file.size, this.options.chunking),
       transport: this.createTransportState(session),
+      ...(this.options.parallel
+        ? { parallel: this.parallelState(planChunks(this.file.size, this.options.chunking))! }
+        : {}),
       ...(this.options.domainProfile
         ? { domainProfile: this.options.domainProfile.profile }
         : {})
@@ -543,6 +569,10 @@ export class LargeImageIngestSession {
       );
     }
 
+    if (record.schemaVersion === PARALLEL_RESUME_SCHEMA_VERSION) {
+      await this.validatePersistedParallelEvidence(record);
+    }
+
     this.currentRecord = record;
     void store;
     return sourceIdentity;
@@ -555,6 +585,9 @@ export class LargeImageIngestSession {
     record: ResumeRecord | undefined,
     snapshotCreatedAt: string
   ): Promise<ResumeRecord | undefined> {
+    if (this.options.parallel) {
+      return this.uploadRemainingChunksParallel(manifest, session, chunkPlan, record, snapshotCreatedAt);
+    }
     let activeRecord = record;
 
     for (const chunk of chunkPlan.chunks) {
@@ -564,7 +597,6 @@ export class LargeImageIngestSession {
 
       this.throwIfStopped();
       this.emit({ type: "chunk:started", manifestId: manifest.id, chunk });
-
       const result = await this.uploadChunkWithRetry(manifest, session, chunk);
       this.storeReceipt(chunk, result.receipt);
 
@@ -594,6 +626,72 @@ export class LargeImageIngestSession {
     return activeRecord;
   }
 
+  private async uploadRemainingChunksParallel(
+    manifest: IngestManifest,
+    session: TransportSession,
+    chunkPlan: ChunkPlan,
+    record: ResumeRecord | undefined,
+    snapshotCreatedAt: string
+  ): Promise<ResumeRecord | undefined> {
+    const remaining = chunkPlan.chunks.filter((chunk) => !this.completedReceipts.has(chunk.index));
+    let cursor = 0;
+    let activeRecord = record;
+    let failure: unknown;
+    let commitQueue = Promise.resolve();
+
+    const commit = (chunk: ChunkDescriptor, result: NormalizedUploadChunkResult): Promise<void> => {
+      const next = commitQueue.then(async () => {
+        if (this.completedReceipts.has(chunk.index)) return;
+        this.storeReceipt(chunk, result.receipt);
+        if (activeRecord) activeRecord = await this.checkpointChunk(activeRecord, chunk, chunkPlan, result.transportResult);
+        const uploadedBytes = calculateUploadedBytes(this.sortedReceipts());
+        this.emit({
+          type: "chunk:completed",
+          manifestId: manifest.id,
+          chunk,
+          uploadedBytes,
+          totalBytes: this.file.size,
+          ...(result.attemptId && result.attemptNumber !== undefined
+            ? { attemptId: result.attemptId, attemptNumber: result.attemptNumber }
+            : {})
+        });
+        this.updateSnapshot({ manifest, chunkPlan, session, status: "uploading", createdAt: snapshotCreatedAt });
+      });
+      commitQueue = next.catch(() => undefined);
+      return next;
+    };
+
+    const worker = async (): Promise<void> => {
+      while (!failure && cursor < remaining.length) {
+        if (this.abortController.signal.aborted) {
+          failure ??= this.abortController.signal.reason;
+          return;
+        }
+        const chunk = remaining[cursor++];
+        if (!chunk) return;
+        try {
+          const integrity = await this.createChunkIntegrity(manifest, session, chunk);
+          const result = await this.uploadChunkWithRetry(manifest, session, chunk, integrity);
+          await commit(chunk, result);
+        } catch (error) {
+          if (!failure) {
+            failure = error;
+            if (this.lifecycleAction) this.ambiguousChunks.add(chunk.index);
+            else this.failedChunks.add(chunk.index);
+            if (!this.abortController.signal.aborted) this.abortController.abort(error);
+          } else if (!this.completedReceipts.has(chunk.index)) {
+            this.ambiguousChunks.add(chunk.index);
+          }
+        }
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(this.effectiveConcurrency(chunkPlan), remaining.length) }, () => worker()));
+    await commitQueue;
+    if (failure) throw failure;
+    return activeRecord;
+  }
+
   private async checkpointChunk(
     record: ResumeRecord,
     chunk: ChunkDescriptor,
@@ -618,30 +716,34 @@ export class LargeImageIngestSession {
     const transport = result ? mergeTransportState(record.transport, result) : record.transport;
     const updatedAt = nowIso();
     let nextRecord: ResumeRecord;
-    if (record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION) {
-      nextRecord = {
+    if (record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION || record.schemaVersion === PARALLEL_RESUME_SCHEMA_VERSION) {
+      nextRecord = ({
         ...record,
+        ...(record.schemaVersion === PARALLEL_RESUME_SCHEMA_VERSION
+          ? { parallel: { ...record.parallel, ambiguousChunkIndexes: [...this.ambiguousChunks].sort((a, b) => a - b) } }
+          : {}),
         transport,
         receipts: this.sortedReceipts().map(cloneReceipt),
         progress,
         updatedAt
-      };
+      } as ResumeRecord);
     } else if (
       this.resumeSourceIdentity &&
       (record.schemaVersion === "large-image-ingest.resume.v0.2" || record.progress.uploadedBytes === 0)
     ) {
-      nextRecord = {
+      nextRecord = ({
         ...record,
-        schemaVersion: CURRENT_RESUME_SCHEMA_VERSION,
+        schemaVersion: this.options.parallel ? PARALLEL_RESUME_SCHEMA_VERSION : CURRENT_RESUME_SCHEMA_VERSION,
         file: {
           ...record.file,
           contentIdentity: { ...this.resumeSourceIdentity }
         },
         transport,
         receipts: this.sortedReceipts().map(cloneReceipt),
+        ...(this.options.parallel ? { parallel: this.parallelState(chunkPlan)! } : {}),
         progress,
         updatedAt
-      };
+      } as ResumeRecord);
     } else {
       nextRecord = {
         ...record,
@@ -664,13 +766,21 @@ export class LargeImageIngestSession {
   private async uploadChunkWithRetry(
     manifest: IngestManifest,
     session: TransportSession,
-    chunk: ChunkDescriptor
+    chunk: ChunkDescriptor,
+    integrity?: ChunkIntegrityEvidence
   ): Promise<NormalizedUploadChunkResult> {
     const retryPolicy = normalizeRetryPolicy(this.options.retryPolicy, this.options.retries);
 
     for (let attempt = 0; attempt < retryPolicy.maxAttempts; attempt += 1) {
+      const attemptNumber = attempt + 1;
+      const attemptId = `${manifest.id}:${chunk.index}:${attemptNumber}`;
       try {
         this.throwIfStopped();
+        this.retryableChunks.delete(chunk.index);
+        this.inFlightChunks.add(chunk.index);
+        if (this.options.parallel) {
+          this.emit({ type: "chunk:started", manifestId: manifest.id, chunk, attemptId, attemptNumber });
+        }
         const result = await this.options.transport.uploadChunk({
           manifest,
           file: this.file,
@@ -679,11 +789,21 @@ export class LargeImageIngestSession {
           chunk,
           body: this.file.slice(chunk.start, chunk.end),
           session,
-          previousReceipts: this.sortedReceipts()
+          previousReceipts: this.sortedReceipts(),
+          ...(this.options.parallel ? { attemptId, attemptNumber } : {}),
+          ...(integrity ? { integrity } : {})
         });
 
-        return normalizeChunkResult(chunk, session, result);
+        const normalized = normalizeChunkResult(chunk, session, result);
+        if (integrity) normalized.receipt.integrity = this.validateChunkIntegrity(integrity, normalized.receipt);
+        if (this.options.parallel) {
+          normalized.attemptId = attemptId;
+          normalized.attemptNumber = attemptNumber;
+        }
+        this.inFlightChunks.delete(chunk.index);
+        return normalized;
       } catch (error) {
+        this.inFlightChunks.delete(chunk.index);
         if (this.lifecycleAction === "cancel") {
           throw new UploadCanceledError(this.currentRecord?.id);
         }
@@ -713,7 +833,8 @@ export class LargeImageIngestSession {
           throw error;
         }
 
-        this.emit({ type: "retry", manifestId: manifest.id, chunk, attempt: attempt + 1, error });
+        this.retryableChunks.add(chunk.index);
+        this.emit({ type: "retry", manifestId: manifest.id, chunk, attempt: attemptNumber, attemptId, error });
         await this.waitForRetryDelay(calculateRetryDelay(retryPolicy, attempt + 1));
       }
     }
@@ -757,6 +878,13 @@ export class LargeImageIngestSession {
     snapshotCreatedAt: string
   ): Promise<void> {
     this.throwIfStopped();
+    if (this.completedReceipts.size !== chunkPlan.totalChunks) {
+      throw createIngestError(
+        "transport.receipt_missing",
+        "Upload cannot complete until every planned chunk has one authoritative receipt.",
+        false
+      );
+    }
     this.updateSnapshot({
       manifest,
       chunkPlan,
@@ -869,8 +997,14 @@ export class LargeImageIngestSession {
   ): void {
     if (
       record.schemaVersion === "large-image-ingest.resume.v0.2" ||
-      record.schemaVersion === CURRENT_RESUME_SCHEMA_VERSION
+      record.schemaVersion === "large-image-ingest.resume.v0.3" ||
+      record.schemaVersion === PARALLEL_RESUME_SCHEMA_VERSION
     ) {
+      if (record.schemaVersion === PARALLEL_RESUME_SCHEMA_VERSION) {
+        for (const chunkIndex of record.parallel.ambiguousChunkIndexes) {
+          this.ambiguousChunks.add(chunkIndex);
+        }
+      }
       for (const receipt of record.receipts) {
         const chunk = chunkPlan.chunks[receipt.chunkIndex];
         if (!chunk) {
@@ -1007,6 +1141,290 @@ export class LargeImageIngestSession {
     );
   }
 
+  private validateParallelAdmission(): void {
+    const parallel = this.options.parallel;
+    if (!parallel) return;
+    if (!Number.isSafeInteger(parallel.concurrency) || parallel.concurrency < 2 || parallel.concurrency > 16) {
+      throw createIngestError("session.invalid_state", "parallel.concurrency must be an integer from 2 through 16.", false);
+    }
+    const capabilities = this.options.transport.capabilities;
+    if (!capabilities?.supportsParallelChunks) {
+      throw createIngestError("session.invalid_state", "The selected transport does not support parallel chunks.", false);
+    }
+    if (capabilities.maxParallelChunks !== undefined && (
+      !Number.isSafeInteger(capabilities.maxParallelChunks) || capabilities.maxParallelChunks < 1
+    )) {
+      throw createIngestError("session.invalid_state", "The transport parallel ceiling is invalid.", false);
+    }
+    if (capabilities.chunkChecksumAlgorithms && !capabilities.chunkChecksumAlgorithms.includes("sha256")) {
+      throw new ChunkIntegrityError("checksum.chunk_unsupported", "The selected transport does not support SHA-256 chunk checksums.");
+    }
+    if (capabilities.chunkChecksumEncodings && !capabilities.chunkChecksumEncodings.includes("base64")) {
+      throw new ChunkIntegrityError("checksum.chunk_unsupported", "The selected transport does not support Base64 chunk checksums.");
+    }
+    if (
+      !capabilities.supportsSafeChunkRepeat &&
+      !(capabilities.supportsRemoteChunkReconciliation && this.options.transport.reconcileChunks)
+    ) {
+      throw createIngestError(
+        "resume.transport_unsupported",
+        "Parallel upload requires sparse resume support or safe chunk repetition.",
+        false
+      );
+    }
+  }
+
+  private effectiveConcurrency(chunkPlan: ChunkPlan, remainingChunks = chunkPlan.totalChunks): number {
+    const requested = this.options.parallel?.concurrency ?? 1;
+    return Math.min(
+      requested,
+      this.options.transport.capabilities?.maxParallelChunks ?? requested,
+      Math.max(0, remainingChunks)
+    );
+  }
+
+  private parallelState(chunkPlan: ChunkPlan, remainingChunks = chunkPlan.totalChunks) {
+    if (!this.options.parallel) return undefined;
+    return {
+      requestedConcurrency: this.options.parallel.concurrency,
+      effectiveConcurrency: this.effectiveConcurrency(chunkPlan, remainingChunks),
+      policyId: PARALLEL_POLICY_ID,
+      integrityPolicyId: CHUNK_INTEGRITY_POLICY_ID,
+      ambiguousChunkIndexes: [...this.ambiguousChunks].sort((a, b) => a - b)
+    };
+  }
+
+  private validateParallelResume(record: ResumeRecord, chunkPlan: ChunkPlan): void {
+    if (!this.options.parallel) {
+      if (record.schemaVersion === "large-image-ingest.resume.v0.4") {
+        throw this.emitResumeConflict("resume.chunking_mismatch", "Parallel resume requires the original parallel policy.", record.id);
+      }
+      return;
+    }
+    if (record.schemaVersion !== "large-image-ingest.resume.v0.4") {
+      if (record.progress.uploadedBytes > 0) {
+        throw this.emitResumeConflict("resume.chunking_mismatch", "Legacy progress cannot be promoted to parallel resume without integrity evidence.", record.id);
+      }
+      return;
+    }
+    const expected = this.parallelState(chunkPlan);
+    if (
+      !expected ||
+      record.parallel.policyId !== expected.policyId ||
+      record.parallel.integrityPolicyId !== expected.integrityPolicyId ||
+      record.parallel.requestedConcurrency !== expected.requestedConcurrency
+    ) {
+      throw this.emitResumeConflict("resume.chunking_mismatch", "Parallel resume policy does not match the persisted record.", record.id);
+    }
+  }
+
+  private async validatePersistedParallelEvidence(
+    record: Extract<ResumeRecord, { schemaVersion: "large-image-ingest.resume.v0.4" }>
+  ): Promise<void> {
+    for (const receipt of record.receipts) {
+      const binding = receipt.integrity?.binding;
+      if (!receipt.integrity || !binding) {
+        throw this.emitResumeConflict("resume.receipt_invalid", "Parallel resume receipt lacks integrity evidence.", record.id);
+      }
+      const actual = await calculateBlobSha256(this.file.slice(binding.startByte, binding.endByteExclusive), {
+        encoding: receipt.integrity.local.encoding,
+        signal: this.abortController.signal
+      });
+      let matches = false;
+      try {
+        matches = checksumValuesEqual(actual, receipt.integrity.local);
+      } catch {
+        // Invalid encodings are persisted-record conflicts, not retryable transfer errors.
+      }
+      if (!matches) {
+        throw this.emitResumeConflict("resume.receipt_invalid", "Parallel resume checksum evidence does not match the selected source.", record.id);
+      }
+      if (this.options.transport.capabilities?.attestsChunkChecksum && !receipt.integrity.remote) {
+        throw this.emitResumeConflict("resume.receipt_invalid", "Parallel resume receipt lacks required remote attestation.", record.id);
+      }
+    }
+  }
+
+  private async reconcileParallelResume(
+    record: ResumeRecord,
+    manifest: IngestManifest,
+    session: TransportSession,
+    chunkPlan: ChunkPlan
+  ): Promise<ResumeRecord> {
+    if (record.schemaVersion !== PARALLEL_RESUME_SCHEMA_VERSION) {
+      return record;
+    }
+    this.ambiguousChunks.clear();
+    if (
+      !this.options.transport.capabilities?.supportsRemoteChunkReconciliation ||
+      !this.options.transport.reconcileChunks
+    ) {
+      return {
+        ...record,
+        parallel: { ...record.parallel, ambiguousChunkIndexes: [] }
+      };
+    }
+    const remoteReceipts = await this.options.transport.reconcileChunks({
+      manifest,
+      file: this.file,
+      signal: this.abortController.signal,
+      uploadId: session.uploadId,
+      session,
+      chunkPlan,
+      localReceipts: this.sortedReceipts()
+    });
+    const seen = new Set<number>();
+    for (const receipt of remoteReceipts) {
+      const chunk = chunkPlan.chunks[receipt.chunkIndex];
+      if (!chunk || seen.has(receipt.chunkIndex)) {
+        throw this.emitResumeConflict("resume.receipt_invalid", "Remote reconciliation returned duplicate or out-of-plan evidence.", record.id);
+      }
+      seen.add(receipt.chunkIndex);
+      const local = await this.createChunkIntegrity(manifest, session, chunk);
+      const validated = validateReceipt(chunk, receipt);
+      validateReceiptTransport(validated, session.transportName);
+      validated.integrity = this.validateChunkIntegrity(local, validated);
+      const persisted = this.completedReceipts.get(chunk.index);
+      if (persisted && !receiptsDescribeSameRemoteChunk(persisted, validated)) {
+        throw this.emitResumeConflict("resume.receipt_invalid", "Local and remote chunk evidence conflict.", record.id);
+      }
+      this.completedReceipts.set(chunk.index, validated);
+    }
+    for (const receipt of record.receipts) {
+      if (!seen.has(receipt.chunkIndex)) {
+        throw this.emitResumeConflict("resume.receipt_invalid", "Remote reconciliation is missing a persisted acknowledged chunk.", record.id);
+      }
+    }
+    const receipts = this.sortedReceipts();
+    const completedChunkRanges = receiptsToRanges(receipts);
+    return {
+      ...record,
+      receipts,
+      parallel: { ...record.parallel, ambiguousChunkIndexes: [] },
+      progress: {
+        ...record.progress,
+        uploadedBytes: calculateUploadedBytes(receipts),
+        completedChunkRanges,
+        nextChunkIndex: getNextIncompleteChunkIndex(completedChunkRanges, chunkPlan.totalChunks)
+      },
+      updatedAt: nowIso()
+    };
+  }
+
+  private async validateParallelSnapshot(manifest: IngestManifest, chunkPlan: ChunkPlan): Promise<void> {
+    const snapshot = this.options.resumeFrom;
+    if (!snapshot) return;
+    if (!this.options.parallel) {
+      if (snapshot.parallel) {
+        throw createIngestError("transport.resume_failed", "Parallel snapshot requires the original parallel policy.", false);
+      }
+      return;
+    }
+    const expected = this.parallelState(chunkPlan);
+    if (
+      !snapshot.parallel ||
+      !expected ||
+      snapshot.parallel.requestedConcurrency !== expected.requestedConcurrency ||
+      snapshot.parallel.policyId !== expected.policyId ||
+      snapshot.parallel.integrityPolicyId !== expected.integrityPolicyId
+    ) {
+      throw createIngestError("transport.resume_failed", "Snapshot parallel policy does not match the active policy.", false);
+    }
+    for (const receipt of snapshot.completedChunks) {
+      const chunk = chunkPlan.chunks[receipt.chunkIndex];
+      const integrity = receipt.integrity;
+      if (!chunk || !integrity || integrity.policyId !== CHUNK_INTEGRITY_POLICY_ID) {
+        throw new ChunkIntegrityError("checksum.chunk_missing", "Parallel snapshot receipt lacks required integrity evidence.");
+      }
+      const binding = integrity.binding;
+      if (
+        binding.manifestId !== manifest.id ||
+        binding.uploadId !== snapshot.transportSession?.uploadId ||
+        binding.sourceIdentity !== this.requireParallelSourceIdentity() ||
+        binding.chunkIndex !== chunk.index ||
+        binding.startByte !== chunk.start ||
+        binding.endByteExclusive !== chunk.end ||
+        binding.sizeBytes !== chunk.size
+      ) {
+        throw new ChunkIntegrityError("checksum.chunk_mismatch", "Parallel snapshot integrity scope does not match the active source.");
+      }
+      const actual = await calculateBlobSha256(this.file.slice(chunk.start, chunk.end), {
+        encoding: integrity.local.encoding,
+        signal: this.abortController.signal
+      });
+      try {
+        if (!checksumValuesEqual(actual, integrity.local)) {
+          throw new ChunkIntegrityError("checksum.chunk_mismatch", "Parallel snapshot checksum does not match the active source.");
+        }
+      } catch (error) {
+        if (isIngestError(error)) throw error;
+        throw new ChunkIntegrityError("checksum.chunk_mismatch", "Parallel snapshot checksum evidence is malformed.");
+      }
+    }
+  }
+
+  private async createChunkIntegrity(
+    manifest: IngestManifest,
+    session: TransportSession,
+    chunk: ChunkDescriptor
+  ): Promise<ChunkIntegrityEvidence> {
+    const checksum = await calculateBlobSha256(this.file.slice(chunk.start, chunk.end), {
+      encoding: "base64",
+      signal: this.abortController.signal
+    });
+    return {
+      policyId: CHUNK_INTEGRITY_POLICY_ID,
+      binding: {
+        manifestId: manifest.id,
+        uploadId: session.uploadId,
+        sourceIdentity: this.requireParallelSourceIdentity(),
+        chunkIndex: chunk.index,
+        startByte: chunk.start,
+        endByteExclusive: chunk.end,
+        sizeBytes: chunk.size
+      },
+      local: { ...checksum, role: "local-calculation" }
+    };
+  }
+
+  private requireParallelSourceIdentity(): string {
+    if (!this.parallelSourceIdentity) {
+      throw new ChunkIntegrityError("checksum.chunk_missing", "Parallel upload requires an exact source identity.");
+    }
+    return this.parallelSourceIdentity.value;
+  }
+
+  private validateChunkIntegrity(local: ChunkIntegrityEvidence, receipt: UploadChunkReceipt): ChunkIntegrityEvidence {
+    if (receipt.integrity && (
+      receipt.integrity.policyId !== local.policyId ||
+      JSON.stringify(receipt.integrity.binding) !== JSON.stringify(local.binding)
+    )) {
+      throw new ChunkIntegrityError("checksum.chunk_mismatch", "Transport chunk checksum scope does not match the requested chunk.");
+    }
+    const remote = receipt.integrity?.remote ?? (receipt.checksum ? {
+      algorithm: receipt.checksum.algorithm,
+      encoding: "base64" as const,
+      value: receipt.checksum.value,
+      role: "remote-attestation" as const
+    } : undefined);
+    if (this.options.transport.capabilities?.attestsChunkChecksum) {
+      if (!remote) throw new ChunkIntegrityError("checksum.chunk_missing", "Transport did not attest the chunk checksum.");
+      if (remote.role !== "remote-attestation" || remote.algorithm !== "sha256") {
+        throw new ChunkIntegrityError("checksum.chunk_unsupported", "Transport returned unsupported chunk checksum evidence.");
+      }
+      let matches = false;
+      try {
+        matches = checksumValuesEqual(local.local, remote);
+      } catch {
+        throw new ChunkIntegrityError("checksum.chunk_mismatch", "Transport returned malformed chunk checksum evidence.");
+      }
+      if (!matches) {
+        throw new ChunkIntegrityError("checksum.chunk_mismatch", "Transport chunk checksum does not match the local checksum.");
+      }
+    }
+    return { ...local, ...(remote ? { remote } : {}) };
+  }
+
   private updateSnapshot(options: {
     manifest: IngestManifest;
     chunkPlan: ChunkPlan;
@@ -1028,6 +1446,24 @@ export class LargeImageIngestSession {
       createdAt: options.createdAt,
       updatedAt: nowIso()
     };
+    const parallel = this.parallelState(
+      options.chunkPlan,
+      Math.max(0, options.chunkPlan.totalChunks - this.completedReceipts.size)
+    );
+    if (parallel) {
+      snapshot.parallel = parallel;
+      snapshot.chunkOutcomes = {
+        missing: Math.max(
+          0,
+          options.chunkPlan.totalChunks - this.completedReceipts.size - this.inFlightChunks.size - this.retryableChunks.size - this.ambiguousChunks.size - this.failedChunks.size
+        ),
+        inFlight: this.inFlightChunks.size,
+        acknowledged: this.completedReceipts.size,
+        retryable: this.retryableChunks.size,
+        ambiguous: this.ambiguousChunks.size,
+        failed: this.failedChunks.size
+      };
+    }
 
     if (options.error !== undefined) {
       snapshot.error = toSnapshotError(options.error);
@@ -1127,6 +1563,9 @@ export class LargeImageIngestSession {
 
     return {
       ...record,
+      ...(record.schemaVersion === PARALLEL_RESUME_SCHEMA_VERSION
+        ? { parallel: { ...record.parallel, ambiguousChunkIndexes: [...this.ambiguousChunks].sort((a, b) => a - b) } }
+        : {}),
       progress,
       updatedAt: nowIso()
     };
@@ -1445,8 +1884,10 @@ function normalizeChunkResult(
   result: void | UploadChunkResult | UploadChunkReceipt
 ): NormalizedUploadChunkResult {
   if (isUploadChunkReceipt(result)) {
+    const receipt = validateReceipt(chunk, result);
+    validateReceiptTransport(receipt, session.transportName);
     return {
-      receipt: validateReceipt(chunk, result)
+      receipt
     };
   }
 
@@ -1591,6 +2032,17 @@ function validateReceipt(
   return receipt;
 }
 
+function validateReceiptTransport(receipt: UploadChunkReceipt, expectedTransportName: string): void {
+  if (receipt.transport.name !== expectedTransportName) {
+    throw createIngestError(
+      "transport.receipt_invalid",
+      "Transport receipt identity does not match the active upload session.",
+      false,
+      { chunkIndex: receipt.chunkIndex }
+    );
+  }
+}
+
 function receiptsToRanges(receipts: readonly UploadChunkReceipt[]): CompletedChunkRange[] {
   return receipts
     .slice()
@@ -1627,6 +2079,11 @@ function cloneSnapshot(snapshot: UploadSessionSnapshot): UploadSessionSnapshot {
     },
     completedChunks: snapshot.completedChunks.map(cloneReceipt),
     failedChunk: snapshot.failedChunk ? { ...snapshot.failedChunk } : undefined,
+    parallel: snapshot.parallel ? {
+      ...snapshot.parallel,
+      ambiguousChunkIndexes: [...snapshot.parallel.ambiguousChunkIndexes]
+    } : undefined,
+    chunkOutcomes: snapshot.chunkOutcomes ? { ...snapshot.chunkOutcomes } : undefined,
     error: snapshot.error ? { ...snapshot.error } : undefined,
     redactions: snapshot.redactions
       ? {
@@ -1699,11 +2156,29 @@ function cloneReceipt(receipt: UploadChunkReceipt): UploadChunkReceipt {
   return {
     ...receipt,
     checksum: receipt.checksum ? { ...receipt.checksum } : undefined,
+      integrity: receipt.integrity ? {
+        ...receipt.integrity,
+        binding: { ...receipt.integrity.binding },
+        local: { ...receipt.integrity.local },
+      remote: receipt.integrity.remote ? { ...receipt.integrity.remote } : undefined
+    } : undefined,
     transport: {
       ...receipt.transport,
       opaque: cloneRecord(receipt.transport.opaque)
     }
   };
+}
+
+function receiptsDescribeSameRemoteChunk(
+  left: UploadChunkReceipt,
+  right: UploadChunkReceipt
+): boolean {
+  return left.chunkIndex === right.chunkIndex &&
+    left.sizeBytes === right.sizeBytes &&
+    left.transport.name === right.transport.name &&
+    left.transport.partNumber === right.transport.partNumber &&
+    left.transport.etag === right.transport.etag &&
+    JSON.stringify(left.integrity) === JSON.stringify(right.integrity);
 }
 
 function cloneRecord<T extends Record<string, unknown> | undefined>(record: T): T {

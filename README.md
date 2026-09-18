@@ -67,8 +67,9 @@ The application owns transport credentials/broker policy, stored verification, c
 - File validation for size, MIME type, extension, metadata, dimensions, and checksum mismatch
 - Whole-file SHA-256 checksums using bounded `Blob.slice` reads, cancellation, and an optional browser Worker executor
 - Deterministic chunk planning for large files
+- Opt-in bounded parallel chunk transfer with canonical receipts and mandatory per-chunk SHA-256 evidence
 - Upload sessions with progress, retry, pause, cancel, failure, completion, and resume events
-- Content-bound v0.3 persistent resume records with durable chunk receipts and safe v0.1/v0.2 readers
+- Content-bound v0.3 sequential and v0.4 sparse-parallel resume records with durable chunk receipts and safe v0.1/v0.2 readers
 - Safe diagnostics helpers for logs, telemetry, support traces, and recovery UI
 - Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs
 - Browser-safe tus and S3 multipart transport helpers
@@ -146,6 +147,25 @@ Fallback is explicit: omit `fallback` to receive `checksum.execution_failed` whe
 The reader continues to validate v0.1 and v0.2 records. Legacy records with trustworthy manifest whole-file SHA-256 evidence can resume or promote at the next authoritative checkpoint. Weak zero-progress records are restart-only; weak progressed records and progressed v0.1 S3 records are incompatible. They remain stored until explicit cleanup. Never log full records or content identities; use `redactResumeRecord()` and safe UI summaries.
 
 Transport recovery support is conservative. `resumable`, `supportsSnapshotResume`, and `supportsPersistentResume` describe different behaviors. Missing detailed capability flags do not block ordinary upload, but they are not treated as proof that snapshot or durable recovery is safe. Manifest schema remains `large-image-ingest.manifest.v1`; `manifest.library.version` identifies the actual producing package release independently.
+
+## Parallel Upload And Chunk Integrity
+
+Parallel transfer is opt-in and currently qualified for the provider-neutral contract and official S3 multipart adapter. Applications request 2–16 workers; the effective bound is the minimum of the request, transport ceiling, and remaining chunks. Unsupported transports fail before remote session creation. tus and NAS remain sequential.
+
+```ts
+const session = createIngestSession(file, {
+  chunking: { chunkSize: 64 * 1024 * 1024 },
+  parallel: { concurrency: 4 },
+  resume: { store: resumeStore },
+  transport: createS3MultipartTransport({ broker })
+});
+
+await session.start();
+```
+
+Workers may finish out of order, but acknowledged progress counts each planned byte once and final receipts are sorted by chunk index. Every parallel chunk is SHA-256 hashed over its exact `Blob.slice` and bound to the strong whole-file source identity; S3 sends the Base64 digest in `x-amz-checksum-sha256` and requires a matching response attestation. The broker must create parallel multipart uploads with SHA-256 composite checksum semantics and sign that header boundary.
+
+Pause and cancel stop scheduling, interrupt active requests cooperatively, await worker and checkpoint settlement, then publish one stable outcome. A permanent chunk or integrity failure interrupts siblings and never enters ordinary transient retry. v0.4 records preserve sparse acknowledged receipts and policy identity; changing concurrency policy, integrity policy, source, chunk plan, transport session, or retained evidence is rejected before remote resume. Per-chunk evidence proves transfer units only—it does not replace the manifest whole-file checksum or independent stored-object verification.
 
 ## Auditable Provenance
 
@@ -400,7 +420,7 @@ See [docs/derivatives.md](docs/derivatives.md) for derivative boundaries and exa
 - S3 multipart: broker-backed presigned part upload flow through `large-image-ingest/transport-s3`
 - NAS: server-side staging/finalize gateway through `large-image-ingest/node`
 
-The credential-free conformance suite runs the same ten safety scenarios through all three official paths. S3 multipart and NAS pass all ten; tus passes the nine applicable scenarios and explicitly marks optional chunk-integrity evidence unsupported. A positive capability must have passing behavior evidence, and stored completion is checked independently by byte count and whole-file SHA-256. See [Official transport conformance](docs/transport-conformance.md).
+The credential-free conformance suite runs the same ten safety scenarios through all three official paths. S3 multipart additionally executes the qualified parallel SHA-256 path and proves bounded concurrency, unique progress, canonical completion, and integrity rejection. NAS passes its applicable sequential scenarios; tus explicitly marks optional chunk-integrity evidence unsupported. A positive capability must have passing behavior evidence, and stored completion is checked independently by byte count and whole-file SHA-256. See [Official transport conformance](docs/transport-conformance.md).
 
 The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a filesystem. Use a server-side gateway for those targets.
 
@@ -462,6 +482,7 @@ npm run test:conformance
 npm run test:reference
 npm run test:browser-checksum
 npm run test:adoption-evidence
+npm run benchmark:parallel
 npm run test:integration
 npm pack --dry-run
 ```

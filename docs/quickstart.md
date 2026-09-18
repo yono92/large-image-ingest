@@ -187,6 +187,30 @@ Browser resume still requires the application to ask the user for the same origi
 
 Records created by 1.5.0 use `large-image-ingest.resume.v0.3`. Each record retains mandatory whole-file SHA-256 identity plus validated receipts and derived progress. The reader also supports v0.1 and v0.2: trustworthy manifest SHA-256 evidence permits exact-source recovery and checkpoint promotion; zero-progress weak records are restart-only; progressed weak records remain incompatible and stored. Progressed v0.1 S3 records fail with `resume.receipt_missing` because authoritative ETags cannot be invented.
 
+## Parallel Upload
+
+Select parallel transfer explicitly with concurrency 2–16. The SDK clamps the effective worker count to the transport ceiling and remaining chunks, and rejects incompatible capability, checksum algorithm, encoding, or recovery combinations before creating a remote session.
+
+```ts
+import { createIngestSession } from "large-image-ingest/core";
+import { createS3MultipartTransport } from "large-image-ingest/transport-s3";
+
+const session = createIngestSession(file, {
+  chunking: { chunkSize: 64 * 1024 * 1024 },
+  parallel: { concurrency: 4 },
+  resume: { store: resumeStore },
+  transport: createS3MultipartTransport({ broker })
+});
+
+await session.start();
+```
+
+Network completion order may differ from chunk order. `uploadedBytes` advances only through the serialized authoritative receipt boundary, so retries and duplicate or late results cannot double-count progress. Completion receives one receipt per chunk sorted by chunk index. Snapshots expose requested/effective concurrency and safe missing, in-flight, acknowledged, retryable, ambiguous, and failed counts.
+
+Every parallel chunk has locally calculated SHA-256 evidence bound to the manifest, strong whole-file source identity, upload session, chunk index, and exact byte range. A transport that advertises attestation must return matching evidence before the chunk is checkpointed. S3 uses Base64 `x-amz-checksum-sha256` part values and SHA-256 composite multipart creation. ETags remain provider receipts, not checksums.
+
+Pause and cancel close scheduling, request cooperative interruption, await all workers and serialized checkpoints, and only then publish the terminal control state. Cancellation attempts provider abort once. Permanent identity, policy, or integrity failures are non-transient and interrupt sibling attempts. Resuming v0.4 validates whole-file identity, plan, session, parallel/integrity policy, and retained chunk evidence before calling `resumeSession`; only missing chunks are scheduled. v0.1–v0.3 records retain their established sequential semantics.
+
 ## React Headless State
 
 The optional `large-image-ingest/react` subpath maps one core session to immutable React state. Create one controller per selected file and retain it above any components that may mount or unmount during upload.

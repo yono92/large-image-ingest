@@ -35,3 +35,15 @@ export class ChecksumExecutionError extends LargeImageIngestError {
     this.name = "ChecksumExecutionError";
   }
 }
+
+export class ChunkIntegrityError extends LargeImageIngestError {
+  readonly retryable = false;
+
+  constructor(
+    code: "checksum.chunk_missing" | "checksum.chunk_mismatch" | "checksum.chunk_unsupported",
+    message: string
+  ) {
+    super(code, message);
+    this.name = "ChunkIntegrityError";
+  }
+}

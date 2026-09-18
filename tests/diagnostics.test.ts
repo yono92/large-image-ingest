@@ -282,6 +282,32 @@ describe("diagnostics helpers", () => {
     expect(JSON.stringify(summary)).not.toContain("LOT-SECRET");
     expect(JSON.stringify(summary)).not.toContain("manifest-1");
   });
+
+  it("projects parallel policy and outcome counts without operational receipts", () => {
+    const snapshot = createSnapshot();
+    snapshot.parallel = {
+      requestedConcurrency: 4,
+      effectiveConcurrency: 2,
+      policyId: "parallel-worker-pool-v1",
+      integrityPolicyId: "chunk-sha256-base64-v1",
+      ambiguousChunkIndexes: [1]
+    };
+    snapshot.chunkOutcomes = {
+      missing: 0,
+      inFlight: 0,
+      acknowledged: 1,
+      retryable: 0,
+      ambiguous: 1,
+      failed: 0
+    };
+    const summary = createSafeEventSummary({ type: "snapshot", snapshot });
+    expect(summary).toMatchObject({
+      parallel: { requestedConcurrency: 4, effectiveConcurrency: 2, ambiguousChunkIndexes: [1] },
+      chunkOutcomes: { acknowledged: 1, ambiguous: 1 }
+    });
+    expect(summary).not.toHaveProperty("completedChunks");
+    expect(JSON.stringify(summary)).not.toContain("secret-etag");
+  });
 });
 
 function createFile(): File {

@@ -96,6 +96,9 @@ export interface TransportConformanceObservation {
   expirationReconciliationProven?: boolean;
   invalidEvidenceRejected?: boolean;
   chunkIntegrityEvidenceValidated?: boolean;
+  parallelConcurrencyBounded?: boolean;
+  canonicalReceiptOrder?: boolean;
+  uniqueAcknowledgedProgress?: boolean;
   transferFinalized?: boolean;
   authoritativeCompletionCount?: number;
   ambiguousCompletionReconciled?: boolean;
@@ -283,6 +286,9 @@ const BOOLEAN_OBSERVATION_FIELDS = new Set<keyof TransportConformanceObservation
   "expirationReconciliationProven",
   "invalidEvidenceRejected",
   "chunkIntegrityEvidenceValidated",
+  "parallelConcurrencyBounded",
+  "canonicalReceiptOrder",
+  "uniqueAcknowledgedProgress",
   "transferFinalized",
   "ambiguousCompletionReconciled",
   "authoritativeCompletionPreserved",
@@ -497,8 +503,12 @@ export function evaluateTransportCapabilityEvidence(
   if (capabilities.chunkIntegrity && !chunkIntegrity) {
     issues.push(capabilityIssue("chunkIntegrity", "integrity.chunk-evidence-enforced"));
   }
-  if (capabilities.parallelChunks) {
-    issues.push(capabilityIssue("parallelChunks"));
+  if (capabilities.parallelChunks && (
+    chunkIntegrity?.evidence.parallelConcurrencyBounded !== true ||
+    chunkIntegrity.evidence.canonicalReceiptOrder !== true ||
+    chunkIntegrity.evidence.uniqueAcknowledgedProgress !== true
+  )) {
+    issues.push(capabilityIssue("parallelChunks", "integrity.chunk-evidence-enforced"));
   }
   return issues;
 }
@@ -756,7 +766,12 @@ function evaluateScenario(
     case "integrity.chunk-evidence-enforced":
       return observation.chunkIntegrityEvidenceValidated === true &&
         observation.invalidEvidenceRejected === true &&
-        observation.remoteMutationCountBeforeAuthority === 0;
+        observation.remoteMutationCountBeforeAuthority === 0 &&
+        (!capabilities.parallelChunks || (
+          observation.parallelConcurrencyBounded === true &&
+          observation.canonicalReceiptOrder === true &&
+          observation.uniqueAcknowledgedProgress === true
+        ));
   }
 }
 

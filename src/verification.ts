@@ -1,4 +1,4 @@
-import { calculateChecksum } from "./checksum.js";
+import { calculateChecksum, checksumValuesEqual } from "./checksum.js";
 import { planChunks } from "./chunks.js";
 import type {
   FileChecksum,
@@ -169,6 +169,10 @@ export function verifyUploadReceipts(
       );
     }
 
+    if (receipt.integrity) {
+      verifyChunkIntegrityEvidence(issues, manifest, receipt, path, expectedSize);
+    }
+
     seen.set(receipt.chunkIndex, receipt);
     uploadedBytes += receipt.sizeBytes;
   }
@@ -207,6 +211,91 @@ export function verifyUploadReceipts(
   }
 
   return toResult(issues);
+}
+
+function verifyChunkIntegrityEvidence(
+  issues: IngestIssue[],
+  manifest: IngestManifest,
+  receipt: UploadChunkReceipt,
+  path: string,
+  expectedSize: number
+): void {
+  const integrity = receipt.integrity;
+  if (!integrity) return;
+  const binding = integrity.binding;
+  const expectedStart = receipt.chunkIndex * manifest.chunking.chunkSizeBytes;
+  if (
+    !isNonEmptyString(integrity.policyId) ||
+    !isNonEmptyString(binding.uploadId) ||
+    !isNonEmptyString(binding.sourceIdentity) ||
+    binding.manifestId !== manifest.id ||
+    (manifest.original.checksum !== undefined && binding.sourceIdentity !== manifest.original.checksum.value) ||
+    binding.chunkIndex !== receipt.chunkIndex ||
+    binding.startByte !== expectedStart ||
+    binding.endByteExclusive !== expectedStart + expectedSize ||
+    binding.sizeBytes !== expectedSize
+  ) {
+    pushIssue(
+      issues,
+      "verification.receipt_invalid",
+      "Chunk integrity evidence is bound to a different source or byte range.",
+      `${path}.integrity.binding`,
+      { chunkIndex: receipt.chunkIndex }
+    );
+  }
+  if (
+    integrity.local.role !== "local-calculation" ||
+    integrity.local.algorithm !== "sha256" ||
+    !isSupportedChecksumEncoding(integrity.local.encoding)
+  ) {
+    pushIssue(
+      issues,
+      "verification.checksum_unsupported",
+      "Chunk local checksum evidence uses an unsupported algorithm, encoding, or role.",
+      `${path}.integrity.local`,
+      { chunkIndex: receipt.chunkIndex }
+    );
+    return;
+  }
+  if (integrity.remote) {
+    if (
+      integrity.remote.role !== "remote-attestation" ||
+      integrity.remote.algorithm !== "sha256" ||
+      !isSupportedChecksumEncoding(integrity.remote.encoding)
+    ) {
+      pushIssue(
+        issues,
+        "verification.checksum_unsupported",
+        "Chunk remote checksum evidence uses an unsupported algorithm, encoding, or role.",
+        `${path}.integrity.remote`,
+        { chunkIndex: receipt.chunkIndex }
+      );
+      return;
+    }
+    try {
+      if (!checksumValuesEqual(integrity.local, integrity.remote)) {
+        pushIssue(
+          issues,
+          "verification.checksum_mismatch",
+          "Chunk local checksum and remote attestation do not match.",
+          `${path}.integrity.remote.value`,
+          { chunkIndex: receipt.chunkIndex }
+        );
+      }
+    } catch {
+      pushIssue(
+        issues,
+        "verification.checksum_mismatch",
+        "Chunk checksum evidence is malformed.",
+        `${path}.integrity`,
+        { chunkIndex: receipt.chunkIndex }
+      );
+    }
+  }
+}
+
+function isSupportedChecksumEncoding(value: unknown): value is "hex" | "base64" {
+  return value === "hex" || value === "base64";
 }
 
 export async function verifyIngestIntegrity(

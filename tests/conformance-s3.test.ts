@@ -34,6 +34,7 @@ describe("official S3 transport conformance", () => {
 
     expect(report.overallStatus).toBe("conformant");
     expect(report.target.transportCategory).toBe("s3-multipart");
+    expect(report.capabilities.parallelChunks).toBe(true);
     expect(report.results).toHaveLength(10);
     expect(report.results.every(({ status }) => status === "passed" || status === "unsupported")).toBe(true);
     expect(report.results.find(({ scenarioId }) => scenarioId === "recovery.interrupted-no-retransmit"))
@@ -47,5 +48,14 @@ describe("official S3 transport conformance", () => {
       });
     expect(report.results.find(({ scenarioId }) => scenarioId === "completion.ambiguous-result-reconciled"))
       .toMatchObject({ status: "passed", evidence: { authoritativeCompletionCount: 1 } });
+    expect(report.results.find(({ scenarioId }) => scenarioId === "integrity.chunk-evidence-enforced"))
+      .toMatchObject({
+        status: "passed",
+        evidence: {
+          parallelConcurrencyBounded: true,
+          canonicalReceiptOrder: true,
+          uniqueAcknowledgedProgress: true
+        }
+      });
   });
 });

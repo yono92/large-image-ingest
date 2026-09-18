@@ -1,5 +1,9 @@
 # Local Reference Benchmark
 
+## Parallel upload window
+
+Run `npm run benchmark:parallel` to execute a credential-free, deterministic 32-chunk latency fixture. It compares the unchanged sequential path with concurrency four, verifies the observed in-flight ceiling, canonical receipt order, and a minimum 2x latency-bound speedup. The fixture measures scheduler behavior rather than network throughput or checksum CPU throughput.
+
 This repository-only harness validates the built package through a real loopback HTTP boundary and local filesystem target. It generates a deterministic source file, calculates a manifest checksum through the public core entrypoint, interrupts after acknowledged progress, resumes from a JSON-backed durable record with a replacement session, completes exactly once, and verifies the promoted target through the public Node entrypoint.
 
 Run the 64 MiB release gate after building:

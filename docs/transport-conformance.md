@@ -1,6 +1,6 @@
 # Official Transport Conformance
 
-Version 1.6.0 adds an evidence-producing conformance catalog for the official S3 multipart, tus, and NAS paths. Conformance means equivalent safety outcomes, not identical protocol messages, receipt formats, or performance.
+Version 1.6.0 added the evidence-producing conformance catalog for the official S3 multipart, tus, and NAS paths. Version 1.8.0 extends S3 evidence with the qualified parallel SHA-256 path. Conformance means equivalent safety outcomes, not identical protocol messages, receipt formats, or performance.
 
 ## Shared Invariants
 
@@ -15,6 +15,7 @@ Every applicable official target must demonstrate all of the following through t
 | Separate finalization and verification | Transfer completion is followed by independent stored byte-count and whole-file SHA-256 checks. |
 | One authoritative completion | Lost or ambiguous responses cannot produce duplicate application completion. |
 | Observable cancellation and cleanup | Cleanup completion, failure, and identifiable abandoned resources remain visible without exposing locations. |
+| Qualified parallel behavior | A positive parallel capability proves its in-flight bound, unique acknowledged progress, canonical receipt order, and required chunk evidence. |
 
 The catalog has ten ordered scenarios under `large-image-ingest.transport-conformance-catalog.v1`. A report is `conformant` only when all applicable scenarios pass and every positive capability has behavioral evidence. A skipped scenario makes the report `incomplete`; a failed invariant or unsupported positive claim makes it `non_conformant`.
 
@@ -22,11 +23,11 @@ The catalog has ten ordered scenarios under `large-image-ingest.transport-confor
 
 | Transport | Recovery evidence | Integrity evidence | Notable limitation |
 | --- | --- | --- | --- |
-| S3 multipart | Validated part receipts and broker reconciliation | Per-part evidence plus independent stored SHA-256 | Expiration is broker/provider policy and is not advertised by the generic adapter. |
+| S3 multipart | Sparse validated part receipts, safe same-part repetition, and broker completion reconciliation | Local and remotely attested SHA-256 part evidence plus independent stored SHA-256 | Parallel mode requires broker-created SHA-256 composite multipart state and signed checksum headers; expiration remains broker/provider policy. |
 | tus | Authoritative `Upload-Offset`, upload URL state, and `Upload-Expires` when present | Independent stored SHA-256 | The official adapter does not advertise the optional tus checksum extension, so the chunk-integrity scenario is `unsupported`. |
 | NAS | Durable session metadata, staged chunk records, and coordinated locks | Staged chunk SHA-256 plus final stored SHA-256 | Browser clients require a server-side gateway; mount and rename semantics must be qualified in the deployment environment. |
 
-Static `TransportCapabilities`, successful imports, endpoint reachability, or ordinary custom-transport compatibility are not conformance evidence. A custom transport remains usable without being described as conformant.
+The official S3 adapter advertises parallel transfer up to 16 chunks with Base64 SHA-256 attestation. tus and NAS deliberately advertise no parallel capability in 1.8.0. Static `TransportCapabilities`, successful imports, endpoint reachability, or ordinary custom-transport compatibility are not conformance evidence. A custom transport remains usable without being described as conformant.
 
 ## Credential-Free Release Evidence
 

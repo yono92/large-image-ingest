@@ -3,6 +3,7 @@ import type {
   ChecksumExecutionOptions,
   ChecksumOptions,
   ChecksumProgress,
+  ChunkChecksumValue,
   FileChecksum,
   IngestFileLike
 } from "./types.js";
@@ -66,6 +67,38 @@ export async function calculateChecksum(
   }
 
   return calculateChecksumInline(file, executionOptions);
+}
+
+export async function calculateBlobSha256(
+  blob: Blob,
+  options: { chunkSize?: number; encoding?: "hex" | "base64"; signal?: AbortSignal } = {}
+): Promise<ChunkChecksumValue> {
+  const chunkSize = options.chunkSize ?? DEFAULT_CHECKSUM_CHUNK_SIZE;
+  if (!Number.isSafeInteger(chunkSize) || chunkSize < MIN_CHECKSUM_CHUNK_SIZE) {
+    throw new RangeError(`checksum chunkSize must be at least ${MIN_CHECKSUM_CHUNK_SIZE} bytes.`);
+  }
+  const hasher = new Sha256();
+  for (let start = 0; start < blob.size; start += chunkSize) {
+    throwIfAborted(options.signal);
+    const end = Math.min(start + chunkSize, blob.size);
+    hasher.update(new Uint8Array(await blob.slice(start, end).arrayBuffer()));
+  }
+  throwIfAborted(options.signal);
+  const bytes = hasher.digest();
+  const encoding = options.encoding ?? "hex";
+  return {
+    algorithm: "sha256",
+    encoding,
+    value: encoding === "hex" ? toHex(bytes) : toBase64(bytes)
+  };
+}
+
+export function checksumValuesEqual(
+  left: ChunkChecksumValue,
+  right: ChunkChecksumValue
+): boolean {
+  return left.algorithm === right.algorithm &&
+    normalizeChecksumValue(left) === normalizeChecksumValue(right);
 }
 
 async function calculateChecksumInline(
@@ -316,4 +349,50 @@ function writeUint32(target: Uint8Array, offset: number, value: number): void {
 
 function toHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function normalizeChecksumValue(checksum: ChunkChecksumValue): string {
+  if (checksum.encoding === "hex") {
+    if (!/^[a-fA-F0-9]+$/.test(checksum.value) || checksum.value.length % 2 !== 0) {
+      throw new TypeError("Checksum hex value is invalid.");
+    }
+    return checksum.value.toLowerCase();
+  }
+  return toHex(fromBase64(checksum.value));
+}
+
+function toBase64(bytes: Uint8Array): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let result = "";
+  for (let index = 0; index < bytes.length; index += 3) {
+    const first = bytes[index] ?? 0;
+    const second = bytes[index + 1];
+    const third = bytes[index + 2];
+    const value = (first << 16) | ((second ?? 0) << 8) | (third ?? 0);
+    result += alphabet[(value >>> 18) & 63];
+    result += alphabet[(value >>> 12) & 63];
+    result += second === undefined ? "=" : alphabet[(value >>> 6) & 63];
+    result += third === undefined ? "=" : alphabet[value & 63];
+  }
+  return result;
+}
+
+function fromBase64(value: string): Uint8Array {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value) || value.length % 4 !== 0) {
+    throw new TypeError("Checksum Base64 value is invalid.");
+  }
+  const output: number[] = [];
+  for (let index = 0; index < value.length; index += 4) {
+    const a = alphabet.indexOf(value[index] ?? "");
+    const b = alphabet.indexOf(value[index + 1] ?? "");
+    const c = value[index + 2] === "=" ? 0 : alphabet.indexOf(value[index + 2] ?? "");
+    const d = value[index + 3] === "=" ? 0 : alphabet.indexOf(value[index + 3] ?? "");
+    if (a < 0 || b < 0 || c < 0 || d < 0) throw new TypeError("Checksum Base64 value is invalid.");
+    const combined = (a << 18) | (b << 12) | (c << 6) | d;
+    output.push((combined >>> 16) & 255);
+    if (value[index + 2] !== "=") output.push((combined >>> 8) & 255);
+    if (value[index + 3] !== "=") output.push(combined & 255);
+  }
+  return Uint8Array.from(output);
 }

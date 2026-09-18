@@ -42,7 +42,12 @@ export type S3CompletedPartChecksum = ChecksumReceipt & {
   algorithm: "sha256" | "crc64nvme" | "crc32c" | "crc32";
 };
 
-export interface S3MultipartCreateContext extends UploadSessionContext {}
+export interface S3MultipartCreateContext extends UploadSessionContext {
+  checksum?: {
+    algorithm: "sha256";
+    mode: "composite";
+  } | undefined;
+}
 
 export interface S3MultipartPartContext extends UploadSessionContext {
   bucket?: string | undefined;
@@ -52,6 +57,7 @@ export interface S3MultipartPartContext extends UploadSessionContext {
   previousReceipts: readonly UploadChunkReceipt[];
   session: TransportSession;
   uploadId: string;
+  integrity?: UploadChunkContext["integrity"];
 }
 
 export interface S3MultipartCompleteContext extends UploadSessionContext {
@@ -125,8 +131,15 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
       resumable: true,
       abortable: Boolean(options.broker.abortMultipartUpload),
       expires: false,
-      supportsParallelChunks: false,
+      supportsParallelChunks: true,
       supportsChunkChecksum: true,
+      maxParallelChunks: 16,
+      supportsSparseResume: true,
+      supportsSafeChunkRepeat: true,
+      chunkChecksumAlgorithms: ["sha256"],
+      chunkChecksumEncodings: ["base64"],
+      attestsChunkChecksum: true,
+      supportsCompletionReconciliation: Boolean(options.broker.reconcileMultipartUpload),
       supportsSnapshotResume: true,
       supportsPersistentResume: true,
       minChunkSizeBytes: minPartSizeBytes,
@@ -136,7 +149,10 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
       partNumberBase: 1
     },
     async createSession(context) {
-      const handle = await options.broker.createMultipartUpload(context);
+      const handle = await options.broker.createMultipartUpload({
+        ...context,
+        ...(context.parallel ? { checksum: { algorithm: "sha256", mode: "composite" } as const } : {})
+      });
       validateUploadHandle(handle);
 
       return {
@@ -202,14 +218,15 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
         session: context.session,
         chunk: context.chunk,
         partNumber,
-        previousReceipts: context.previousReceipts
+        previousReceipts: context.previousReceipts,
+        ...(context.integrity ? { integrity: context.integrity } : {})
       });
 
       validateUploadTarget(target);
 
       const response = await fetchImpl(target.url, {
         method: target.method ?? "PUT",
-        headers: await createUploadHeaders(options, target.headers),
+        headers: await createUploadHeaders(options, target.headers, context.integrity),
         body: context.body,
         signal: context.signal
       });
@@ -241,11 +258,24 @@ export function createS3MultipartTransport(options: S3MultipartTransportOptions)
         );
       }
 
+      const checksum = readChecksum(response);
       return {
         chunkIndex: context.chunk.index,
         sizeBytes: context.chunk.size,
         completedAt: nowIso(),
-        checksum: readChecksum(response),
+        checksum,
+        ...(context.integrity ? {
+          integrity: {
+            ...context.integrity,
+            ...(checksum ? {
+              remote: {
+                ...checksum,
+                encoding: "base64" as const,
+                role: "remote-attestation" as const
+              }
+            } : {})
+          }
+        } : {}),
         transport: {
           name: S3_TRANSPORT_NAME,
           partNumber,
@@ -360,7 +390,8 @@ function validateUploadTarget(target: S3MultipartUploadTarget): void {
 
 async function createUploadHeaders(
   options: S3MultipartTransportOptions,
-  targetHeaders: HeadersInit | undefined
+  targetHeaders: HeadersInit | undefined,
+  integrity: UploadChunkContext["integrity"]
 ): Promise<Headers> {
   const result = await resolveHeaders(options.headers);
   const target = new Headers(targetHeaders);
@@ -368,6 +399,10 @@ async function createUploadHeaders(
   target.forEach((value, name) => {
     result.set(name, value);
   });
+
+  if (integrity?.local.algorithm === "sha256") {
+    result.set("x-amz-checksum-sha256", integrity.local.value);
+  }
 
   return result;
 }

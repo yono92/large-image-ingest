@@ -41,6 +41,9 @@ export type IngestIssueCode =
   | "checksum.mismatch"
   | "checksum.canceled"
   | "checksum.execution_failed"
+  | "checksum.chunk_missing"
+  | "checksum.chunk_mismatch"
+  | "checksum.chunk_unsupported"
   | "image.dimensions_unavailable"
   | "image.width_too_small"
   | "image.width_too_large"
@@ -460,6 +463,14 @@ export interface TransportCapabilities {
   expires: boolean;
   supportsParallelChunks: boolean;
   supportsChunkChecksum: boolean;
+  maxParallelChunks?: number;
+  supportsSparseResume?: boolean;
+  supportsSafeChunkRepeat?: boolean;
+  supportsRemoteChunkReconciliation?: boolean;
+  chunkChecksumAlgorithms?: readonly ChecksumAlgorithm[];
+  chunkChecksumEncodings?: readonly ("hex" | "base64")[];
+  attestsChunkChecksum?: boolean;
+  supportsCompletionReconciliation?: boolean;
   supportsSnapshotResume?: boolean;
   supportsPersistentResume?: boolean;
   minChunkSizeBytes?: number;
@@ -490,11 +501,59 @@ export interface ChecksumReceipt {
   value: string;
 }
 
+export interface ChunkChecksumValue extends ChecksumReceipt {
+  encoding: "hex" | "base64";
+}
+
+export interface ChunkChecksumEvidence extends ChunkChecksumValue {
+  role: "local-calculation" | "remote-attestation";
+}
+
+export interface ChunkIntegrityBinding {
+  manifestId: string;
+  uploadId: string;
+  sourceIdentity: string;
+  chunkIndex: number;
+  startByte: number;
+  endByteExclusive: number;
+  sizeBytes: number;
+}
+
+export interface ChunkIntegrityEvidence {
+  policyId: string;
+  binding: ChunkIntegrityBinding;
+  local: ChunkChecksumEvidence;
+  remote?: ChunkChecksumEvidence | undefined;
+}
+
+export interface ParallelUploadOptions {
+  concurrency: number;
+  chunkChecksum?: { algorithm?: "sha256" | undefined } | undefined;
+}
+
+export interface ParallelUploadState {
+  requestedConcurrency: number;
+  effectiveConcurrency: number;
+  policyId: string;
+  integrityPolicyId: string;
+  ambiguousChunkIndexes: number[];
+}
+
+export interface ParallelChunkOutcomeCounts {
+  missing: number;
+  inFlight: number;
+  acknowledged: number;
+  retryable: number;
+  ambiguous: number;
+  failed: number;
+}
+
 export interface UploadChunkReceipt {
   chunkIndex: number;
   sizeBytes: number;
   completedAt: string;
   checksum?: ChecksumReceipt | undefined;
+  integrity?: ChunkIntegrityEvidence | undefined;
   transport: {
     name: string;
     partNumber?: number | undefined;
@@ -528,6 +587,8 @@ export interface UploadSessionSnapshot {
   totalBytes: number;
   createdAt: string;
   updatedAt: string;
+  parallel?: ParallelUploadState | undefined;
+  chunkOutcomes?: ParallelChunkOutcomeCounts | undefined;
   error?: {
     code: IngestErrorCode;
     message: string;
@@ -542,7 +603,8 @@ export interface UploadSessionSnapshot {
 export type ResumeRecordSchemaVersion =
   | "large-image-ingest.resume.v0.1"
   | "large-image-ingest.resume.v0.2"
-  | "large-image-ingest.resume.v0.3";
+  | "large-image-ingest.resume.v0.3"
+  | "large-image-ingest.resume.v0.4";
 
 export type ContentSourceIdentitySchemaVersion =
   "large-image-ingest.source-identity.v1";
@@ -648,7 +710,16 @@ export interface ResumeRecordV0_3 extends ResumeRecordBase {
   receipts: UploadChunkReceipt[];
 }
 
-export type ResumeRecord = ResumeRecordV0_1 | ResumeRecordV0_2 | ResumeRecordV0_3;
+export interface ResumeRecordV0_4 extends ResumeRecordBase {
+  schemaVersion: "large-image-ingest.resume.v0.4";
+  file: ResumeFileIdentity & {
+    contentIdentity: ContentSourceIdentityV1;
+  };
+  receipts: UploadChunkReceipt[];
+  parallel: ParallelUploadState;
+}
+
+export type ResumeRecord = ResumeRecordV0_1 | ResumeRecordV0_2 | ResumeRecordV0_3 | ResumeRecordV0_4;
 
 export type ResumeCompatibilityStatus =
   | "resumable"
@@ -740,9 +811,9 @@ export type IngestEvent =
   | { type: "validated"; manifest: IngestManifest }
   | { type: "started"; manifest: IngestManifest; uploadId: string }
   | { type: "snapshot"; snapshot: UploadSessionSnapshot }
-  | { type: "chunk:started"; manifestId: string; chunk: ChunkDescriptor }
-  | { type: "chunk:completed"; manifestId: string; chunk: ChunkDescriptor; uploadedBytes: number; totalBytes: number }
-  | { type: "retry"; manifestId: string; chunk: ChunkDescriptor; attempt: number; error: unknown }
+  | { type: "chunk:started"; manifestId: string; chunk: ChunkDescriptor; attemptId?: string; attemptNumber?: number }
+  | { type: "chunk:completed"; manifestId: string; chunk: ChunkDescriptor; uploadedBytes: number; totalBytes: number; attemptId?: string; attemptNumber?: number }
+  | { type: "retry"; manifestId: string; chunk: ChunkDescriptor; attempt: number; attemptId?: string; error: unknown }
   | { type: "resume:available"; recordId: string; manifestId: string; status: ResumeRecordStatus }
   | { type: "resume:started"; recordId: string; manifestId: string }
   | { type: "resume:checkpoint"; recordId: string; completedChunkRanges: CompletedChunkRange[] }
@@ -766,6 +837,7 @@ export interface UploadSessionContext {
   manifest: IngestManifest;
   file: IngestFileLike;
   signal: AbortSignal;
+  parallel?: ParallelUploadState | undefined;
 }
 
 export interface UploadChunkContext extends UploadSessionContext {
@@ -774,11 +846,21 @@ export interface UploadChunkContext extends UploadSessionContext {
   body: Blob;
   session: TransportSession;
   previousReceipts: readonly UploadChunkReceipt[];
+  attemptId?: string | undefined;
+  attemptNumber?: number | undefined;
+  integrity?: ChunkIntegrityEvidence | undefined;
 }
 
 export interface ResumeSessionContext extends UploadSessionContext {
   record: ResumeRecord;
   snapshot?: UploadSessionSnapshot;
+}
+
+export interface ReconcileChunksContext extends UploadSessionContext {
+  uploadId: string;
+  session: TransportSession;
+  chunkPlan: ChunkPlan;
+  localReceipts: readonly UploadChunkReceipt[];
 }
 
 export interface UploadSessionResult {
@@ -802,6 +884,7 @@ export interface UploadTransport {
   readonly capabilities?: TransportCapabilities;
   createSession(context: UploadSessionContext): Promise<TransportSession | UploadSessionResult>;
   resumeSession?(context: ResumeSessionContext): Promise<TransportSession | UploadSessionResult>;
+  reconcileChunks?(context: ReconcileChunksContext): Promise<readonly UploadChunkReceipt[]>;
   uploadChunk(context: UploadChunkContext): Promise<void | UploadChunkResult | UploadChunkReceipt>;
   completeSession(
     context: UploadSessionContext & {
@@ -826,6 +909,7 @@ export interface CreateIngestSessionOptions {
   manifest?: IngestManifest;
   manifestIdentity?: ManifestIdentityOverride;
   metadata?: Record<string, unknown>;
+  parallel?: ParallelUploadOptions;
   onEvent?: (event: IngestEvent) => void;
   onObserverError?: (failure: IngestObserverFailure) => void;
   onSnapshot?: (snapshot: UploadSessionSnapshot) => void;

@@ -1,4 +1,4 @@
-export { calculateChecksum } from "./checksum.js";
+export { calculateBlobSha256, calculateChecksum, checksumValuesEqual } from "./checksum.js";
 export { planChunks } from "./chunks.js";
 export {
   createSafeEventSummary,
@@ -15,6 +15,7 @@ export {
 export {
   ChecksumCanceledError,
   ChecksumExecutionError,
+  ChunkIntegrityError,
   LargeImageIngestError,
   isLargeImageIngestError
 } from "./errors.js";
@@ -66,6 +67,10 @@ export type {
   ChecksumOptions,
   ChecksumProgress,
   ChecksumReceipt,
+  ChunkChecksumEvidence,
+  ChunkChecksumValue,
+  ChunkIntegrityBinding,
+  ChunkIntegrityEvidence,
   ChunkDescriptor,
   ChunkPlan,
   ChunkPlanOptions,
@@ -109,6 +114,10 @@ export type {
   IngestObserverFailure,
   ManifestIdentityOverride,
   OriginalImageManifest,
+  ParallelUploadOptions,
+  ParallelChunkOutcomeCounts,
+  ParallelUploadState,
+  ReconcileChunksContext,
   ResumeChunkingIdentity,
   ResumeCompatibilityReason,
   ResumeCompatibilityResult,
@@ -126,6 +135,7 @@ export type {
   ResumeRecordV0_1,
   ResumeRecordV0_2,
   ResumeRecordV0_3,
+  ResumeRecordV0_4,
   ResumeRecordValidationIssue,
   ResumeRecordValidationResult,
   ResumeSessionContext,

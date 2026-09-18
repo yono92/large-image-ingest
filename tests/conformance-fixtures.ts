@@ -119,6 +119,11 @@ export function createPassingObservation(
       return {
         ...common,
         chunkIntegrityEvidenceValidated: true,
+        ...(capabilities.parallelChunks ? {
+          parallelConcurrencyBounded: true,
+          canonicalReceiptOrder: true,
+          uniqueAcknowledgedProgress: true
+        } : {}),
         invalidEvidenceRejected: true,
         remoteMutationCountBeforeAuthority: 0
       };
