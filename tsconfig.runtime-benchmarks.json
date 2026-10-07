@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "rootDir": "benchmarks", "outDir": "dist/benchmarks" },
+  "include": ["benchmarks/browser-checksum.mts"]
+}

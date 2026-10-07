@@ -1,0 +1,63 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "moduleDetection": "force",
+    "types": [
+      "node"
+    ],
+    "paths": {
+      "large-image-ingest": [
+        "./src/index.ts"
+      ],
+      "large-image-ingest/core": [
+        "./src/core.ts"
+      ],
+      "large-image-ingest/workflow": [
+        "./src/workflow.ts"
+      ],
+      "large-image-ingest/profiles": [
+        "./src/profiles.ts"
+      ],
+      "large-image-ingest/provenance": [
+        "./src/provenance.ts"
+      ],
+      "large-image-ingest/node": [
+        "./src/node.ts"
+      ],
+      "large-image-ingest/browser": [
+        "./src/browser.ts"
+      ],
+      "large-image-ingest/conformance": [
+        "./src/conformance.ts"
+      ],
+      "large-image-ingest/preservation": [
+        "./src/preservation.ts"
+      ],
+      "large-image-ingest/transport-s3": [
+        "./src/s3.ts"
+      ],
+      "large-image-ingest/transport-tus": [
+        "./src/tus.ts"
+      ],
+      "large-image-ingest/react": [
+        "./src/react.ts"
+      ],
+      "large-image-ingest/react-ui": [
+        "./src/react-ui.ts"
+      ],
+      "large-image-ingest/tiff": [
+        "./src/tiff.ts"
+      ]
+    }
+  },
+  "include": [
+    "scripts/**/*.cts",
+    "benchmarks/**/*.cts",
+    "examples/**/*.mts",
+    "examples/**/*.cts",
+    "tests/fixtures/**/*.mts",
+    "benchmarks/**/*.mts"
+  ]
+}

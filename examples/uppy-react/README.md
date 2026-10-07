@@ -67,7 +67,7 @@ Select a local file that passes the Uppy selection restrictions but violates the
 - `src/selection-bridge.ts` accepts only a local `File` and preserves the exact object.
 - `src/App.tsx` owns `createIngestController`, controller controls, safe state, and recovery matching.
 - `src/local-reference-transport.ts` re-exports the provider-neutral `UploadTransport` recipe from `examples/reference-local/`.
-- `../reference-local/local-server.mjs` stores actual bytes and invokes the package's Node verification API for both official UI examples.
+- `../reference-local/local-server.mts` stores actual bytes and invokes the package's Node verification API for both official UI examples.
 
 No Uppy uploader plugin is configured. Uppy does not own progress, retry, pause, resume, cancellation, or completion. The example never logs a full manifest or resume record.
 

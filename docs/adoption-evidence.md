@@ -2,7 +2,7 @@
 
 For actual first-time developer trials and known project observations, use [Developer trials and actual adoption](adoption-validation.md). This page measures controlled reference integrations, rather than real adoption.
 
-The September 7, 2026 report compares three frozen, credential-free reference integrations against the same original-preserving TIFF ingest journey:
+The October 7, 2026 TypeScript-source report compares three frozen, credential-free reference integrations against the same original-preserving TIFF ingest journey:
 
 - `sdk-s3`: `createVerifiedIngestWorkflow()` with application-owned S3-style broker, stored-object verifier, checkpoint store, and evidence sink adapters;
 - `raw-tus`: a representative tus-style composition whose application owns ingest coordination around a generic protocol client;
@@ -10,13 +10,15 @@ The September 7, 2026 report compares three frozen, credential-free reference in
 
 The candidates are review fixtures, not claims about every tus client, S3 library, hosted service, or deployment. Selection UI, styling, account provisioning, provider policy, and media transformation are outside the boundary for all three.
 
+The [September 7 JavaScript-source report](../benchmarks/results/2026-09-workflow-adoption-evidence.json) remains archived unchanged. The new report counts typed candidate sources, including declarations; it records new source revisions and uses the current SDK version.
+
 ## Recorded Result
 
 All three candidates completed the same validation, whole-file SHA-256, manifest, three-part transfer, durable recovery, completion, and independent stored-original verification journey. The workflow candidate additionally sealed provenance and committed a durable evidence dossier before reporting success. The retained report contains 42 candidate-scenario results and 150 raw trials: four timing-sensitive scenarios ran ten times per candidate, and ten deterministic scenarios ran once per candidate.
 
 | Measure | SDK S3-style | Raw tus-style | Raw S3-style |
 | --- | ---: | ---: | ---: |
-| Application non-comment source lines | 249 | 140 | 142 |
+| Application non-comment source lines | 250 | 151 | 154 |
 | Application-owned lifecycle responsibilities | 2 | 14 | 14 |
 | Dependency-owned lifecycle responsibilities | 12 | 0 | 0 |
 | Explicit configuration decisions | 5 | 12 | 12 |
@@ -26,11 +28,11 @@ All three candidates completed the same validation, whole-file SHA-256, manifest
 
 The SDK binding reduced application-owned lifecycle responsibilities by 12/14, or 85.71%, and explicit configuration decisions by 7/12, or 58.33%, against each generic composition. Those are unweighted counts over the frozen responsibility taxonomy and configuration lists. Responsibilities and decisions vary in difficulty, so the percentages describe coordination surface rather than engineering effort.
 
-The code-line result is adverse and remains published: the workflow binding used 109/140 (77.86%) more application-owned non-comment lines than the raw tus fixture and 107/142 (75.35%) more than the raw S3 fixture. The SDK candidate includes complete transport, resume, checkpoint, verifier, and evidence-sink fixture boundaries while the generic fixtures talk directly to the reference target and stop at verification. The result prevents a blanket “less code” claim; the demonstrated reduction is in application-owned lifecycle coordination and integrated authority, not in this fixture's physical line count.
+The code-line result is adverse and remains published: the workflow binding used 99/151 (65.56%) more application-owned non-comment lines than the raw tus fixture and 96/154 (62.34%) more than the raw S3 fixture. The SDK candidate includes complete transport, resume, checkpoint, verifier, and evidence-sink fixture boundaries while the generic fixtures talk directly to the reference target and stop at verification. The result prevents a blanket “less code” claim; the demonstrated reduction is in application-owned lifecycle coordination and integrated authority, not in this fixture's physical line count.
 
 All 42/42 applicable candidate-scenario pairs satisfied their invariant, with zero exclusions under unweighted candidate-scenario aggregation. This is parity across the controlled matrix. It does not establish a lower production incident rate for any candidate.
 
-Exact raw measurements, candidate revisions, numerators, denominators, weighting, environment categories, claim links, and limitations are retained in [the versioned JSON report](../benchmarks/results/2026-09-workflow-adoption-evidence.json).
+Exact raw measurements, candidate revisions, numerators, denominators, weighting, environment categories, claim links, and limitations are retained in [the versioned JSON report](../benchmarks/results/2026-10-typescript-adoption-evidence.json).
 
 ## Responsibility Boundary
 
@@ -67,7 +69,7 @@ From a clean checkout with Node.js 20 or later:
 
 ```bash
 npm ci
-npm run evidence:adoption -- --output benchmarks/results/2026-09-workflow-adoption-evidence.json
+npm run evidence:adoption -- --output benchmarks/results/2026-10-typescript-adoption-evidence.json
 npm run test:adoption-evidence
 ```
 

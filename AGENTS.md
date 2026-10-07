@@ -113,6 +113,8 @@ This directory includes a skills.sh-installed skill at `.agents/skills/add-commu
 
 The project is initialized with GitHub Spec Kit `1.0.2` and Codex skills integration. Use the generated `.agents/skills/speckit-*` skills for this SDK's normal Spec-Driven Development workflow.
 
+Spec Kit executable helpers are excluded from this repository, including release-tag history. The installed skills that invoke these helpers require matching Spec Kit 1.0.2 tools to be provisioned separately before use. Do not restore them from this repository's tags or commit them. SDK build and tests do not require these helpers. See `docs/development.md` for the tool boundary.
+
 ## Verification
 
 Before finishing implementation work, run the relevant package checks once they exist:

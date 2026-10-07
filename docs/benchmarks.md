@@ -8,7 +8,7 @@ The harness is validation infrastructure, not a production upload server. Execut
 
 The separate adoption-evidence runner compares the built verified-workflow binding with raw tus-style and raw S3-style reference compositions over one frozen, credential-free ingest journey. Its retained September 7, 2026 report contains three verified happy paths, 42/42 safe controlled candidate-scenario outcomes, and all 150 raw trials.
 
-The SDK fixture owns 2 of 14 lifecycle responsibilities and 5 explicit configuration decisions, versus 14 responsibilities and 12 decisions in each generic fixture: reductions of 85.71% and 58.33% under unweighted frozen counts. The physical source-line result goes the other way and is retained: 249 workflow-binding lines versus 140 raw-tus and 142 raw-S3 lines. See [Comparative adoption evidence](adoption-evidence.md) and the [raw report](../benchmarks/results/2026-09-workflow-adoption-evidence.json) for boundaries, numerators, denominators, revisions, and limitations.
+The SDK fixture owns 2 of 14 lifecycle responsibilities and 5 explicit configuration decisions, versus 14 responsibilities and 12 decisions in each generic fixture: reductions of 85.71% and 58.33% under unweighted frozen counts. The physical source-line result goes the other way and is retained: 250 workflow-binding lines versus 151 raw-tus and 154 raw-S3 lines. See [Comparative adoption evidence](adoption-evidence.md) and the [raw report](../benchmarks/results/2026-10-typescript-adoption-evidence.json) for boundaries, numerators, denominators, revisions, and limitations.
 
 ## September 2026 Rerun
 

@@ -47,7 +47,7 @@ jobs:
         run: npm pack --dry-run
 
       - name: Verify packaged onboarding
-        run: node scripts/verify-onboarding-package.cjs
+        run: node --import tsx scripts/verify-onboarding-package.cts
 
       - name: Audit
         run: npm audit --audit-level=moderate

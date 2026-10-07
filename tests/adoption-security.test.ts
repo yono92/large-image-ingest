@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const protocol = require("../benchmarks/adoption/protocol.cjs") as {
+const protocol = require("../benchmarks/adoption/protocol.cts") as {
   inspectSafeValue(value: unknown): { safe: boolean };
   validateReport(report: any): { ok: boolean; errors: string[] };
 };

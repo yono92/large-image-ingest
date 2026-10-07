@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 const {
   getIntegrationTargets,
   runIntegrationHarness
-} = require("../scripts/run-integration-tests.cjs") as {
+} = require("../scripts/run-integration-tests.cts") as {
   getIntegrationTargets(env?: Record<string, string | undefined>): {
     kind: string;
     enabled: boolean;
@@ -24,7 +24,7 @@ const {
     ) => Promise<{ status: string }>;
   }): Promise<number>;
 };
-const { runRealTarget } = require("../scripts/run-conformance.cjs") as {
+const { runRealTarget } = require("../scripts/run-conformance.cts") as {
   runRealTarget(
     options: { repeat: number; realTarget: boolean },
     env: Record<string, string | undefined>,
@@ -39,7 +39,7 @@ const { runRealTarget } = require("../scripts/run-conformance.cjs") as {
 
 const fixtureEnvironment = (name: string) => ({
   LII_CONFORMANCE_OPT_IN: "1",
-  LII_CONFORMANCE_DRIVER_MODULE: `tests/fixtures/conformance-drivers/${name}.mjs`
+  LII_CONFORMANCE_DRIVER_MODULE: `tests/fixtures/conformance-drivers/${name}.mts`
 });
 
 const sourceSdk = { PACKAGE_VERSION, runTransportConformance };

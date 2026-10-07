@@ -3,14 +3,14 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ResumeRecord } from "../src/core.js";
+import { createManifest, createResumeRecord, type ResumeRecord } from "../src/core.js";
 
 const require = createRequire(import.meta.url);
 const {
   JsonFileResumeStore,
   parseArguments,
   validateResult
-} = require("../benchmarks/run-local.cjs") as {
+} = require("../benchmarks/run-local.cts") as {
   JsonFileResumeStore: new (filePath: string) => {
     get(recordId: string): Promise<ResumeRecord | undefined>;
     put(record: ResumeRecord): Promise<void>;
@@ -78,10 +78,14 @@ describe("reference benchmark harness", () => {
     temporaryRoots.push(root);
     const filePath = path.join(root, "records.json");
     const store = new JsonFileResumeStore(filePath);
-    const record = {
-      id: "record-1",
-      progress: { status: "failed" }
-    } as ResumeRecord;
+    const file = Object.assign(new Blob(["fixture"], { type: "application/octet-stream" }), { name: "fixture.bin" });
+    const manifest = await createManifest(file, { checksum: false });
+    const record = createResumeRecord({
+      id: "record-1", manifest,
+      file: { name: file.name, sizeBytes: file.size, mediaType: file.type, fingerprint: manifest.original.fingerprint },
+      chunking: manifest.chunking,
+      transport: { name: "fixture", uploadId: "fixture-upload" }
+    });
 
     await store.put(record);
     expect(await store.get(record.id)).toEqual(record);

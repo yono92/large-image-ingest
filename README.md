@@ -14,7 +14,7 @@ npm install large-image-ingest
 
 ## Quick Start
 
-After installing version 1.8.1 or later, run a complete local upload:
+For published version 1.8.1, run a complete local upload:
 
 ```bash
 node node_modules/large-image-ingest/examples/onboarding/minimal-upload.mjs
@@ -44,7 +44,9 @@ When you need profile evaluation, durable recovery, stored verification and pers
 node node_modules/large-image-ingest/examples/onboarding/verified-workflow.mjs
 ```
 
-This complete [workflow example](examples/onboarding/verified-workflow.mjs) supplies every adapter and demonstrates client reconstruction. See [its storage and deployment boundaries](examples/onboarding/README.md) and [the workflow guide](docs/verified-ingest-workflow.md).
+Packages built from the current TypeScript checkout emit these scripts under `dist/examples/onboarding/`; use that path for a newly packed checkout. See [the package example instructions](examples/onboarding/README.md).
+
+This complete [workflow example](examples/onboarding/verified-workflow.mts) supplies every adapter and demonstrates client reconstruction. See [its storage and deployment boundaries](examples/onboarding/README.md) and [the workflow guide](docs/verified-ingest-workflow.md).
 
 ## Verified Reference Run
 
@@ -64,7 +66,7 @@ This September 7, 2026 verification used Node.js 22.14.0 on macOS 26.6 arm64 wit
 
 The separately retained Chromium Worker qualification hashed real 1 GiB and 3 GiB `File` inputs at 234.78 and 258.88 MiB/s. Both digests matched, cancellation returned `checksum.canceled` with no late progress, and the maximum measured main-thread delay was 1.70 ms with no observed long task. These are machine-specific qualification results, not universal performance guarantees.
 
-The refreshed credential-free adoption comparison uses the verified-workflow facade for the SDK candidate across 14 injected scenarios. The SDK binding retained 2 of 14 application-owned lifecycle responsibilities and 5 explicit configuration decisions, while its physical-line result became more adverse: 249 lines versus 140 and 142 in the two generic fixtures. All candidates passed 14/14 controlled scenarios. This demonstrates coordination ownership and end-to-end authority, not less code or a lower real-world incident rate. See [the method, raw report, and claim limits](docs/adoption-evidence.md).
+The refreshed credential-free adoption comparison uses the verified-workflow facade for the SDK candidate across 14 injected scenarios. The SDK binding retained 2 of 14 application-owned lifecycle responsibilities and 5 explicit configuration decisions, while its physical-line result became more adverse: 250 lines versus 151 and 154 in the two generic fixtures. All candidates passed 14/14 controlled scenarios. This demonstrates coordination ownership and end-to-end authority, not less code or a lower real-world incident rate. See [the method, raw report, and claim limits](docs/adoption-evidence.md).
 
 ## What It Provides
 
@@ -470,6 +472,7 @@ Server-owned credential, object key, NAS path, cleanup, and final verification r
 - [Uppy friction and adapter decision](docs/integrations/uppy-friction.md)
 - [tus-js-client transport review brief](docs/integrations/tus-js-client-review.md)
 - [Roadmap](docs/roadmap.md)
+- [Development sources and Spec Kit tools](docs/development.md)
 - [Changelog](CHANGELOG.md)
 
 ## Verification
@@ -491,6 +494,8 @@ npm run benchmark:parallel
 npm run test:integration
 npm pack --dry-run
 ```
+
+SDK and tooling sources use TypeScript; the build emits JavaScript for npm consumers. See [development sources](docs/development.md) for the loader, compiler checks and Spec Kit helpers.
 
 Default verification is local and credential-free. The conformance gate executes isolated S3 multipart, tus, and NAS representative targets; the reference gate performs a 64 MiB HTTP interruption-and-resume scenario with stored-file verification. Real tus servers, S3-compatible buckets, and mounted NAS paths require `LII_CONFORMANCE_OPT_IN=1` plus an operator-owned conformance driver.
 

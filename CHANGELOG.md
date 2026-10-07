@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Maintain development scripts, benchmarks, executable examples and conformance fixtures as strictly checked TypeScript sources.
+- Compile packaged Node examples into `dist/examples/` and the browser checksum probe into `dist/benchmarks/`; generated JavaScript remains outside Git.
+- Remove shell helpers from the working tree and remove CommonJS/ESM JavaScript and shell files from all branch/tag histories; keep the working-feature pointer local and untracked.
+- Retain the historical adoption report and add a separately dated TypeScript-source measurement.
+
 ## 1.8.1 - 2026-10-07
 
 - Start onboarding with a minimal upload and complete credential-free HTTP/filesystem examples using public package imports.

@@ -10,9 +10,9 @@ npm run example:minimal
 npm run example:verified
 ```
 
-The first command builds the SDK and runs [minimal-upload.mjs](minimal-upload.mjs). It creates a valid 512 × 512 grayscale TIFF, starts the real loopback HTTP target, transfers the original using the public core API, and independently verifies the stored SHA-256. Expected output includes `completed` and `storedVerified: true`.
+The first command builds the SDK and compiles the TypeScript example into `dist/examples/`. Its source is [minimal-upload.mts](minimal-upload.mts). It creates a valid 512 × 512 grayscale TIFF, starts the real loopback HTTP target, transfers the original using the public core API, and independently verifies the stored SHA-256. Expected output includes `completed` and `storedVerified: true`.
 
-The second runs [verified-workflow.mjs](verified-workflow.mjs). It supplies every adapter that the full workflow requires, pauses after acknowledged progress, reconstructs the client and stores, resumes against the running server, verifies the stored original, seals provenance and persists evidence. Expected output includes `evidence_persisted`, `recovered: true` and `evidenceReloaded: true`.
+The second compiles and runs [verified-workflow.mts](verified-workflow.mts). It supplies every adapter that the full workflow requires, pauses after acknowledged progress, reconstructs the client and stores, resumes against the running server, verifies the stored original, seals provenance and persists evidence. Expected output includes `evidence_persisted`, `recovered: true` and `evidenceReloaded: true`.
 
 To retain files in a chosen directory:
 
@@ -24,19 +24,21 @@ The terminal prints safe status and the local artifact root. Inspect `targets/` 
 
 ## Using A Packed Or Installed Package
 
-From version 1.8.1, both scripts execute without repository tooling:
+Both scripts execute without repository tooling. A package built from this TypeScript checkout uses the compiled paths below:
 
 ```bash
-node node_modules/large-image-ingest/examples/onboarding/minimal-upload.mjs
-node node_modules/large-image-ingest/examples/onboarding/verified-workflow.mjs
+node node_modules/large-image-ingest/dist/examples/onboarding/minimal-upload.mjs
+node node_modules/large-image-ingest/dist/examples/onboarding/verified-workflow.mjs
 ```
+
+Published version 1.8.1 keeps these scripts at `examples/onboarding/` instead of `dist/examples/onboarding/`.
 
 To validate a checkout as an installed package, run `npm run test:onboarding-package`. It packs the SDK and executes both shipped examples from an isolated consumer without access to checkout dependencies.
 
 ## Adapt The Example
 
-- [transport.mjs](transport.mjs) connects to the included reference HTTP server. For an existing tus server, use `createTusTransport({ endpoint })`. For S3, provide the application broker described in [the server guide](../../docs/server-operational-guide.md).
-- [file-stores.mjs](file-stores.mjs) supplies functioning resume, checkpoint and immutable evidence stores. Use the exported `createFileStores(root)` once for a root and share its adapters with your workflow.
+- [transport.mts](transport.mts) connects to the included reference HTTP server. For an existing tus server, use `createTusTransport({ endpoint })`. For S3, provide the application broker described in [the server guide](../../docs/server-operational-guide.md).
+- [file-stores.mts](file-stores.mts) supplies functioning resume, checkpoint and immutable evidence stores. Use the exported `createFileStores(root)` once for a root and share its adapters with your workflow.
 - `createNodeStoredFileVerifier()` performs the separate stored-byte verification. The reference server resolves generated upload paths from its own manifest mapping.
 - Structural TIFF metadata in this example is **caller supplied** and describes only its generated fixture. For another original, obtain real metadata using the TIFF probe or an appropriate trusted source; never reuse fixture dimensions.
 

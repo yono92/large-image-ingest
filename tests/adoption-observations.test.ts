@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import { expect, test } from "vitest";
 
 const require = createRequire(import.meta.url);
-const load = () => require("../scripts/adoption-report.cjs");
+const load = () => require("../scripts/adoption-report.cts");
 const blank = () => ({ schemaVersion: "large-image-ingest.adoption-observations.v1", trials: [], projects: [] });
 const trial = (changes = {}) => ({ trialId: "trial-001", participantId: "participant-001",
   participantKind: "external-developer", firstTime: true, libraryVersion: "1.8.0",

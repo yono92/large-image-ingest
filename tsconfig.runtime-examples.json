@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "rootDir": "examples", "outDir": "dist/examples", "types": ["node"] },
+  "include": ["examples/**/*.mts", "examples/**/*.cts"]
+}

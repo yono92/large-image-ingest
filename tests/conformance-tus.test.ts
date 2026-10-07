@@ -13,7 +13,7 @@ import { runTransportConformance } from "../src/conformance.js";
 import { createTusTransport } from "../src/tus.js";
 
 const require = createRequire(import.meta.url);
-const { createRepresentativeTusTarget } = require("../scripts/conformance/representative-tus.cjs") as {
+const { createRepresentativeTusTarget } = require("../scripts/conformance/representative-tus.cts") as {
   createRepresentativeTusTarget(sdk: Record<string, unknown>): import("../src/conformance.js").TransportConformanceTarget;
 };
 

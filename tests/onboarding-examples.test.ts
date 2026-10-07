@@ -14,20 +14,16 @@ async function root() {
 afterEach(async () => { await Promise.all(roots.splice(0).map(value => rm(value, { recursive: true, force: true }))); });
 
 test("minimal upload verifies the stored original through real HTTP", async () => {
-  // @ts-expect-error executable example intentionally has no SDK declaration surface
-  const { runMinimalUpload } = await import("../examples/onboarding/minimal-upload.mjs");
+  const { runMinimalUpload } = await import("../examples/onboarding/minimal-upload.mts");
   const result = await runMinimalUpload({ root: await root() });
   expect(result.status).toBe("completed");
   expect(result.storedVerified).toBe(true);
 });
 
 test("the reference HTTP target rejects corrupted original bytes", async () => {
-  // @ts-expect-error example-only module
-  const { createLocalReferenceServer } = await import("../examples/reference-local/local-server.mjs");
-  // @ts-expect-error example-only module
-  const { createFixture } = await import("../examples/onboarding/fixture.mjs");
-  // @ts-expect-error example-only module
-  const { createReferenceTransport } = await import("../examples/onboarding/transport.mjs");
+  const { createLocalReferenceServer } = await import("../examples/reference-local/local-server.mts");
+  const { createFixture } = await import("../examples/onboarding/fixture.mts");
+  const { createReferenceTransport } = await import("../examples/onboarding/transport.mts");
   const server = await createLocalReferenceServer({ root: await root() });
   try {
     const transport = createReferenceTransport(server.baseUrl);
@@ -43,14 +39,10 @@ test("the reference HTTP target rejects corrupted original bytes", async () => {
 });
 
 test("file-backed recovery rejects metadata-equal changed bytes before remote resume", async () => {
-  // @ts-expect-error example-only module
-  const { createLocalReferenceServer } = await import("../examples/reference-local/local-server.mjs");
-  // @ts-expect-error example-only module
-  const { createFixture } = await import("../examples/onboarding/fixture.mjs");
-  // @ts-expect-error example-only module
-  const { createReferenceTransport } = await import("../examples/onboarding/transport.mjs");
-  // @ts-expect-error example-only module
-  const { createFileStores } = await import("../examples/onboarding/file-stores.mjs");
+  const { createLocalReferenceServer } = await import("../examples/reference-local/local-server.mts");
+  const { createFixture } = await import("../examples/onboarding/fixture.mts");
+  const { createReferenceTransport } = await import("../examples/onboarding/transport.mts");
+  const { createFileStores } = await import("../examples/onboarding/file-stores.mts");
   const directory = await root();
   const server = await createLocalReferenceServer({ root: directory });
   try {
@@ -75,8 +67,7 @@ test("file-backed recovery rejects metadata-equal changed bytes before remote re
 });
 
 test("verified workflow persists readable evidence through reconstructed adapters", async () => {
-  // @ts-expect-error executable example intentionally has no SDK declaration surface
-  const { runVerifiedWorkflow } = await import("../examples/onboarding/verified-workflow.mjs");
+  const { runVerifiedWorkflow } = await import("../examples/onboarding/verified-workflow.mts");
   const directory = await root();
   const result = await runVerifiedWorkflow({ root: directory, exerciseRecovery: true });
   expect(result.status).toBe("evidence_persisted");
@@ -86,10 +77,8 @@ test("verified workflow persists readable evidence through reconstructed adapter
 });
 
 test("example storage serializes stale CAS and protects immutable evidence revisions", async () => {
-  // @ts-expect-error executable example intentionally has no SDK declaration surface
-  const { createFileStores } = await import("../examples/onboarding/file-stores.mjs");
-  // @ts-expect-error executable example intentionally has no SDK declaration surface
-  const { runVerifiedWorkflow } = await import("../examples/onboarding/verified-workflow.mjs");
+  const { createFileStores } = await import("../examples/onboarding/file-stores.mts");
+  const { runVerifiedWorkflow } = await import("../examples/onboarding/verified-workflow.mts");
   const directory = await root();
   const result = await runVerifiedWorkflow({ root: directory });
   const stores = await createFileStores(path.join(directory, "records"));

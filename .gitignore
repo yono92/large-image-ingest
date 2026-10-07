@@ -24,3 +24,8 @@ examples/reference-local/.fixtures/
 examples/inspection-upload-react/.vite-dist/
 test-results/
 playwright-report/
+
+# Maintained sources are TypeScript; generated runtime files stay outside Git.
+*.cjs
+*.mjs
+*.sh

@@ -12,7 +12,7 @@ import { runTransportConformance } from "../src/conformance.js";
 import { createS3MultipartTransport } from "../src/s3.js";
 
 const require = createRequire(import.meta.url);
-const { createRepresentativeS3Target } = require("../scripts/conformance/representative-s3.cjs") as {
+const { createRepresentativeS3Target } = require("../scripts/conformance/representative-s3.cts") as {
   createRepresentativeS3Target(sdk: Record<string, unknown>): import("../src/conformance.js").TransportConformanceTarget;
 };
 

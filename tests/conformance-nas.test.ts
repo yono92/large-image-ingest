@@ -11,7 +11,7 @@ import { runTransportConformance } from "../src/conformance.js";
 import { createNasGateway } from "../src/nas.js";
 
 const require = createRequire(import.meta.url);
-const { createRepresentativeNasTarget } = require("../scripts/conformance/representative-nas.cjs") as {
+const { createRepresentativeNasTarget } = require("../scripts/conformance/representative-nas.cts") as {
   createRepresentativeNasTarget(sdk: Record<string, unknown>): import("../src/conformance.js").TransportConformanceTarget;
 };
 

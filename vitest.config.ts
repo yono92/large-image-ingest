@@ -20,6 +20,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    setupFiles: ["./tests/setup-tooling.ts"],
     exclude: [...configDefaults.exclude, "tests/ui-browser/**"]
   }
 });

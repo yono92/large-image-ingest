@@ -13,7 +13,7 @@ import { MemoryResumeStore } from "./resume-fixtures";
 import { createLocalReferenceTransport } from "../examples/reference-local/local-reference-transport";
 
 const require = createRequire(import.meta.url);
-const { generateFixture } = require("../scripts/create-uppy-example-fixture.cjs") as {
+const { generateFixture } = require("../scripts/create-uppy-example-fixture.cts") as {
   generateFixture(outputPath: string, sizeBytes: number): Promise<{
     outputPath: string;
     sizeBytes: number;
@@ -252,7 +252,7 @@ async function startServer(): Promise<{
   };
 }> {
   const root = await temporaryRoot();
-  const { createLocalReferenceServer } = await import("../examples/reference-local/local-server.mjs");
+  const { createLocalReferenceServer } = await import("../examples/reference-local/local-server.mts");
   const server = await createLocalReferenceServer({
     root,
     verifyStoredFile: (filePath: string, manifest: Parameters<typeof verifyNodeFileManifest>[1]) =>

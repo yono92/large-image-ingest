@@ -7,7 +7,7 @@ import * as workflow from "../src/workflow.js";
 const sdk = { ...core, ...profiles, ...workflow };
 
 const require = createRequire(import.meta.url);
-const { runEvidence } = require("../benchmarks/run-adoption-evidence.cjs") as {
+const { runEvidence } = require("../benchmarks/run-adoption-evidence.cts") as {
   runEvidence(options?: { sdk?: typeof sdk }): Promise<any>;
 };
 

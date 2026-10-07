@@ -15,9 +15,9 @@ import { createS3MultipartTransport } from "../src/s3.js";
 import { createTusTransport } from "../src/tus.js";
 
 const require = createRequire(import.meta.url);
-const { createRepresentativeS3Target } = require("../scripts/conformance/representative-s3.cjs");
-const { createRepresentativeTusTarget } = require("../scripts/conformance/representative-tus.cjs");
-const { createRepresentativeNasTarget } = require("../scripts/conformance/representative-nas.cjs");
+const { createRepresentativeS3Target } = require("../scripts/conformance/representative-s3.cts");
+const { createRepresentativeTusTarget } = require("../scripts/conformance/representative-tus.cts");
+const { createRepresentativeNasTarget } = require("../scripts/conformance/representative-nas.cts");
 
 const sdk = {
   calculateChecksum,

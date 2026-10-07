@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { countNonCommentSourceLines } = require("../benchmarks/adoption/protocol.cjs") as {
+const { countNonCommentSourceLines } = require("../benchmarks/adoption/protocol.cts") as {
   countNonCommentSourceLines(source: string): number;
 };
 
