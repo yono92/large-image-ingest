@@ -27,7 +27,7 @@ The catalog has ten ordered scenarios under `large-image-ingest.transport-confor
 | tus | Authoritative `Upload-Offset`, upload URL state, and `Upload-Expires` when present | Independent stored SHA-256 | The official adapter does not advertise the optional tus checksum extension, so the chunk-integrity scenario is `unsupported`. |
 | NAS | Durable session metadata, staged chunk records, and coordinated locks | Staged chunk SHA-256 plus final stored SHA-256 | Browser clients require a server-side gateway; mount and rename semantics must be qualified in the deployment environment. |
 
-The official S3 adapter advertises parallel transfer up to 16 chunks with Base64 SHA-256 attestation. tus and NAS deliberately advertise no parallel capability in 1.8.0. Static `TransportCapabilities`, successful imports, endpoint reachability, or ordinary custom-transport compatibility are not conformance evidence. A custom transport remains usable without being described as conformant.
+The official S3 adapter advertises parallel transfer up to 16 chunks with Base64 SHA-256 attestation. tus and NAS deliberately advertise no parallel capability in 1.8.1. Static `TransportCapabilities`, successful imports, endpoint reachability, or ordinary custom-transport compatibility are not conformance evidence. A custom transport remains usable without being described as conformant.
 
 ## Credential-Free Release Evidence
 

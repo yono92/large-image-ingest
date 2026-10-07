@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.8.1 - 2026-10-07
+
+- Start onboarding with a minimal upload and complete credential-free HTTP/filesystem examples using public package imports.
+- Add a verified workflow example with persistent resume/checkpoint/evidence adapters, client reconstruction, independent stored verification and immutable evidence reload.
+- Add explicit local first-time developer and known-project observations, safe reports and evaluation instructions without runtime telemetry or inferred adoption counts.
+- Update development-only source-map-js and undici transitive dependencies to resolve audit findings; SDK runtime dependencies remain unchanged.
+
 ## 1.8.0 - 2026-09-18
 
 - Add opt-in bounded parallel upload with requested concurrency 2–16, transport ceilings, canonical receipts, unique acknowledged-byte progress, attempt identity, fail-fast sibling interruption, and settled pause/cancel behavior.

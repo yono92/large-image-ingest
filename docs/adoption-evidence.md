@@ -1,5 +1,7 @@
 # Comparative Adoption Evidence
 
+For actual first-time developer trials and known project observations, use [Developer trials and actual adoption](adoption-validation.md). This page measures controlled reference integrations, rather than real adoption.
+
 The September 7, 2026 report compares three frozen, credential-free reference integrations against the same original-preserving TIFF ingest journey:
 
 - `sdk-s3`: `createVerifiedIngestWorkflow()` with application-owned S3-style broker, stored-object verifier, checkpoint store, and evidence sink adapters;

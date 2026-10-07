@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -118,6 +118,10 @@
   },
   "types": "./dist/esm/index.d.ts",
   "scripts": {
+    "example:minimal": "npm run build && node examples/onboarding/minimal-upload.mjs",
+    "example:verified": "npm run build && node examples/onboarding/verified-workflow.mjs",
+    "adoption:report": "node scripts/adoption-report.cjs",
+    "test:onboarding-package": "npm run build && node scripts/verify-onboarding-package.cjs",
     "prebuild": "node scripts/verify-package-version.cjs",
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs && node scripts/verify-package-consumption.cjs",
     "benchmark:local": "npm run build && node benchmarks/run-local.cjs",
@@ -130,7 +134,7 @@
     "example:inspection-ui": "node scripts/run-inspection-ui-example.cjs",
     "example:inspection-ui:fixture": "node examples/reference-local/create-fixture.cjs",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && npm run test:conformance && npm run test:browser-checksum && npm run test:reference && npm run test:adoption-evidence && npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && node scripts/verify-onboarding-package.cjs && npm run test:conformance && npm run test:browser-checksum && npm run test:reference && npm run test:adoption-evidence && npm audit --audit-level=moderate",
     "qualify:transport": "npm run build && node scripts/run-conformance.cjs --real-target",
     "smoke:exports": "node scripts/verify-package-consumption.cjs",
     "test:integration": "node scripts/run-integration-tests.cjs",

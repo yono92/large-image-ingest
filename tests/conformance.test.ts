@@ -52,7 +52,7 @@ describe("transport conformance", () => {
     expect(report.issues).toEqual([]);
     expect(report.results).toHaveLength(10);
     expect(report.results.every(({ status }) => status === "passed")).toBe(true);
-    expect(report.libraryVersion).toBe("1.8.0");
+    expect(report.libraryVersion).toBe("1.8.1");
     expect(validateTransportConformanceReport(report)).toEqual({ ok: true, issues: [], report });
   });
 

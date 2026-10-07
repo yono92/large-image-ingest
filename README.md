@@ -12,6 +12,40 @@ The package orchestrates validation, checksums, manifest generation, chunk plann
 npm install large-image-ingest
 ```
 
+## Quick Start
+
+After installing version 1.8.1 or later, run a complete local upload:
+
+```bash
+node node_modules/large-image-ingest/examples/onboarding/minimal-upload.mjs
+```
+
+The example generates a valid TIFF, transfers it over real HTTP, and independently verifies the stored original. It needs Node.js 20+ and no cloud credentials. See [the executable examples](examples/onboarding/README.md).
+
+For an existing tus server, the basic session needs only a transport. Pass the untouched browser File from your file picker:
+
+```ts
+import { createIngestSession } from "large-image-ingest/core";
+import { createTusTransport } from "large-image-ingest/transport-tus";
+
+async function upload(file: File) {
+  const session = createIngestSession(file, {
+    transport: createTusTransport({ endpoint: "/uploads/" })
+  });
+  return session.start();
+}
+```
+
+Set `/uploads/` to your tus creation endpoint. The session preserves original bytes, computes whole-file SHA-256, and owns chunking, retries and transfer state. The returned manifest records the source; transport completion is followed by separate server-side stored-original verification. See [the modular quickstart](docs/quickstart.md) for validation and recovery.
+
+When you need profile evaluation, durable recovery, stored verification and persisted audit evidence together:
+
+```bash
+node node_modules/large-image-ingest/examples/onboarding/verified-workflow.mjs
+```
+
+This complete [workflow example](examples/onboarding/verified-workflow.mjs) supplies every adapter and demonstrates client reconstruction. See [its storage and deployment boundaries](examples/onboarding/README.md) and [the workflow guide](docs/verified-ingest-workflow.md).
+
 ## Verified Reference Run
 
 The repository reference harness exercises the built package through real loopback HTTP, forces an interruption after durable progress, resumes with a replacement session, and verifies the stored file against its manifest.
@@ -31,35 +65,6 @@ This September 7, 2026 verification used Node.js 22.14.0 on macOS 26.6 arm64 wit
 The separately retained Chromium Worker qualification hashed real 1 GiB and 3 GiB `File` inputs at 234.78 and 258.88 MiB/s. Both digests matched, cancellation returned `checksum.canceled` with no late progress, and the maximum measured main-thread delay was 1.70 ms with no observed long task. These are machine-specific qualification results, not universal performance guarantees.
 
 The refreshed credential-free adoption comparison uses the verified-workflow facade for the SDK candidate across 14 injected scenarios. The SDK binding retained 2 of 14 application-owned lifecycle responsibilities and 5 explicit configuration decisions, while its physical-line result became more adverse: 249 lines versus 140 and 142 in the two generic fixtures. All candidates passed 14/14 controlled scenarios. This demonstrates coordination ownership and end-to-end authority, not less code or a lower real-world incident rate. See [the method, raw report, and claim limits](docs/adoption-evidence.md).
-
-## Quick Start
-
-```ts
-import { loadBundledDomainProfile } from "large-image-ingest/profiles";
-import { createVerifiedIngestWorkflow } from "large-image-ingest/workflow";
-
-const profile = await loadBundledDomainProfile("semiconductor-inspection");
-const workflow = createVerifiedIngestWorkflow(file, {
-  profile: { definition: profile, structuralEvidence },
-  session: {
-    transport,
-    resume: { store: resumeStore, cleanup: "delete-on-complete" },
-    metadata: { lotId, waferId, inspectionTimestamp },
-    image: structuralEvidence
-  },
-  verifier: storedObjectVerifier,
-  checkpointStore,
-  evidenceSink,
-  onEvent: (event) => publishSafeStatus(event)
-});
-
-const result = await workflow.start();
-if (result.status === "evidence_persisted") {
-  retainEvidenceReference(result.evidenceReference);
-}
-```
-
-The application owns transport credentials/broker policy, stored verification, checkpoint storage, and evidence persistence. The workflow owns their safe order and keeps transfer completion distinct from stored verification. See the [verified workflow guide](docs/verified-ingest-workflow.md) or the [low-level modular session examples](docs/quickstart.md).
 
 ## What It Provides
 

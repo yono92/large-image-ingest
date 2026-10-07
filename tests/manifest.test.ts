@@ -27,7 +27,7 @@ describe("createManifest", () => {
     });
 
     expect(manifest.schemaVersion).toBe("large-image-ingest.manifest.v1");
-    expect(manifest.library.version).toBe("1.8.0");
+    expect(manifest.library.version).toBe("1.8.1");
     expect(manifest.original).toMatchObject({
       kind: "original",
       name: "wafer-aoi-001.tif",

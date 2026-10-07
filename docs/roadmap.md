@@ -2,6 +2,19 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.8.1 Included - Executable Onboarding And Adoption Validation
+
+Spec Kit artifacts:
+
+- [Executable onboarding and adoption validation](../specs/021-onboarding-adoption/spec.md)
+
+- [x] Put a runnable minimal original-preserving upload first in the README.
+- [x] Supply complete HTTP/filesystem workflow examples with client reconstruction, stored verification and persisted evidence.
+- [x] Add local developer-trial and known-project observations with safe aggregate reporting and explicit unknown population counts.
+- [x] Verify both shipped examples in an isolated packed consumer.
+
+Real external developer trials and project observations remain to be collected; the tooling does not establish adoption or ease of use by itself.
+
 ## 1.8.0 Included - Parallel Upload Integrity
 
 Spec Kit artifacts:

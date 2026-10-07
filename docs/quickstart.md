@@ -26,6 +26,25 @@ import {
 } from "large-image-ingest/core";
 ```
 
+## Minimal Upload First
+
+Run `npm run example:minimal` in a checkout for a complete local upload with stored SHA-256 verification. Run `npm run example:verified` next to exercise the full workflow and persisted adapters. [Execution instructions and recovery limits](../examples/onboarding/README.md).
+
+With an existing tus server, only the transport is required:
+
+```ts
+import { createIngestSession } from "large-image-ingest/core";
+import { createTusTransport } from "large-image-ingest/transport-tus";
+
+async function upload(file: File) {
+  return createIngestSession(file, {
+    transport: createTusTransport({ endpoint: "/uploads/" })
+  }).start();
+}
+```
+
+Pass the original browser File, configure the real tus endpoint, and verify the stored original on the server after transfer. Add persistent recovery and the full workflow when those stages are needed.
+
 ## Verified Ingest Workflow
 
 Use `large-image-ingest/workflow` when the application wants one authoritative path from explicit profile selection through durable evidence:
