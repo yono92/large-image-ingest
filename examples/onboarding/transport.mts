@@ -1,9 +1,11 @@
 import type { UploadTransport } from "large-image-ingest/core";
+import { ExampleFailure } from "./cli.mjs";
 // Example-only bridge to the credential-free reference server, using real HTTP.
 export function createReferenceTransport(baseUrl: string): UploadTransport {
   async function request(suffix: string, options: RequestInit = {}): Promise<Record<string, unknown>> {
     const response = await fetch(`${baseUrl}${suffix}`, options);
     if (!response.ok) {
+      if (response.status === 422 && suffix.endsWith("/complete")) throw new ExampleFailure("verification.failed");
       throw Object.assign(new Error("Local reference request failed."), {
         code: "transport.failed", retryable: response.status >= 500
       });
@@ -41,7 +43,7 @@ export function createReferenceTransport(baseUrl: string): UploadTransport {
     },
     async completeSession({ session, signal }) {
       const result = await request(`/uploads/${encodeURIComponent(session.uploadId)}/complete`, { method: "POST", signal });
-      if (!result.completed || result.verification !== "verified") throw new Error("Stored original did not verify.");
+      if (!result.completed || result.verification !== "verified") throw new ExampleFailure("verification.failed");
     },
     async abortSession({ session }) {
       await request(`/uploads/${encodeURIComponent(session.uploadId)}`, { method: "DELETE" });

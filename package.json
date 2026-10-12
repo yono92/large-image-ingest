@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -117,11 +117,16 @@
     }
   },
   "types": "./dist/esm/index.d.ts",
+  "bin": {
+    "large-image-ingest-minimal": "./dist/examples/onboarding/minimal-upload.mjs",
+    "large-image-ingest-verified": "./dist/examples/onboarding/verified-workflow.mjs"
+  },
   "scripts": {
     "example:minimal": "npm run build && node dist/examples/onboarding/minimal-upload.mjs",
     "example:verified": "npm run build && node dist/examples/onboarding/verified-workflow.mjs",
     "adoption:report": "node --import tsx scripts/adoption-report.cts",
     "test:onboarding-package": "npm run build && node --import tsx scripts/verify-onboarding-package.cts",
+    "test:package-manager": "node --import tsx scripts/verify-onboarding-package.cts",
     "prebuild": "node --import tsx scripts/verify-package-version.cts",
     "build": "npm run clean && tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && tsc -p tsconfig.runtime-examples.json && tsc -p tsconfig.runtime-benchmarks.json && node --import tsx scripts/write-cjs-package.cts && node --import tsx scripts/verify-package-consumption.cts",
     "benchmark:local": "npm run build && node --import tsx benchmarks/run-local.cts",

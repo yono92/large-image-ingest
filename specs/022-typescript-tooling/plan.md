@@ -20,3 +20,7 @@ PASS: preserve original bytes/checksums and recovery authority; adapters remain 
 
 ## Constraints
 No blanket ts-nocheck/noImplicitAny relaxation. SDK APIs/schema/version unchanged. Shell helpers removed locally and .cjs/.mjs/.sh files purged from all branch/tag histories with explicit force-push authorization; feature.json is machine-local and untracked. Runtime examples use emitted .mjs/.cjs; repositories contain .mts/.cts source only.
+
+## 1.8.2 Maintenance Release
+
+Package the already completed migration with the installation documentation update. Synchronize package/lockfile/producer versions and existing release assertions; align README commands with compiled example paths and verify documentation during the existing isolated packed-consumer check. Update changelog, roadmap and current guides while retaining historical evidence and the 1.8.1 path note. Run required package checks and the existing publish checks before distribution.

@@ -45,3 +45,18 @@ Establish executable TS infrastructure, migrate behavior with explicit types, th
 - Real-provider integration remains explicitly opt-in and skipped without operator configuration. No publish or release tag is part of this change.
 
 - History cleanup: 47 retained commits and 39 distinct commit trees audited with zero .cjs/.mjs/.sh paths; SDK/tooling typecheck, 410 tests and build passed after local helper removal.
+
+## 1.8.2 Maintenance Release Follow-Up — 2026-10-12
+
+- [x] T013 Align README installation commands and compiled onboarding paths; extend the existing packed-consumer check to validate documented commands.
+- [x] T014 Synchronize package, lockfile and embedded producer version with existing test assertions; update changelog, roadmap and current documentation for 1.8.2.
+- [x] T015 Run release preparation checks and record outcomes before distribution.
+
+### Release Preparation Validation
+
+- Node 22.14.0: SDK/tooling and all three example typechecks pass; 88 test files / 410 tests pass. Initial sandbox-only HTTP listen failures pass when local server execution is permitted.
+- Build and ESM/CommonJS package consumption pass with producer metadata 1.8.2; both packed onboarding commands match the packaged README and independently verify stored originals.
+- Official S3/tus/NAS conformance passes (10/9/10 scenarios, with tus chunk integrity explicitly unsupported); 64 MiB reference interruption/resume verifies stored bytes with zero duplicate acknowledged bytes.
+- Existing Chromium UI checks pass 4/4; 64 MiB browser checksum and cancellation qualification pass with zero late progress events.
+- npm audit reports zero vulnerabilities; package dry-run contains compiled examples and no private local records or Spec Kit/test sources; git diff whitespace checks pass.
+- Preparation is complete; npm publication and a release tag have not been performed in this follow-up.

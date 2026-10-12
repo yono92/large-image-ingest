@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { File } from "node:buffer";
@@ -20,6 +20,47 @@ test("minimal upload verifies the stored original through real HTTP", async () =
   expect(result.storedVerified).toBe(true);
 });
 
+test("minimal upload preserves a supplied file with a spaced path", async () => {
+  const { runMinimalUpload } = await import("../examples/onboarding/minimal-upload.mts");
+  const directory = await root();
+  const file = path.join(directory, "private inspection image.tiff");
+  const original = Buffer.alloc(600 * 1024, 123);
+  await writeFile(file, original);
+  const result = await runMinimalUpload({ file, root: path.join(directory, "output") });
+  expect(result.storedVerified).toBe(true);
+  expect(await readFile(result.storedPath)).toEqual(original);
+  expect(await readFile(file)).toEqual(original);
+});
+
+test("file-backed source uses slices and rejects a changed original", async () => {
+  const { openLocalSource } = await import("../examples/onboarding/source.mts");
+  const directory = await root();
+  const file = path.join(directory, "source.tiff");
+  await writeFile(file, Buffer.alloc(2 * 1024 * 1024, 42));
+  const source = await openLocalSource(file);
+  // A file-backed slice reads only this range; opening does not construct a full buffer.
+  expect(source.file.size).toBe(2 * 1024 * 1024);
+  expect(source.file.type).toBe("image/tiff");
+  expect(new Uint8Array(await source.file.slice(123, 127).arrayBuffer())).toEqual(new Uint8Array([42, 42, 42, 42]));
+  await source.assertUnchanged();
+  await writeFile(file, Buffer.alloc(2 * 1024 * 1024, 43));
+  await expect(source.assertUnchanged()).rejects.toMatchObject({ code: "input.changed" });
+  await expect(source.file.slice(0, 4).arrayBuffer()).rejects.toThrow();
+});
+
+test("minimal source validation rejects missing, empty and directory inputs before storage", async () => {
+  const { runMinimalUpload } = await import("../examples/onboarding/minimal-upload.mts");
+  const directory = await root();
+  const empty = path.join(directory, "empty.tiff");
+  await writeFile(empty, "");
+  for (const [file, code] of [[path.join(directory, "missing.tiff"), "input.not_found"],
+    [empty, "input.empty"], [directory, "input.not_regular"]]) {
+    const output = path.join(directory, "not-created");
+    await expect(runMinimalUpload({ file, root: output })).rejects.toMatchObject({ code });
+    await expect(readFile(path.join(output, "anything"))).rejects.toMatchObject({ code: "ENOENT" });
+  }
+});
+
 test("the reference HTTP target rejects corrupted original bytes", async () => {
   const { createLocalReferenceServer } = await import("../examples/reference-local/local-server.mts");
   const { createFixture } = await import("../examples/onboarding/fixture.mts");
@@ -33,7 +74,7 @@ test("the reference HTTP target rejects corrupted original bytes", async () => {
       return transport.uploadChunk({ ...input, body: new Blob([bytes]) });
     } };
     const session = createIngestSession(createFixture(), { transport: corrupt });
-    await expect(session.start()).rejects.toThrow();
+    await expect(session.start()).rejects.toMatchObject({ code: "verification.failed" });
     expect(server.listUploads()[0]).toMatchObject({ status: "open", verification: "failed" });
   } finally { await server.close(); }
 });

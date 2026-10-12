@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.8.2 - 2026-10-12
 
+- Document npm, pnpm, Yarn and Bun installation commands.
+- Add read-only file-backed `--file` input to the minimal example, preserving original bytes and rejecting missing, empty, non-regular or changed sources.
+- Provide portable minimal/verified example commands, help and safe actionable cause codes without exposing private source or error details.
+- Qualify real npm/pnpm/Yarn PnP/Bun local package installations, ESM/CommonJS imports, absent optional peers and executable examples through a pinned CI consumer matrix; example execution remains Node.js 20+.
+- Preserve local example disk synchronization under Yarn PnP using descriptor-based `fsync` instead of its unimplemented `FileHandle.sync` wrapper.
+- Align README quick-start commands with compiled packaged examples and verify those commands in the isolated package consumer.
 - Maintain development scripts, benchmarks, executable examples and conformance fixtures as strictly checked TypeScript sources.
 - Compile packaged Node examples into `dist/examples/` and the browser checksum probe into `dist/benchmarks/`; generated JavaScript remains outside Git.
 - Remove shell helpers from the working tree and remove CommonJS/ESM JavaScript and shell files from all branch/tag histories; keep the working-feature pointer local and untracked.

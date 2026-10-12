@@ -1,8 +1,6 @@
-import { realpathSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 // A valid, uncompressed 512 × 512 grayscale TIFF with one strip and 8-bit samples.
 export function createFixture() {
@@ -27,23 +25,4 @@ export function createFixture() {
 
 export async function exampleRoot(root?: string) {
   return root ? path.resolve(root) : mkdtemp(path.join(os.tmpdir(), "large-image-ingest-onboarding-"));
-}
-
-export function runCli(moduleUrl: string, run: (options: { root?: string }) => Promise<{ root: string; status: string; storedVerified: boolean; evidenceReloaded?: boolean; recovered?: boolean }>) {
-  if (!process.argv[1] || realpathSync(process.argv[1]) !== realpathSync(fileURLToPath(moduleUrl))) return;
-  const args = process.argv.slice(2);
-  if (args.length && (args.length !== 2 || args[0] !== "--root")) {
-    process.stderr.write("Usage: node example.mjs [--root <directory>]\n");
-    process.exitCode = 1;
-    return;
-  }
-  run(args[1] === undefined ? {} : { root: args[1] }).then(result => {
-    const { root, status, storedVerified, evidenceReloaded, recovered } = result;
-    process.stdout.write(`${JSON.stringify({ status, storedVerified,
-      ...(evidenceReloaded === undefined ? {} : { evidenceReloaded, recovered }) })}\n`);
-    process.stdout.write(`Local artifacts: ${root}\n`);
-  }).catch(() => {
-    process.stderr.write("Onboarding example failed; check local storage permissions and available ports.\n");
-    process.exitCode = 1;
-  });
 }

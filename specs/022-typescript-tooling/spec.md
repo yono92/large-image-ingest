@@ -60,3 +60,9 @@ A contributor runs build, tests, examples and benchmark commands from a clean ch
 - Existing constitution 1.0.0 applies; no public API/version bump or new release is part of this migration request.
 - A development-only loader is allowed; npm consumers must not depend on it.
 - No critical ambiguity remains after this scope clarification.
+
+## Maintenance Release Follow-Up — 2026-10-12
+
+Version 1.8.2 packages the completed tooling migration with npm, pnpm, Yarn and Bun installation instructions. This follows the original migration request, which did not include a release. Public SDK contracts and artifact schemas remain unchanged; embedded producer metadata and package version assertions advance to 1.8.2.
+
+The initial maintenance preparation aligned direct quick-start paths with `dist/examples/onboarding/`. The subsequently authorized [onboarding portability feature](../023-onboarding-portability/spec.md) supersedes that preparation with portable bins and actual four-manager installation qualification. Historical 1.8.1 example paths and dated benchmark evidence retain their original context. Bun installation qualification still does not establish Bun runtime support.

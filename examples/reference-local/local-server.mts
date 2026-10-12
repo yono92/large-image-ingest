@@ -2,6 +2,8 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { mkdir, open, rename, rm } from "node:fs/promises";
+import { fsync } from "node:fs";
+import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +33,7 @@ import type { IngestManifest, VerificationResult } from "large-image-ingest/core
 
 const JSON_BODY_LIMIT = 1024 * 1024;
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024 * 1024;
+const syncFileDescriptor = promisify(fsync);
 
 export async function createLocalReferenceServer(options: LocalReferenceServerOptions = {}) {
   const root = path.resolve(options.root ?? path.join(os.tmpdir(), "large-image-ingest-reference-local"));
@@ -292,7 +295,7 @@ async function writeRequestRange(request: IncomingMessage, filePath: string, sta
     if (received !== expectedSize) {
       throw new HttpError(400, "Chunk body does not match declared size.");
     }
-    await handle.sync();
+    await syncFileDescriptor(handle.fd);
   } finally {
     await handle.close();
   }

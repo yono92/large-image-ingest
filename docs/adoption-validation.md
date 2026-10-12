@@ -33,7 +33,7 @@ Trial fields (all required):
 | `trialId`, `participantId` | Stable pseudonymous IDs such as `trial-001`, `participant-001` |
 | `participantKind` | `external-developer`, `maintainer`, `automation` |
 | `firstTime` | Whether this is a first-time integration observation |
-| `libraryVersion` | Exact package version, such as `1.8.1` |
+| `libraryVersion` | Exact package version, such as `1.8.2` |
 | `journey` | `minimal-upload` or `verified-workflow` |
 | `environment` | `node` or `browser` |
 | `assistance` | `none` or `human` |

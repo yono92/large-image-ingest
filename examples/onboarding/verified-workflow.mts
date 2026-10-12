@@ -1,10 +1,12 @@
+#!/usr/bin/env node
 import type { VerifiedIngestWorkflow, CreateVerifiedIngestWorkflowOptions } from "large-image-ingest/workflow";
 import path from "node:path";
 import { loadBundledDomainProfile } from "large-image-ingest/profiles";
 import { createVerifiedIngestWorkflow } from "large-image-ingest/workflow";
 import { createNodeStoredFileVerifier } from "large-image-ingest/node";
 import { createLocalReferenceServer } from "../reference-local/local-server.mjs";
-import { createFixture, exampleRoot, runCli } from "./fixture.mjs";
+import { createFixture, exampleRoot } from "./fixture.mjs";
+import { ExampleFailure, runCli } from "./cli.mjs";
 import { createReferenceTransport } from "./transport.mjs";
 import { createFileStores } from "./file-stores.mjs";
 
@@ -48,7 +50,9 @@ export async function runVerifiedWorkflow(options: { root?: string; exerciseReco
       result = await workflow.resume(result.workflowId);
       recovered = true;
     }
-    if (result.status !== "evidence_persisted") throw new Error(`Evidence was not persisted: ${result.status} ${JSON.stringify("issueCodes" in result ? result.issueCodes : [])}.`);
+    if (result.status !== "evidence_persisted") {
+      throw new ExampleFailure(result.status === "verification_failed" ? "verification.failed" : "example.failed");
+    }
     const reloaded = await createFileStores(path.join(root, "records"));
     const checkpoint = await reloaded.checkpoint.get(result.workflowId);
     if (!checkpoint?.evidenceId || checkpoint.evidenceRevision === undefined || !checkpoint.manifestId) throw new Error("Evidence checkpoint is incomplete.");

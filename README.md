@@ -8,19 +8,42 @@ The package orchestrates validation, checksums, manifest generation, chunk plann
 
 ## Install
 
+Use your preferred package manager:
+
 ```bash
+# npm
 npm install large-image-ingest
+
+# pnpm
+pnpm add large-image-ingest
+
+# Yarn
+yarn add large-image-ingest
+
+# Bun
+bun add large-image-ingest
 ```
 
 ## Quick Start
 
-For published version 1.8.1, run a complete local upload:
+For version 1.8.2, run a complete local upload with your package manager:
 
 ```bash
-node node_modules/large-image-ingest/examples/onboarding/minimal-upload.mjs
+npm exec --no -- large-image-ingest-minimal
+# Or: pnpm exec large-image-ingest-minimal
+# Or: yarn run large-image-ingest-minimal
+# Or: bun run large-image-ingest-minimal
 ```
 
 The example generates a valid TIFF, transfers it over real HTTP, and independently verifies the stored original. It needs Node.js 20+ and no cloud credentials. See [the executable examples](examples/onboarding/README.md).
+
+Try your own local original without loading the whole file into memory:
+
+```bash
+npm exec --no -- large-image-ingest-minimal --file "./inspection image.tiff" --root ./local-ingest
+```
+
+The source is opened read-only, transferred unchanged, and independently checked against the stored bytes. Dimensions and domain metadata are not inferred by this minimal example. Use `--help` for options; failures show a safe cause code and recovery instruction. Both commands run with Node.js, including when installed with Bun.
 
 For an existing tus server, the basic session needs only a transport. Pass the untouched browser File from your file picker:
 
@@ -41,10 +64,10 @@ Set `/uploads/` to your tus creation endpoint. The session preserves original by
 When you need profile evaluation, durable recovery, stored verification and persisted audit evidence together:
 
 ```bash
-node node_modules/large-image-ingest/examples/onboarding/verified-workflow.mjs
+npm exec --no -- large-image-ingest-verified
 ```
 
-Packages built from the current TypeScript checkout emit these scripts under `dist/examples/onboarding/`; use that path for a newly packed checkout. See [the package example instructions](examples/onboarding/README.md).
+Use the equivalent `pnpm exec`, `yarn run` or `bun run` command for the full workflow. These packaged commands also resolve under Yarn PnP. See [the package example instructions and compatibility checks](examples/onboarding/README.md).
 
 This complete [workflow example](examples/onboarding/verified-workflow.mts) supplies every adapter and demonstrates client reconstruction. See [its storage and deployment boundaries](examples/onboarding/README.md) and [the workflow guide](docs/verified-ingest-workflow.md).
 

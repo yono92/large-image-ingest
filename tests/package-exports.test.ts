@@ -12,6 +12,7 @@ describe("package exports", () => {
       peerDependencies?: Record<string, string>;
       peerDependenciesMeta?: Record<string, { optional?: boolean }>;
       sideEffects?: boolean | string[];
+      bin: Record<string, string>;
     };
 
     expect(packageJson.exports).toMatchObject({
@@ -87,6 +88,10 @@ describe("package exports", () => {
       }
     });
     expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "docs", "examples"]));
+    expect(packageJson.bin).toEqual({
+      "large-image-ingest-minimal": "./dist/examples/onboarding/minimal-upload.mjs",
+      "large-image-ingest-verified": "./dist/examples/onboarding/verified-workflow.mjs"
+    });
     expect(packageJson.exports).not.toHaveProperty("./preview");
     expect(packageJson.peerDependencies?.react).toBe(">=18 <20");
     expect(packageJson.peerDependenciesMeta?.react?.optional).toBe(true);
@@ -104,7 +109,7 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.8.1");
+    expect(packageJson.version).toBe("1.8.2");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./provenance");

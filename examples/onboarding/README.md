@@ -24,16 +24,51 @@ The terminal prints safe status and the local artifact root. Inspect `targets/` 
 
 ## Using A Packed Or Installed Package
 
-Both scripts execute without repository tooling. A package built from this TypeScript checkout uses the compiled paths below:
+Version 1.8.2 provides commands that resolve through each package manager, including Yarn PnP:
+
+| Manager | Minimal upload | Verified fixture workflow |
+| --- | --- | --- |
+| npm | `npm exec --no -- large-image-ingest-minimal` | `npm exec --no -- large-image-ingest-verified` |
+| pnpm | `pnpm exec large-image-ingest-minimal` | `pnpm exec large-image-ingest-verified` |
+| Yarn | `yarn run large-image-ingest-minimal` | `yarn run large-image-ingest-verified` |
+| Bun | `bun run large-image-ingest-minimal` | `bun run large-image-ingest-verified` |
+
+These commands execute compiled examples with Node.js 20+, including when Bun installs the package. They need no repository tooling or optional React/geotiff peers. Direct paths also work with node_modules installations:
 
 ```bash
 node node_modules/large-image-ingest/dist/examples/onboarding/minimal-upload.mjs
 node node_modules/large-image-ingest/dist/examples/onboarding/verified-workflow.mjs
 ```
 
-Published version 1.8.1 keeps these scripts at `examples/onboarding/` instead of `dist/examples/onboarding/`.
+Version 1.8.1 keeps these scripts at `examples/onboarding/` instead of `dist/examples/onboarding/`.
 
-To validate a checkout as an installed package, run `npm run test:onboarding-package`. It packs the SDK and executes both shipped examples from an isolated consumer without access to checkout dependencies.
+To build and validate npm consumption, run `npm run test:onboarding-package`. After building once, use `npm run test:package-manager -- --manager npm` (or `pnpm`, `yarn`, `bun`). The runner actually installs a local tarball, checks ESM/CommonJS and absent optional peers, then executes both examples and a supplied-file journey. Missing managers fail instead of being skipped. See [qualification setup and scope](../../docs/development.md).
+
+## Use Your Own Original
+
+```bash
+npm run example:minimal -- --file "./inspection image.tiff" --root ./local-ingest
+# Installed package:
+npm exec --no -- large-image-ingest-minimal --file "./inspection image.tiff" --root ./local-ingest
+```
+
+The minimal example accepts any non-empty local regular file, labels MIME type from known image extensions, and independently verifies the stored bytes. It does not decode or infer dimensions/domain metadata, so a TIFF extension alone does not establish a valid TIFF container. Files are opened read-only with file-backed `Blob` slices; Node 20's native `fs.openAsBlob` API is experimental. Source changes are rejected rather than reported as verified. The local target has a 10 GiB size limit and needs disk space for its stored copy.
+
+The full workflow keeps its known generated fixture and domain metadata; it rejects `--file`. Both commands accept `--root` and `--help`. Artifact paths printed after success are for local inspection; error output never prints source names, paths, checksums or raw exceptions.
+
+## Safe Failure Guidance
+
+| Cause code | Next action |
+| --- | --- |
+| `usage.invalid` | Run `--help`; remove duplicate/unsupported options and supply values. |
+| `input.not_found`, `input.access_denied`, `input.failed` | Check the input path and read permissions. |
+| `input.not_regular`, `input.empty` | Choose a non-empty regular original. |
+| `input.changed` | Keep the source unchanged during the entire run and retry. |
+| `storage.access_denied`, `storage.full` | Select a writable artifact root with enough free space. |
+| `server.port_in_use` | Stop the conflicting local server. |
+| `validation.failed` | Check the file and ingest policy. |
+| `verification.failed` | Keep the source unchanged and inspect local stored bytes before retrying. |
+| `example.failed` | Check the documented runtime, local server and storage requirements. |
 
 ## Adapt The Example
 

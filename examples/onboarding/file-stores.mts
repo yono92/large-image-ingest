@@ -2,12 +2,16 @@ import type { ResumeStore } from "large-image-ingest/core";
 import type { WorkflowCheckpointStore, WorkflowEvidenceSink } from "large-image-ingest/workflow";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, rm, readdir } from "node:fs/promises";
+import { fsync } from "node:fs";
+import { promisify } from "node:util";
 import path from "node:path";
 import { parseResumeRecord } from "large-image-ingest/core";
 import { validateIngestEvidenceBundle, type IngestEvidenceBundleV1, parseWorkflowCheckpoint } from "large-image-ingest/workflow";
 import { validateIngestProvenance, type IngestProvenanceArtifactV1, canonicalizeProvenanceJson } from "large-image-ingest/provenance";
 
 // One process/factory owns this root. Use transactional storage for multiple owners.
+const syncFileDescriptor = promisify(fsync);
+
 export async function createFileStores(root: string): Promise<{ resume: ResumeStore; checkpoint: WorkflowCheckpointStore; evidence: WorkflowEvidenceSink }> {
   for (const kind of ["resume", "checkpoints", "evidence"]) {
     await mkdir(path.join(root, kind), { recursive: true, mode: 0o700 });
@@ -32,7 +36,7 @@ export async function createFileStores(root: string): Promise<{ resume: ResumeSt
   async function write(filename: string, value: unknown, exclusive = false) {
     const candidate = exclusive ? filename : `${filename}.${randomUUID()}.tmp`;
     const handle = await open(candidate, "wx", 0o600);
-    try { await handle.writeFile(JSON.stringify(value)); await handle.sync(); }
+    try { await handle.writeFile(JSON.stringify(value)); await syncFileDescriptor(handle.fd); }
     finally { await handle.close(); }
     if (!exclusive) await rename(candidate, filename);
   }

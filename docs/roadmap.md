@@ -2,6 +2,21 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## 1.8.2 Included - Tooling And Onboarding Maintenance
+
+Spec Kit artifacts:
+
+- [TypeScript tooling sources](../specs/022-typescript-tooling/spec.md)
+- [Real-file onboarding and package portability](../specs/023-onboarding-portability/spec.md)
+
+- [x] Maintain development tools and example sources in strictly checked TypeScript while shipping compiled Node examples.
+- [x] Document npm, pnpm, Yarn and Bun installation commands.
+- [x] Accept local originals in the minimal example with bounded reads and independent stored verification.
+- [x] Provide portable example commands, help and safe cause-specific failure guidance.
+- [x] Test actual installations through four pinned managers including Yarn PnP in CI.
+- [x] Align README commands with packaged example paths and check them during packed-consumer verification.
+- [x] Preserve historical adoption evidence and retain the separate TypeScript-source comparison.
+
 ## 1.8.1 Included - Executable Onboarding And Adoption Validation
 
 Spec Kit artifacts:
