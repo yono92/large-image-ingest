@@ -30,7 +30,7 @@ test("minimal upload preserves a supplied file with a spaced path", async () => 
   expect(result.storedVerified).toBe(true);
   expect(await readFile(result.storedPath)).toEqual(original);
   expect(await readFile(file)).toEqual(original);
-});
+}, 20_000); // File-backed HTTP and fsync can exceed the unit-test timeout on shared CI runners.
 
 test("file-backed source uses slices and rejects a changed original", async () => {
   const { openLocalSource } = await import("../examples/onboarding/source.mts");

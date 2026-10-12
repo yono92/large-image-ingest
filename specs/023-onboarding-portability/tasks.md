@@ -41,3 +41,4 @@ T001/T002 → T003/T005 tests → T004/T006 implementation → T007 → T008/T00
 - The user authorized the 1.8.2 release, commit, push and annotated version tag.
 - Full npm run prepublishOnly passes: all TypeScript checks, 449 tests, UI unit/browser checks, packed npm consumption, transport conformance, browser checksum, HTTP recovery, adoption evidence and npm audit (zero vulnerabilities).
 - Release documentation, package/lockfile/producer versions and examples describe 1.8.2. Four-manager Node 20/22 qualification remains the recorded distribution compatibility evidence.
+- Initial Linux CI hit the default 5-second timeout in the real file-backed HTTP/fsync test (about 7 seconds under shared load). The integration test alone receives a 20-second timeout; SDK/runtime behavior and other test limits remain unchanged.
