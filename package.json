@@ -118,8 +118,8 @@
   },
   "types": "./dist/esm/index.d.ts",
   "bin": {
-    "large-image-ingest-minimal": "./dist/examples/onboarding/minimal-upload.mjs",
-    "large-image-ingest-verified": "./dist/examples/onboarding/verified-workflow.mjs"
+    "large-image-ingest-minimal": "dist/examples/onboarding/minimal-upload.mjs",
+    "large-image-ingest-verified": "dist/examples/onboarding/verified-workflow.mjs"
   },
   "scripts": {
     "example:minimal": "npm run build && node dist/examples/onboarding/minimal-upload.mjs",

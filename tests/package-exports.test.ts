@@ -89,8 +89,8 @@ describe("package exports", () => {
     });
     expect(packageJson.files).toEqual(expect.arrayContaining(["dist", "docs", "examples"]));
     expect(packageJson.bin).toEqual({
-      "large-image-ingest-minimal": "./dist/examples/onboarding/minimal-upload.mjs",
-      "large-image-ingest-verified": "./dist/examples/onboarding/verified-workflow.mjs"
+      "large-image-ingest-minimal": "dist/examples/onboarding/minimal-upload.mjs",
+      "large-image-ingest-verified": "dist/examples/onboarding/verified-workflow.mjs"
     });
     expect(packageJson.exports).not.toHaveProperty("./preview");
     expect(packageJson.peerDependencies?.react).toBe(">=18 <20");
