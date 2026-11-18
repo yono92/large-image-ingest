@@ -7,7 +7,8 @@
 - Apply the verified workflow's `session.checksum` options (including an executor) when re-hashing the source on restart.
 - Require a decimal tus `Upload-Offset`; values such as `0x10` or `1e3` now fail as `transport.offset_mismatch`.
 - Refuse NAS finalization when a symlink inside the target root would place the file outside it, and accept in-root names that begin with `..`.
-- Publish releases from GitHub Actions with npm provenance; add a `size-limit` bundle-size gate to CI.
+- Add a GitHub Actions release workflow that publishes with npm provenance; add a `size-limit` bundle-size gate to CI. 1.9.0 itself was published locally without provenance because npm Trusted Publishing was not yet accepting the workflow.
+- Write example `bin` paths in the form npm 11 keeps when publishing.
 - Declare Stable, Experimental and Compatibility import-path tiers; Experimental runtime exports carry `@experimental`.
 - Shorten the README; move detailed feature sections unchanged to `docs/guide.md`; add `docs/glossary.md`.
 - Move internal session helpers into separate modules with no public type or behavior change.
