@@ -20,8 +20,10 @@ import {
 } from "./provenance.js";
 import type { DerivativeManifest, IngestFileLike, IngestManifest } from "./types.js";
 
+/** @experimental */
 export const PRESERVATION_MAPPING_SCHEMA_VERSION =
   "large-image-ingest.preservation-mapping.v1" as const;
+/** @experimental */
 export const PRESERVATION_RELATIONSHIP_SCHEMA_VERSION =
   "large-image-ingest.preservation-relationships.v1" as const;
 
@@ -164,6 +166,7 @@ export interface PreservationExportResult {
   verifiedContentFileCount: number;
 }
 
+/** @experimental */
 export class PreservationError extends Error {
   readonly code: PreservationIssueCode;
   readonly issues: readonly PreservationIssue[];
@@ -213,6 +216,7 @@ const BAGIT_DECLARATION = "BagIt-Version: 1.0\nTag-File-Character-Encoding: UTF-
 const OCFL_DECLARATION = "ocfl_object_1.1\n";
 const OCFL_INVENTORY_TYPE = "https://ocfl.io/1.1/spec/#inventory" as const;
 
+/** @experimental */
 export async function evaluatePreservationMapping(
   input: EvaluatePreservationMappingInput
 ): Promise<PreservationMapping> {
@@ -388,6 +392,7 @@ export async function evaluatePreservationMapping(
   return deepFreeze(mapping);
 }
 
+/** @experimental */
 export async function exportBagIt(
   mapping: PreservationMapping,
   options: PreservationExportOptions
@@ -395,6 +400,7 @@ export async function exportBagIt(
   return materialize(mapping, options, "bagit-1.0-sha256", writeBagIt, validateBagIt);
 }
 
+/** @experimental */
 export async function exportOcflObject(
   mapping: PreservationMapping,
   options: PreservationExportOptions
@@ -402,6 +408,7 @@ export async function exportOcflObject(
   return materialize(mapping, options, "ocfl-1.1-sha256", writeOcflObject, validateOcflObject);
 }
 
+/** @experimental */
 export async function validateBagIt(root: string): Promise<PreservationValidationResult> {
   const issues: PreservationIssue[] = [];
   let verified = 0;
@@ -480,6 +487,7 @@ export async function validateBagIt(root: string): Promise<PreservationValidatio
   return validationResult("bagit-1.0-sha256", issues, contentCount, verified);
 }
 
+/** @experimental */
 export async function validateOcflObject(root: string): Promise<PreservationValidationResult> {
   const issues: PreservationIssue[] = [];
   let verified = 0;

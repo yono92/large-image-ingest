@@ -1,7 +1,9 @@
 import { PACKAGE_VERSION } from "./package-version.js";
 
+/** @experimental */
 export const TRANSPORT_CONFORMANCE_CATALOG_VERSION =
   "large-image-ingest.transport-conformance-catalog.v1" as const;
+/** @experimental */
 export const TRANSPORT_CONFORMANCE_REPORT_VERSION =
   "large-image-ingest.transport-conformance-report.v1" as const;
 
@@ -197,6 +199,7 @@ export type TransportConformanceReportValidationResult =
   | { ok: true; issues: readonly []; report: TransportConformanceReportV1 }
   | { ok: false; issues: readonly TransportConformanceIssue[] };
 
+/** @experimental */
 export class TransportConformanceError extends Error {
   readonly code: TransportConformanceIssueCode;
   readonly issues: readonly TransportConformanceIssue[];
@@ -269,6 +272,7 @@ const SCENARIOS: readonly TransportConformanceScenario[] = [
   ], "chunkIntegrity")
 ];
 
+/** @experimental */
 export const TRANSPORT_CONFORMANCE_CATALOG: TransportConformanceCatalogV1 = Object.freeze({
   schemaVersion: TRANSPORT_CONFORMANCE_CATALOG_VERSION,
   scenarios: Object.freeze(SCENARIOS)
@@ -350,6 +354,7 @@ const CAPABILITY_KEYS: readonly TransportConformanceCapability[] = [
   "chunkIntegrity"
 ];
 
+/** @experimental */
 export async function runTransportConformance(
   target: TransportConformanceTarget,
   options: RunTransportConformanceOptions = {}
@@ -470,6 +475,7 @@ export async function runTransportConformance(
   return report;
 }
 
+/** @experimental */
 export function evaluateTransportCapabilityEvidence(
   capabilities: TransportConformanceCapabilities,
   results: readonly TransportConformanceScenarioResult[]
@@ -513,6 +519,7 @@ export function evaluateTransportCapabilityEvidence(
   return issues;
 }
 
+/** @experimental */
 export function validateTransportConformanceReport(
   value: unknown
 ): TransportConformanceReportValidationResult {
@@ -1080,8 +1087,10 @@ const RESULT_OVERALL_STATUSES = new Set<TransportConformanceOverallStatus>([
   "incomplete"
 ]);
 
+/** @experimental */
 export const WORKFLOW_CONFORMANCE_CATALOG_VERSION =
   "large-image-ingest.workflow-conformance-catalog.v1" as const;
+/** @experimental */
 export const WORKFLOW_CONFORMANCE_REPORT_VERSION =
   "large-image-ingest.workflow-conformance-report.v1" as const;
 
@@ -1146,11 +1155,13 @@ const WORKFLOW_SCENARIOS: readonly WorkflowConformanceScenario[] = [
   workflowScenario("diagnostics.restricted-values-absent", ["restrictedValuesAbsent"])
 ];
 
+/** @experimental */
 export const WORKFLOW_CONFORMANCE_CATALOG = Object.freeze({
   schemaVersion: WORKFLOW_CONFORMANCE_CATALOG_VERSION,
   scenarios: Object.freeze(WORKFLOW_SCENARIOS)
 });
 
+/** @experimental */
 export async function runWorkflowConformance(
   target: WorkflowConformanceTarget,
   options: { signal?: AbortSignal } = {}

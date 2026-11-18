@@ -20,6 +20,7 @@ const SAFE_MESSAGES: Record<WorkflowIssueCode, string> = {
   "workflow.internal_failed": "The workflow could not complete the requested stage."
 };
 
+/** @experimental */
 export class VerifiedIngestWorkflowError extends Error {
   readonly code: WorkflowIssueCode;
   readonly retryable: boolean;
@@ -32,12 +33,14 @@ export class VerifiedIngestWorkflowError extends Error {
   }
 }
 
+/** @experimental */
 export function isVerifiedIngestWorkflowError(
   value: unknown
 ): value is VerifiedIngestWorkflowError {
   return value instanceof VerifiedIngestWorkflowError;
 }
 
+/** @experimental */
 export function toWorkflowIssueCode(value: unknown): WorkflowIssueCode {
   return isVerifiedIngestWorkflowError(value) ? value.code : "workflow.internal_failed";
 }

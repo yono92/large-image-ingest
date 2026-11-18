@@ -48,6 +48,11 @@
       "import": "./dist/esm/browser.js",
       "default": "./dist/esm/browser.js"
     },
+    "./browser-wasm": {
+      "types": "./dist/esm/browser-wasm.d.ts",
+      "import": "./dist/esm/browser-wasm.js",
+      "default": "./dist/esm/browser-wasm.js"
+    },
     "./conformance": {
       "types": "./dist/esm/conformance.d.ts",
       "import": "./dist/esm/conformance.js",
@@ -155,7 +160,8 @@
     "typecheck:inspection-ui-example": "tsc -p tsconfig.inspection-ui-example.json",
     "typecheck:uppy-example": "tsc -p tsconfig.uppy-example.json",
     "test": "vitest run",
-    "typecheck:tooling": "tsc -p tsconfig.tooling.json"
+    "typecheck:tooling": "tsc -p tsconfig.tooling.json",
+    "size": "size-limit"
   },
   "keywords": [
     "large-image",
@@ -170,10 +176,14 @@
   },
   "peerDependencies": {
     "geotiff": "^3.0.5",
+    "hash-wasm": "^4.12.0",
     "react": ">=18 <20"
   },
   "peerDependenciesMeta": {
     "geotiff": {
+      "optional": true
+    },
+    "hash-wasm": {
       "optional": true
     },
     "react": {
@@ -182,6 +192,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@size-limit/preset-small-lib": "14.3.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^20.19.43",
@@ -192,10 +203,12 @@
     "@uppy/react": "^5.2.0",
     "axe-core": "^4.13.0",
     "geotiff": "^3.0.5",
+    "hash-wasm": "4.12.0",
     "jsdom": "^29.1.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-test-renderer": "^19.2.7",
+    "size-limit": "14.3.0",
     "tsx": "^4.23.15",
     "typescript": "^5.0.0",
     "vite": "^7.3.6",

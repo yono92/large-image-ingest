@@ -2,6 +2,26 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
+## Next (unreleased) - Hash Performance, Release Integrity And Scope
+
+New features are frozen through 1.10; work until then only makes existing behavior faster, verifiable and easier to adopt.
+
+Spec Kit artifacts:
+
+- [Hash performance, release integrity and scope clarity](../specs/024-hash-release-scope/spec.md)
+
+- [x] Publish releases from GitHub Actions with npm provenance; fail CI when the `core` bundle grows more than 10%.
+- [x] Double built-in SHA-256 throughput; add `node:crypto` and optional `hash-wasm` executors.
+- [x] Declare Stable, Experimental and Compatibility import-path tiers; tag Experimental exports.
+- [x] Shorten the README to install, first upload, executors and tiers; move details to the feature guide.
+- [x] Extract session retry, receipt and snapshot helpers without behavior change.
+- [ ] Single read and hash/upload overlap for parallel upload (needs a 020 spec amendment).
+- [ ] Decide the replacement for v0.2 resume records before announcing v0.1/v0.2 removal in 2.0.
+- [ ] Split the session class into lifecycle, sequential, parallel and resume modules.
+- [ ] Collect a real-environment adoption case.
+
+Consider separate `@large-image-ingest/*` packages only after 2.0 and only once Experimental paths have users.
+
 ## 1.8.2 Included - Tooling And Onboarding Maintenance
 
 Spec Kit artifacts:

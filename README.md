@@ -1,534 +1,132 @@
 # large-image-ingest
 
-TypeScript SDK for verifiable, resumable ingestion of very large inspection images while preserving the original file as the source of truth.
+[![npm](https://img.shields.io/npm/v/large-image-ingest)](https://www.npmjs.com/package/large-image-ingest)
+[![CI](https://github.com/yono92/large-image-ingest/actions/workflows/ci.yml/badge.svg)](https://github.com/yono92/large-image-ingest/actions/workflows/ci.yml)
 
-The package is built for semiconductor inspection, microscopy, industrial vision, wafer inspection, medical imaging, satellite imaging, and other workflows where the uploaded original is a source-of-truth artifact that must remain verifiable.
+Resumable upload SDK for very large inspection images that never touches the original bytes and proves what was stored.
 
-The package orchestrates validation, checksums, manifest generation, chunk planning, resumable session state, safe diagnostics, derivative references, and adapter-based storage transfer. It does not decode, resize, compress, tile, or otherwise transform images.
+Built for semiconductor and industrial inspection, microscopy and satellite imagery, where the uploaded original is a source-of-truth artifact. It validates, hashes, plans chunks, uploads through your transport (tus, S3 multipart, NAS gateway) and verifies the stored file. It never decodes, resizes, recompresses or strips metadata.
+
+## Why not just Uppy or tus-js-client?
+
+Keep them for UI and plain transfer. Use this SDK when you must show that the stored file is the original.
+
+| | large-image-ingest | tus-js-client | Uppy |
+| --- | --- | --- | --- |
+| Resume identity | Whole-file SHA-256 of the content | Fingerprint of name, size, type and modified time | Same as its transport plugin |
+| Original bytes | Never transformed | Not transformed | Optional plugins (compressor, image editor) can transform |
+| Stored-file verification | Built in (`node` subpath, workflow) | Not built in | Not built in |
+| Per-chunk integrity | SHA-256 per chunk for parallel S3 transfer | Not built in | Not built in |
+| Manifest | Versioned, with checksums and derivative references | None | None |
+
+Uppy can still be your UI: see [the Uppy integration](docs/integrations/uppy.md).
 
 ## Install
 
-Use your preferred package manager:
-
 ```bash
-# npm
 npm install large-image-ingest
-
-# pnpm
-pnpm add large-image-ingest
-
-# Yarn
-yarn add large-image-ingest
-
-# Bun
-bun add large-image-ingest
 ```
 
-## Quick Start
+pnpm (`pnpm add`), Yarn (`yarn add`) and Bun (`bun add`) work the same way. Node.js 20+ for Node usage; any modern browser for browser usage.
 
-For version 1.8.2, run a complete local upload with your package manager:
-
-```bash
-npm exec --no -- large-image-ingest-minimal
-# Or: pnpm exec large-image-ingest-minimal
-# Or: yarn run large-image-ingest-minimal
-# Or: bun run large-image-ingest-minimal
-```
-
-The example generates a valid TIFF, transfers it over real HTTP, and independently verifies the stored original. It needs Node.js 20+ and no cloud credentials. See [the executable examples](examples/onboarding/README.md).
-
-Try your own local original without loading the whole file into memory:
-
-```bash
-npm exec --no -- large-image-ingest-minimal --file "./inspection image.tiff" --root ./local-ingest
-```
-
-The source is opened read-only, transferred unchanged, and independently checked against the stored bytes. Dimensions and domain metadata are not inferred by this minimal example. Use `--help` for options; failures show a safe cause code and recovery instruction. Both commands run with Node.js, including when installed with Bun.
-
-For an existing tus server, the basic session needs only a transport. Pass the untouched browser File from your file picker:
+## Upload a file
 
 ```ts
 import { createIngestSession } from "large-image-ingest/core";
 import { createTusTransport } from "large-image-ingest/transport-tus";
 
-async function upload(file: File) {
+export async function upload(file: File) {
   const session = createIngestSession(file, {
     transport: createTusTransport({ endpoint: "/uploads/" })
   });
-  return session.start();
+  return session.start(); // manifest with whole-file SHA-256, chunk receipts
 }
 ```
 
-Set `/uploads/` to your tus creation endpoint. The session preserves original bytes, computes whole-file SHA-256, and owns chunking, retries and transfer state. The returned manifest records the source; transport completion is followed by separate server-side stored-original verification. See [the modular quickstart](docs/quickstart.md) for validation and recovery.
+The session computes the SHA-256, owns chunking, retries, pause and resume, and returns a manifest. Verify the stored original on the server with `verifyNodeFileManifest` from `large-image-ingest/node`. See [the quickstart](docs/quickstart.md).
 
-When you need profile evaluation, durable recovery, stored verification and persisted audit evidence together:
+## Try it locally
+
+Run a complete upload over real HTTP with independent stored-file verification. No cloud credentials needed:
+
+```bash
+npm exec --no -- large-image-ingest-minimal
+```
+
+Use your own file (opened read-only, streamed, verified after storage):
+
+```bash
+npm exec --no -- large-image-ingest-minimal --file "./inspection image.tiff" --root ./local-ingest
+```
+
+For profile evaluation, durable recovery, stored verification and audit evidence together:
 
 ```bash
 npm exec --no -- large-image-ingest-verified
 ```
 
-Use the equivalent `pnpm exec`, `yarn run` or `bun run` command for the full workflow. These packaged commands also resolve under Yarn PnP. See [the package example instructions and compatibility checks](examples/onboarding/README.md).
+Use `pnpm exec`, `yarn run` or `bun run` in place of `npm exec --no --`. See [the example instructions](examples/onboarding/README.md).
 
-This complete [workflow example](examples/onboarding/verified-workflow.mts) supplies every adapter and demonstrates client reconstruction. See [its storage and deployment boundaries](examples/onboarding/README.md) and [the workflow guide](docs/verified-ingest-workflow.md).
+## Faster hashing
 
-## Verified Reference Run
+Hashing happens before upload, so its speed is the wait users see. Pick an executor for your runtime:
 
-The repository reference harness exercises the built package through real loopback HTTP, forces an interruption after durable progress, resumes with a replacement session, and verifies the stored file against its manifest.
+```ts
+// Node.js: node:crypto
+import { createNodeChecksumExecutor } from "large-image-ingest/node";
+createIngestSession(file, { transport, checksum: { executor: createNodeChecksumExecutor() } });
 
-| Scenario | Result |
+// Browser: optional `hash-wasm` peer (npm install hash-wasm)
+import { createBrowserWasmChecksumExecutor } from "large-image-ingest/browser-wasm";
+createIngestSession(file, { transport, checksum: { executor: createBrowserWasmChecksumExecutor() } });
+```
+
+| Executor | Measured (256 MiB, Apple Silicon) |
 | --- | ---: |
-| Source size | 3 GiB |
-| SHA-256 and manifest | 128.46 MiB/s |
-| HTTP transfer including resume | 100.14 MiB/s |
-| Peak JavaScript heap / RSS | 11.07 MiB / 270.69 MiB |
-| Acknowledged bytes retransmitted | 0 |
-| Remote completion calls | 1 |
-| Stored-file SHA-256 | Verified |
+| Built-in JavaScript (default, Node.js) | 235 MiB/s |
+| `createNodeChecksumExecutor` | 2,478 MiB/s |
+| Built-in JavaScript in a Worker (`large-image-ingest/browser`, Chromium) | 283 MiB/s |
+| `createBrowserWasmChecksumExecutor` (Chromium) | 393 MiB/s |
 
-This September 7, 2026 verification used Node.js 22.14.0 on macOS 26.6 arm64 with a 64 MiB upload chunk. The client and local reference server shared one process; loopback throughput is not a remote-provider or browser-responsiveness guarantee. See the [methodology, historical results, limitations, and reproduction commands](docs/benchmarks.md).
+All executors produce identical digests and the same progress and cancellation contract. See [benchmarks](docs/benchmarks.md).
 
-The separately retained Chromium Worker qualification hashed real 1 GiB and 3 GiB `File` inputs at 234.78 and 258.88 MiB/s. Both digests matched, cancellation returned `checksum.canceled` with no late progress, and the maximum measured main-thread delay was 1.70 ms with no observed long task. These are machine-specific qualification results, not universal performance guarantees.
+## Stability
 
-The refreshed credential-free adoption comparison uses the verified-workflow facade for the SDK candidate across 14 injected scenarios. The SDK binding retained 2 of 14 application-owned lifecycle responsibilities and 5 explicit configuration decisions, while its physical-line result became more adverse: 250 lines versus 151 and 154 in the two generic fixtures. All candidates passed 14/14 controlled scenarios. This demonstrates coordination ownership and end-to-end authority, not less code or a lower real-world incident rate. See [the method, raw report, and claim limits](docs/adoption-evidence.md).
+| Tier | Import paths | Promise |
+| --- | --- | --- |
+| Stable | `core`, `browser`, `transport-tus`, `transport-s3`, `node`, `react`, `tiff` | Semver: breaking changes only in a major release |
+| Experimental | `provenance`, `preservation`, `profiles`, `workflow`, `conformance`, `react-ui`, `browser-wasm` | May change in a minor release; changes are listed in the [changelog](CHANGELOG.md). Exports carry an `@experimental` TSDoc tag |
+| Compatibility | root `large-image-ingest` | Re-exports `core` plus the tus and S3 transports |
 
-## What It Provides
+All paths are prefixed with `large-image-ingest/`.
 
-- Original-preserving manifest schema `large-image-ingest.manifest.v1`
-- File validation for size, MIME type, extension, metadata, dimensions, and checksum mismatch
-- Whole-file SHA-256 checksums using bounded `Blob.slice` reads, cancellation, and an optional browser Worker executor
-- Deterministic chunk planning for large files
-- Opt-in bounded parallel chunk transfer with canonical receipts and mandatory per-chunk SHA-256 evidence
-- Upload sessions with progress, retry, pause, cancel, failure, completion, and resume events
-- Content-bound v0.3 sequential and v0.4 sparse-parallel resume records with durable chunk receipts and safe v0.1/v0.2 readers
-- Safe diagnostics helpers for logs, telemetry, support traces, and recovery UI
-- Derivative references for previews, thumbnails, tiles, metadata enrichments, and custom outputs
-- Browser-safe tus and S3 multipart transport helpers
-- Server-side NAS gateway and stored-file verification helpers under the Node subpath
-- Versioned, evidence-driven S3/tus/NAS conformance reports and an explicit real-target qualification path
-- Opt-in integrity-protected ingest provenance with safe summaries, explicit exports, and application-owned persistence
-- Node-only BagIt 1.0 and OCFL 1.1 preflight, streaming export, and independent fixity validation
-- Explicit versioned semiconductor, microscopy, and satellite validation profiles with safe derived-policy and resume binding
-- Opt-in verified-ingest workflow joining profile, authoritative resumable upload, stored verification, provenance, evidence persistence, and optional preservation
-- Versioned self-hashed evidence dossier with safe summaries, explicit export, immutable revisions, and separate actor/time trust
-- Optional first-party React panel, provider, hook, composable primitives, and opt-in static CSS
-- ESM, CommonJS, and TypeScript declaration entrypoints
+## Verify the package you install
 
-The first-party UI never decodes, previews, resizes, recompresses, or strips metadata from the selected original. Any preview is an explicit caller-owned derivative. The optional TIFF subpath probes structural metadata without decoding pixels, and provider SDKs remain caller-owned adapters.
-
-## Package Map
-
-```txt
-large-image-ingest
-large-image-ingest/core
-large-image-ingest/browser
-large-image-ingest/conformance
-large-image-ingest/provenance
-large-image-ingest/preservation
-large-image-ingest/profiles
-large-image-ingest/workflow
-large-image-ingest/transport-tus
-large-image-ingest/transport-s3
-large-image-ingest/node
-large-image-ingest/react
-large-image-ingest/react-ui
-large-image-ingest/react-ui/styles.css
-large-image-ingest/tiff
-```
-
-- Use `large-image-ingest/core` for framework-agnostic browser-safe core APIs.
-- Use the ESM-only `large-image-ingest/browser` subpath for the packaged Worker checksum executor.
-- Use `large-image-ingest/conformance` for the versioned scenario catalog, runner, target types, and untrusted-report validator.
-- Use `large-image-ingest/provenance` for durable lifecycle evidence that remains separate from sensitive resume state.
-- Use `large-image-ingest/preservation` to map and export one verified ingest as a new BagIt 1.0 package or OCFL 1.1 v1 object.
-- Use `large-image-ingest/profiles` for explicitly selected domain baselines, derived organization policies, and safe profile evaluation.
-- Use `large-image-ingest/workflow` for the official one-file verifiable ingest control-plane facade and evidence bundle.
-- Use `large-image-ingest/transport-tus` for the raw `fetch` tus transport.
-- Use `large-image-ingest/transport-s3` for broker-backed S3 multipart uploads.
-- Use `large-image-ingest/node` for server-only NAS gateway, metadata derivative, tile descriptor, stored-file verification, and optional workflow preservation adapters.
-- Use `large-image-ingest/react` for optional headless session or verified-workflow projections.
-- Use `large-image-ingest/react-ui` for the official ready-made session or verified-workflow panels.
-- Import `large-image-ingest/react-ui/styles.css` only when the default theme is wanted.
-- Use `large-image-ingest/tiff` for optional bounded TIFF and BigTIFF structural metadata probing.
-- Use `large-image-ingest` as a compatibility root for core plus browser-safe transports.
-
-## Browser Checksum And Persistent Identity
-
-Persistent resume records created by 1.5.0 are `large-image-ingest.resume.v0.3`. They bind acknowledged ranges to a whole-file SHA-256 source identity; filename, size, media type, modification time, and metadata remain preliminary filters only. A metadata-equal file with different bytes is rejected before remote recovery or upload work. The identity is reused from the manifest checksum when possible, so the normal checksum-enabled path reads the source once. If manifest checksum output is disabled while a persistent store is configured, the SDK still calculates a separate strong resume identity.
-
-Browser applications can move sustained checksum work off the interactive path:
-
-```ts
-import { createBrowserWorkerChecksumExecutor } from "large-image-ingest/browser";
-import { createIngestSession } from "large-image-ingest/core";
-
-const checksumExecutor = createBrowserWorkerChecksumExecutor();
-const session = createIngestSession(file, {
-  checksum: {
-    executor: checksumExecutor,
-    fallback: "inline"
-  },
-  resume: { store: resumeStore },
-  transport
-});
-```
-
-Fallback is explicit: omit `fallback` to receive `checksum.execution_failed` when Worker execution cannot start or returns invalid evidence, or choose `"inline"` to retain bounded reads and cancellation on the caller's execution path. Abort signals stop acceptance of canceled results. Progress is monotonic and bounded, and callback failures are isolated through `onObserverError`.
-
-The reader continues to validate v0.1 and v0.2 records. Legacy records with trustworthy manifest whole-file SHA-256 evidence can resume or promote at the next authoritative checkpoint. Weak zero-progress records are restart-only; weak progressed records and progressed v0.1 S3 records are incompatible. They remain stored until explicit cleanup. Never log full records or content identities; use `redactResumeRecord()` and safe UI summaries.
-
-Transport recovery support is conservative. `resumable`, `supportsSnapshotResume`, and `supportsPersistentResume` describe different behaviors. Missing detailed capability flags do not block ordinary upload, but they are not treated as proof that snapshot or durable recovery is safe. Manifest schema remains `large-image-ingest.manifest.v1`; `manifest.library.version` identifies the actual producing package release independently.
-
-## Parallel Upload And Chunk Integrity
-
-Parallel transfer is opt-in and currently qualified for the provider-neutral contract and official S3 multipart adapter. Applications request 2–16 workers; the effective bound is the minimum of the request, transport ceiling, and remaining chunks. Unsupported transports fail before remote session creation. tus and NAS remain sequential.
-
-```ts
-const session = createIngestSession(file, {
-  chunking: { chunkSize: 64 * 1024 * 1024 },
-  parallel: { concurrency: 4 },
-  resume: { store: resumeStore },
-  transport: createS3MultipartTransport({ broker })
-});
-
-await session.start();
-```
-
-Workers may finish out of order, but acknowledged progress counts each planned byte once and final receipts are sorted by chunk index. Every parallel chunk is SHA-256 hashed over its exact `Blob.slice` and bound to the strong whole-file source identity; S3 sends the Base64 digest in `x-amz-checksum-sha256` and requires a matching response attestation. The broker must create parallel multipart uploads with SHA-256 composite checksum semantics and sign that header boundary.
-
-Pause and cancel stop scheduling, interrupt active requests cooperatively, await worker and checkpoint settlement, then publish one stable outcome. A permanent chunk or integrity failure interrupts siblings and never enters ordinary transient retry. v0.4 records preserve sparse acknowledged receipts and policy identity; changing concurrency policy, integrity policy, source, chunk plan, transport session, or retained evidence is rejected before remote resume. Per-chunk evidence proves transfer units only—it does not replace the manifest whole-file checksum or independent stored-object verification.
-
-## Auditable Provenance
-
-Create an opt-in recorder after the manifest exists and forward the existing event stream. The recorder does not change session authority or persistence when unused.
-
-```ts
-import { createIngestProvenanceRecorder } from "large-image-ingest/provenance";
-
-const recorder = createIngestProvenanceRecorder({
-  manifest,
-  policy: { id: "inspection-default", version: "1.0.0" },
-  transport: { category: "s3-multipart", capabilities: transport.capabilities }
-});
-
-const session = createIngestSession(file, {
-  manifest,
-  transport,
-  onEvent: (event) => recorder.observeIngestEvent(event)
-});
-```
-
-After completion, record independent stored verification and call `seal()`. SHA-256 over RFC 8785 canonical JSON detects artifact changes but is not a signature or trusted timestamp. Default summaries omit filenames, checksums, annotation values, manifests, resume state, receipts, URLs, paths, keys, and raw errors. See [Auditable ingest provenance](docs/provenance.md).
-
-## BagIt And OCFL Preservation
-
-The Node-only preservation subpath verifies selected Blob bytes against manifest evidence before it touches an output directory. It assigns source-independent paths, retains original/derivative/provenance relationships in an integrity-protected sidecar, and streams either a new BagIt 1.0 package or a new OCFL 1.1 `v1` object through an incomplete staging directory.
-
-```ts
-import {
-  evaluatePreservationMapping,
-  exportOcflObject
-} from "large-image-ingest/preservation";
-
-const mapping = await evaluatePreservationMapping({
-  profile: "ocfl-1.1-sha256",
-  manifest,
-  original: { bytes: originalFile },
-  derivatives,
-  provenance
-});
-
-if (mapping.status !== "blocked") {
-  await exportOcflObject(mapping, { destination: "/new/object" });
-}
-```
-
-The first release creates only new outputs; it does not import, append versions, or manage an OCFL storage root. See [BagIt and OCFL preservation export](docs/preservation.md).
-
-## Domain Validation Profiles
-
-Domain policy is opt-in and never inferred. Load one immutable baseline, evaluate it against the existing manifest and labelled bounded structural evidence, then pass the resulting binding to the session only when it passed.
-
-```ts
-import {
-  evaluateDomainValidationProfile,
-  loadBundledDomainProfile
-} from "large-image-ingest/profiles";
-
-const profile = await loadBundledDomainProfile("semiconductor-inspection");
-const evaluation = await evaluateDomainValidationProfile({
-  profile,
-  manifest,
-  structuralEvidence
-});
-
-if (evaluation.sessionBinding) {
-  await createIngestSession(file, {
-    manifest,
-    domainProfile: evaluation.sessionBinding,
-    transport,
-    resume: { store: resumeStore }
-  }).start();
-}
-```
-
-Baseline profiles are reference starting points, not compliance or scientific certification. Derived policies require a new identity and explicit categorized exceptions for any relaxation. New resume records retain the exact profile reference and reject policy changes before remote resume. See [Domain validation profiles](docs/domain-profiles.md).
-
-## First-Party React UI
-
-Install React as an optional peer, import the panel, and opt into the static stylesheet. The application still supplies the exact-file controller configuration, transport, resume store, and stored-object verifier.
-
-```tsx
-import { InspectionUploadPanel } from "large-image-ingest/react-ui";
-import "large-image-ingest/react-ui/styles.css";
-import { createIngestController } from "large-image-ingest/react";
-
-<InspectionUploadPanel
-  createController={(file) => createIngestController(file, options)}
-  recovery={{
-    store: resumeStore,
-    chunking: options.chunking,
-    capabilities: options.transport.capabilities,
-    sourceIdentity: options.sourceIdentity
-  }}
-  verifier={storedObjectVerifier}
-  accept=".tif,.tiff,.png,.jpg,.jpeg"
-/>
-```
-
-The initial public workflow supports one local `File`. It shows controller-authoritative validation, source-identity preparation, acknowledged progress, pause/cancel/recovery, transfer completion, and application-supplied stored-original verification. Full manifests, resume records, URLs, keys, credentials, provider receipts, and customer metadata are not rendered. See the [React UI guide](docs/react-ui.md) and [credential-free reference app](examples/inspection-upload-react/README.md).
-
-For an entirely custom design, use the provider, `useInspectionUploadUi`, and primitives from `react-ui`, or use the lower-level headless `large-image-ingest/react` surface. Uppy remains an optional selection-only recipe for applications already standardized on Uppy.
-
-## React Headless Adapter
-
-Install React alongside the SDK only when the optional React subpath is used.
+Releases from 1.9.0 are published from GitHub Actions with npm provenance. Check signatures and attestations of your installed dependencies with:
 
 ```bash
-npm install large-image-ingest react
+npm audit signatures
 ```
-
-The adapter provides state and controls without rendering a dropzone, dashboard, buttons, or CSS.
-
-```tsx
-import { useState } from "react";
-import type { CreateIngestSessionOptions, IngestFileLike } from "large-image-ingest";
-import {
-  IngestProvider,
-  createIngestController,
-  useIngestSession,
-  useUploadControls,
-  useUploadProgress
-} from "large-image-ingest/react";
-
-function UploadStatus() {
-  const { status, error } = useIngestSession();
-  const { progress } = useUploadProgress();
-  const { start, pause, cancel, canStart, canPause, canCancel } = useUploadControls();
-
-  return (
-    <section>
-      <progress value={progress} max={1} />
-      <output>{status}</output>
-      <button onClick={() => void start()} disabled={!canStart}>Upload</button>
-      <button onClick={() => pause()} disabled={!canPause}>Pause</button>
-      <button onClick={() => void cancel()} disabled={!canCancel}>Cancel</button>
-      {error ? <output>Upload failed</output> : null}
-    </section>
-  );
-}
-
-function UploadPanel({
-  file,
-  options
-}: {
-  file: IngestFileLike;
-  options: CreateIngestSessionOptions;
-}) {
-  const [controller] = useState(() => createIngestController(file, options));
-  return (
-    <IngestProvider controller={controller}>
-      <UploadStatus />
-    </IngestProvider>
-  );
-}
-```
-
-Keep the controller mounted above route changes when uploads must continue while individual UI components unmount.
-
-The controller preserves the existing `starting` revision and also publishes additive
-`preparation` details for `validating`, `preparing_identity`, and
-`creating_upload`. Byte progress is reported only when checksum preparation can
-measure bounded reads. Preflight policy rejection uses the typed
-`validation.failed` code, while application event, snapshot, and observer-error
-callbacks remain isolated from ingest control flow.
-
-## Uppy UI-Only Integration
-
-Uppy is an optional compatibility recipe for applications that already use its selection UI. `large-image-ingest` remains the sole owner of validation, checksum, manifest, upload, retry, progress, pause, cancellation, persistent resume, and completion evidence. New applications that want a ready-made experience should start with the first-party UI above.
-
-```bash
-npm install large-image-ingest react @uppy/core @uppy/react
-```
-
-The supported reference flow accepts one local file, passes the exact browser `File` to one ingest controller, and configures no Uppy uploader plugin or source transform. After reload, the user reselects the original and the SDK validates it against a versioned resume record before continuing.
-
-The [Uppy UI-only guide](docs/integrations/uppy.md) contains the ownership and event mapping. The repository also includes a [runnable React example](examples/uppy-react/README.md) with a credential-free local transfer, pause/reload recovery, cancellation, and final stored-file verification.
-
-```bash
-npm run example:uppy:fixture
-npm run example:uppy
-```
-
-## TIFF And BigTIFF Metadata
-
-Install the optional parser peer only when TIFF metadata probing is needed.
-
-```bash
-npm install large-image-ingest geotiff
-```
-
-The TIFF subpath validates binary headers, bounds image file directory traversal, and reports structural metadata without decoding raster pixels.
-
-```ts
-import {
-  probeTiffMetadata,
-  toTiffImageMetadata
-} from "large-image-ingest/tiff";
-
-const probe = await probeTiffMetadata(file, {
-  maxDirectories: 64,
-  signal: abortController.signal
-});
-
-const primary = probe.directories[0];
-console.log(probe.container, probe.directoryCount, primary?.layout);
-
-const image = toTiffImageMetadata(probe);
-const session = createIngestSession(file, {
-  ...options,
-  image
-});
-```
-
-The probe reports width, height, bit depth, samples, compression, photometric interpretation, orientation, planar configuration, and tile or strip layout when available. GeoTIFF.js documents limited BigTIFF support; unsupported 64-bit offsets or parser-specific BigTIFF structures fail with typed errors. This subpath does not render TIFF, read raster pixels, generate thumbnails, resize images, or create tile pyramids.
-
-## Derivatives
-
-Previews, thumbnails, tile pyramids, metadata extractions, compressed outputs, and custom transformed outputs are modeled as derivatives. They never replace or rewrite the original source artifact.
-
-```ts
-import {
-  attachDerivative,
-  createPreviewDerivative,
-  validateManifestDerivatives
-} from "large-image-ingest";
-
-const preview = createPreviewDerivative({
-  manifest,
-  id: "preview-1024",
-  kind: "preview",
-  status: "created",
-  mediaType: "image/jpeg",
-  width: 1024,
-  height: 1024,
-  storage: {
-    kind: "object",
-    label: "preview-store",
-    locationHint: "previews/manifest-id-1024.jpg"
-  }
-});
-
-const manifestWithPreview = attachDerivative(manifest, preview);
-const derivativeValidation = validateManifestDerivatives(manifestWithPreview);
-```
-
-See [docs/derivatives.md](docs/derivatives.md) for derivative boundaries and examples.
-
-## Transports And Storage
-
-- tus: resumable browser uploads through `large-image-ingest/transport-tus`
-- S3 multipart: broker-backed presigned part upload flow through `large-image-ingest/transport-s3`
-- NAS: server-side staging/finalize gateway through `large-image-ingest/node`
-
-The credential-free conformance suite runs the same ten safety scenarios through all three official paths. S3 multipart additionally executes the qualified parallel SHA-256 path and proves bounded concurrency, unique progress, canonical completion, and integrity rejection. NAS passes its applicable sequential scenarios; tus explicitly marks optional chunk-integrity evidence unsupported. A positive capability must have passing behavior evidence, and stored completion is checked independently by byte count and whole-file SHA-256. See [Official transport conformance](docs/transport-conformance.md).
-
-The browser core does not write directly to SMB, NFS, NAS, WebDAV, SFTP, or a filesystem. Use a server-side gateway for those targets.
-
-NAS gateway instances that share a staging root coordinate same-session staging, finalization, cancellation, and expired cleanup. Session metadata is promoted atomically from unique same-directory candidates so concurrent or interrupted updates preserve the last committed state without changing the v0.1 session schema.
-
-Persistent resume records created by 1.5.0 use schema `large-image-ingest.resume.v0.3`, bind durable receipts to whole-file content identity, and remain recoverable after a page or process restart without relying on an in-memory snapshot. v0.1/v0.2 records remain readable when their whole-file and transport evidence is trustworthy; progressed S3 v0.1 records are rejected because their ETags cannot be reconstructed safely.
-
-Full resume records can contain source digests, upload identifiers, tus upload URLs, customer metadata, object keys, and provider receipt evidence. Store them according to application security policy and use the diagnostic redaction helpers for logs and support output.
-
-Starting in 1.3.0, successful transport completion remains authoritative even when local resume-record cleanup fails. The session still resolves with a completed snapshot and emits a non-fatal `resume:cleanup-failed` event so applications can inspect or remove stale local state without retrying remote completion.
-
-Event and snapshot observers are isolated from upload control flow. Use `onObserverError` when UI or telemetry callback failures need separate reporting; exceptions from observers or from the reporter itself never change session state.
-
-```ts
-const session = createIngestSession(file, {
-  ...options,
-  onEvent(event) {
-    if (event.type === "resume:cleanup-failed") {
-      reportLocalCleanupWarning(createSafeEventSummary(event));
-    }
-  },
-  onObserverError({ observer, eventType, error }) {
-    reportUiObserverFailure({ observer, eventType, error });
-  }
-});
-```
-
-Server-owned credential, object key, NAS path, cleanup, and final verification responsibilities are documented in [docs/server-operational-guide.md](docs/server-operational-guide.md).
 
 ## Documentation
 
+- [Feature guide](docs/guide.md): checksums, parallel upload, provenance, preservation, profiles, React, TIFF, derivatives, transports, verification commands
 - [Quickstart and API examples](docs/quickstart.md)
-- [Derivative and preview foundations](docs/derivatives.md)
-- [Reference integration and benchmarks](docs/benchmarks.md)
-- [Comparative adoption evidence](docs/adoption-evidence.md)
-- [Official transport conformance](docs/transport-conformance.md)
-- [Auditable ingest provenance](docs/provenance.md)
-- [Opt-in integration test policy](docs/integration-tests.md)
-- [Server operational guide](docs/server-operational-guide.md)
+- [Verified ingest workflow](docs/verified-ingest-workflow.md)
+- [Benchmarks](docs/benchmarks.md) and [adoption evidence](docs/adoption-evidence.md)
+- [Transport conformance](docs/transport-conformance.md) and [server operational guide](docs/server-operational-guide.md)
 - [First-party React UI](docs/react-ui.md)
-- [Uppy UI-only integration](docs/integrations/uppy.md)
-- [Uppy friction and adapter decision](docs/integrations/uppy-friction.md)
-- [tus-js-client transport review brief](docs/integrations/tus-js-client-review.md)
-- [Roadmap](docs/roadmap.md)
-- [Development sources and Spec Kit tools](docs/development.md)
-- [Changelog](CHANGELOG.md)
+- [Glossary](docs/glossary.md)
+- [Roadmap](docs/roadmap.md), [development](docs/development.md), [changelog](CHANGELOG.md)
 
-## Verification
+## Design principles
 
-```bash
-npm ci
-npm run typecheck
-npm run typecheck:examples
-npm run typecheck:uppy-example
-npm run typecheck:inspection-ui-example
-npm test
-npm run test:ui
-npm run build
-npm run test:conformance
-npm run test:reference
-npm run test:browser-checksum
-npm run test:adoption-evidence
-npm run benchmark:parallel
-npm run test:integration
-npm pack --dry-run
-```
+1. Preserve the original file by default; previews, thumbnails and tiles are separate derivatives.
+2. Upload large files in chunks, with observable and recoverable state.
+3. Generate a manifest before upload starts and verify after storage.
+4. Keep the core framework-agnostic and transports adapter-based.
+5. Keep runtime dependencies at zero; heavier helpers are optional peers.
 
-SDK and tooling sources use TypeScript; the build emits JavaScript for npm consumers. See [development sources](docs/development.md) for the loader, compiler checks and Spec Kit helpers.
+## License
 
-Default verification is local and credential-free. The conformance gate executes isolated S3 multipart, tus, and NAS representative targets; the reference gate performs a 64 MiB HTTP interruption-and-resume scenario with stored-file verification. Real tus servers, S3-compatible buckets, and mounted NAS paths require `LII_CONFORMANCE_OPT_IN=1` plus an operator-owned conformance driver.
-
-## Design Principles
-
-1. Preserve the original file by default.
-2. Treat resize, compression, EXIF stripping, previews, thumbnails, and tiles as derivatives.
-3. Use chunked upload flows for large files.
-4. Generate a manifest before upload starts.
-5. Make upload state observable and recoverable.
-6. Keep the core framework-agnostic.
-7. Use adapters for upload transports and storage targets.
-8. Keep runtime dependencies small.
+MIT

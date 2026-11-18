@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useVerifiedIngestActions, useVerifiedIngestState } from "../../react.js";
 
+/** @experimental */
 export function VerifiedIngestActions(): ReactElement {
   const state = useVerifiedIngestState();
   const actions = useVerifiedIngestActions();

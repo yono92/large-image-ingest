@@ -33,6 +33,7 @@ const STAGE_ORDER = [
   "preservation", "evidence_finalization"
 ] as const;
 
+/** @experimental */
 export async function createIngestEvidenceBundle(
   input: CreateIngestEvidenceBundleInput
 ): Promise<IngestEvidenceBundleV1> {
@@ -115,6 +116,7 @@ export async function createIngestEvidenceBundle(
   });
 }
 
+/** @experimental */
 export async function validateIngestEvidenceBundle(
   value: unknown,
   options: ValidateIngestEvidenceBundleOptions = {}
@@ -195,6 +197,7 @@ export async function validateIngestEvidenceBundle(
   };
 }
 
+/** @experimental */
 export async function exportIngestEvidenceBundle(
   value: unknown,
   options: { disclosureProfile: EvidenceBundleDisclosureProfile }
@@ -209,6 +212,7 @@ export async function exportIngestEvidenceBundle(
   return structuredClone(validation.bundle);
 }
 
+/** @experimental */
 export async function createSafeWorkflowSummary(
   value: unknown
 ): Promise<SafeWorkflowSummary> {

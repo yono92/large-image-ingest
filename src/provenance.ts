@@ -9,9 +9,12 @@ import type {
   TransportCapabilities
 } from "./types.js";
 
+/** @experimental */
 export const INGEST_PROVENANCE_SCHEMA_VERSION =
   "large-image-ingest.provenance.v1" as const;
+/** @experimental */
 export const INGEST_PROVENANCE_INTEGRITY_ALGORITHM = "sha256" as const;
+/** @experimental */
 export const INGEST_PROVENANCE_CANONICALIZATION = "rfc8785-jcs" as const;
 
 export type IngestProvenanceSchemaVersion = typeof INGEST_PROVENANCE_SCHEMA_VERSION;
@@ -337,6 +340,7 @@ export interface PersistIngestProvenanceOptions {
   onOutcome?: (result: ProvenancePersistenceResult) => void;
 }
 
+/** @experimental */
 export class IngestProvenanceError extends Error {
   readonly code: ProvenanceIssueCode;
   readonly issues: readonly ProvenanceIssue[];
@@ -403,6 +407,7 @@ interface MutableProvenanceState {
   terminalStatus: ProvenanceTerminalStatus;
 }
 
+/** @experimental */
 export function createIngestProvenanceRecorder(
   options: CreateIngestProvenanceRecorderOptions
 ): IngestProvenanceRecorder {
@@ -712,6 +717,7 @@ class ProvenanceRecorder implements IngestProvenanceRecorder {
   }
 }
 
+/** @experimental */
 export async function validateIngestProvenance(
   value: unknown,
   options: ValidateIngestProvenanceOptions = {}
@@ -754,6 +760,7 @@ export async function validateIngestProvenance(
   };
 }
 
+/** @experimental */
 export async function createSafeProvenanceSummary(
   value: unknown
 ): Promise<SafeProvenanceSummary> {
@@ -795,6 +802,7 @@ export async function createSafeProvenanceSummary(
   return deepFreeze(summary);
 }
 
+/** @experimental */
 export async function exportIngestProvenance(
   value: unknown,
   options: { disclosureProfile: ProvenanceDisclosureProfile }
@@ -820,6 +828,7 @@ export async function exportIngestProvenance(
   return deepFreeze(cloneArtifact(exported));
 }
 
+/** @experimental */
 export async function persistIngestProvenance(
   value: unknown,
   sink: ProvenanceSink,
@@ -852,6 +861,7 @@ export async function persistIngestProvenance(
   }
 }
 
+/** @experimental */
 export function canonicalizeProvenanceJson(value: unknown): string {
   const seen = new WeakSet<object>();
   return canonicalizeValue(value, seen);

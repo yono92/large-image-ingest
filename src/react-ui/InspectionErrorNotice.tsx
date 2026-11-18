@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactElement } from "react";
 import { useInspectionUploadUi } from "./context.js";
 
+/** @experimental */
 export function InspectionErrorNotice(): ReactElement | null {
   const { labels, state } = useInspectionUploadUi();
   const headingRef = useRef<HTMLHeadingElement>(null);

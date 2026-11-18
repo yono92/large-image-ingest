@@ -7,6 +7,7 @@ export interface WorkflowOperationAttempt {
   readonly attempt: number;
 }
 
+/** @experimental */
 export function nextWorkflowOperationAttempt(input: {
   stage: WorkflowStage;
   operationId: string;

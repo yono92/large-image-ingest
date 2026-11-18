@@ -42,6 +42,7 @@ const emptyControls: InspectionUiControls = Object.freeze({
   canDiscardRecovery: false
 });
 
+/** @experimental */
 export class InspectionUploadCoordinator {
   private configuration: InspectionUploadConfiguration;
   private labels: InspectionUploadLabels;

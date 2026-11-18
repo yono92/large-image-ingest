@@ -6,6 +6,7 @@ export interface InspectionRecoveryPromptProps {
   readonly guidance?: ReactNode | undefined;
 }
 
+/** @experimental */
 export function InspectionRecoveryPrompt({ guidance }: InspectionRecoveryPromptProps): ReactElement {
   const { actions, labels, state } = useInspectionUploadUi();
   return (

@@ -12,6 +12,7 @@ import { InspectionValidationSummary } from "./InspectionValidationSummary.js";
 import { InspectionVerificationStatus } from "./InspectionVerificationStatus.js";
 import type { InspectionUploadPanelProps } from "./types.js";
 
+/** @experimental */
 export function InspectionUploadPanel(props: InspectionUploadPanelProps): ReactElement {
   const {
     accept,

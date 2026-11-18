@@ -12,7 +12,9 @@ export type {
   DomainProfileSessionBinding
 } from "./types.js";
 
+/** @experimental */
 export const DOMAIN_PROFILE_SCHEMA_VERSION = "large-image-ingest.domain-profile.v1" as const;
+/** @experimental */
 export const DOMAIN_PROFILE_EVALUATION_SCHEMA_VERSION =
   "large-image-ingest.domain-profile-evaluation.v1" as const;
 
@@ -237,6 +239,7 @@ export interface DeriveDomainValidationProfileInput {
   }[];
 }
 
+/** @experimental */
 export class DomainProfileError extends Error {
   readonly code: DomainProfileIssueCode;
   readonly issues: readonly DomainProfileIssue[];
@@ -258,6 +261,7 @@ const MAX_MAPPINGS = 32;
 const trustedProfiles = new WeakSet<DomainValidationProfile>();
 const bundledCache = new Map<BundledDomainProfileId, Promise<DomainValidationProfile>>();
 
+/** @experimental */
 export async function loadBundledDomainProfile(
   id: BundledDomainProfileId
 ): Promise<DomainValidationProfile> {
@@ -270,6 +274,7 @@ export async function loadBundledDomainProfile(
   return pending;
 }
 
+/** @experimental */
 export function listBundledDomainProfiles(): readonly {
   id: BundledDomainProfileId;
   name: string;
@@ -283,6 +288,7 @@ export function listBundledDomainProfiles(): readonly {
   ] as const);
 }
 
+/** @experimental */
 export async function validateDomainValidationProfile(
   value: unknown,
   options: { baseProfile?: DomainValidationProfile } = {}
@@ -312,6 +318,7 @@ export async function validateDomainValidationProfile(
   return { ok: true, issues: [], profile };
 }
 
+/** @experimental */
 export async function evaluateDomainValidationProfile(
   input: EvaluateDomainValidationProfileInput
 ): Promise<DomainProfileEvaluation> {
@@ -376,6 +383,7 @@ export async function evaluateDomainValidationProfile(
   return deepFreeze(evaluation);
 }
 
+/** @experimental */
 export async function deriveDomainValidationProfile(
   input: DeriveDomainValidationProfileInput
 ): Promise<DomainValidationProfile> {
@@ -457,6 +465,7 @@ export async function deriveDomainValidationProfile(
   return finalizeProfile(draft);
 }
 
+/** @experimental */
 export function createDomainProfileReference(
   profile: DomainValidationProfile
 ): DomainProfileReference {
@@ -471,6 +480,7 @@ export function createDomainProfileReference(
   });
 }
 
+/** @experimental */
 export function domainProfileReferencesEqual(
   left: DomainProfileReference | undefined,
   right: DomainProfileReference | undefined
@@ -483,6 +493,7 @@ export function domainProfileReferencesEqual(
     left.effectivePolicyDigest.value === right.effectivePolicyDigest.value;
 }
 
+/** @experimental */
 export function classifyDomainProfileReferenceAvailability(
   reference: DomainProfileReference,
   availableProfiles: readonly DomainValidationProfile[]
@@ -502,6 +513,7 @@ export function classifyDomainProfileReferenceAvailability(
   });
 }
 
+/** @experimental */
 export function validateDomainProfileReference(value: unknown): value is DomainProfileReference {
   return isRecord(value) &&
     value.schemaVersion === "large-image-ingest.domain-profile-reference.v1" &&
@@ -513,6 +525,7 @@ export function validateDomainProfileReference(value: unknown): value is DomainP
     SHA256.test(value.effectivePolicyDigest.value);
 }
 
+/** @experimental */
 export function validateDomainProfileSessionBinding(
   value: unknown,
   manifestId?: string

@@ -7,6 +7,7 @@ export interface InspectionSourceCardProps {
   readonly previewSlot?: ReactNode | undefined;
 }
 
+/** @experimental */
 export function InspectionSourceCard({ preview, previewSlot }: InspectionSourceCardProps): ReactElement {
   const { actions, labels, state } = useInspectionUploadUi();
   const source = state.source;
@@ -40,6 +41,7 @@ export function InspectionSourceCard({ preview, previewSlot }: InspectionSourceC
   );
 }
 
+/** @experimental */
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KiB", "MiB", "GiB", "TiB"];

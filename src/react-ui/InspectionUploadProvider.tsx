@@ -3,6 +3,7 @@ import { InspectionUploadCoordinator } from "./coordinator.js";
 import { InspectionUploadCoordinatorContext } from "./context.js";
 import type { InspectionUploadProviderProps } from "./types.js";
 
+/** @experimental */
 export function InspectionUploadProvider({
   children,
   ...configuration

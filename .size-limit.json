@@ -1,0 +1,5 @@
+[
+  { "name": "core", "path": "dist/esm/core.js", "import": "*", "gzip": true, "limit": "26.4 kB" },
+  { "name": "browser", "path": "dist/esm/browser.js", "import": "*", "gzip": true, "limit": "1 kB" },
+  { "name": "browser-wasm", "path": "dist/esm/browser-wasm.js", "import": "*", "gzip": true, "ignore": ["hash-wasm"], "limit": "1 kB" }
+]

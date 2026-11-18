@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useInspectionUploadUi } from "./context.js";
 
+/** @experimental */
 export function InspectionValidationSummary(): ReactElement {
   const { labels, state } = useInspectionUploadUi();
   const failed = state.error?.category === "validation";

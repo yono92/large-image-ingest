@@ -6,6 +6,7 @@ export interface InspectionFileDropzoneProps {
   readonly guidance?: ReactElement | string | undefined;
 }
 
+/** @experimental */
 export function InspectionFileDropzone({ accept, guidance }: InspectionFileDropzoneProps): ReactElement {
   const { actions, labels, state } = useInspectionUploadUi();
   const inputId = useId();

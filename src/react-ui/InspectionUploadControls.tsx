@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useInspectionUploadUi } from "./context.js";
 
+/** @experimental */
 export function InspectionUploadControls(): ReactElement {
   const { actions, labels, state } = useInspectionUploadUi();
   return (

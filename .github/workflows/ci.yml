@@ -40,6 +40,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Bundle size
+        run: npm run size
+
       - name: Reference integration
         run: npm run test:reference
 

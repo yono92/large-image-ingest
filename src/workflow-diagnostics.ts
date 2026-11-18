@@ -3,6 +3,7 @@ import type {
   VerifiedIngestWorkflowState
 } from "./workflow-types.js";
 
+/** @experimental */
 export function createSafeWorkflowStateSummary(
   state: VerifiedIngestWorkflowState
 ): SafeWorkflowSummary {

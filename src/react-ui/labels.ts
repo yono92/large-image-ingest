@@ -1,5 +1,6 @@
 import type { InspectionUploadConfiguration, InspectionUploadLabels } from "./types.js";
 
+/** @experimental */
 export const defaultInspectionUploadLabels: InspectionUploadLabels = Object.freeze({
   panelTitle: "Inspection upload",
   panelDescription: "Upload one original inspection image with resumable, verifiable transfer.",
@@ -52,6 +53,7 @@ export const defaultInspectionUploadLabels: InspectionUploadLabels = Object.free
   })
 });
 
+/** @experimental */
 export function mergeInspectionUploadLabels(
   overrides: InspectionUploadConfiguration["labels"]
 ): InspectionUploadLabels {

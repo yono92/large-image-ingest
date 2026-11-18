@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Double built-in SHA-256 throughput (122 → 235 MiB/s on Node.js, 256 MiB) with identical digests.
+- Add `createNodeChecksumExecutor()` to `large-image-ingest/node` (`node:crypto`, 2,478 MiB/s measured).
+- Add experimental ESM-only `large-image-ingest/browser-wasm` with `createBrowserWasmChecksumExecutor()` using the new optional `hash-wasm` peer (393 MiB/s in Chromium).
+- Publish releases from GitHub Actions with npm provenance; add a `size-limit` bundle-size gate to CI.
+- Declare Stable, Experimental and Compatibility import-path tiers; Experimental runtime exports carry `@experimental`.
+- Shorten the README; move detailed feature sections unchanged to `docs/guide.md`; add `docs/glossary.md`.
+- Move internal session helpers into separate modules with no public type or behavior change.
+- Update development-only dependencies to resolve audit findings; SDK runtime dependencies remain empty.
+
 ## 1.8.2 - 2026-10-12
 
 - Document npm, pnpm, Yarn and Bun installation commands.

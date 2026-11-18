@@ -4,6 +4,7 @@ import { VerifiedIngestActions } from "./VerifiedIngestActions.js";
 import { VerifiedIngestStatus } from "./VerifiedIngestStatus.js";
 import type { VerifiedIngestPanelProps } from "./types.js";
 
+/** @experimental */
 export function VerifiedIngestPanel(props: VerifiedIngestPanelProps): ReactElement {
   const { controller, ...layout } = props;
   return (

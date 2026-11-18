@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useInspectionUploadUi } from "./context.js";
 import { formatBytes } from "./InspectionSourceCard.js";
 
+/** @experimental */
 export function InspectionPreparationProgress(): ReactElement {
   const { labels, state } = useInspectionUploadUi();
   const preparation = state.preparation;

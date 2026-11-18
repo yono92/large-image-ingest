@@ -1,6 +1,7 @@
 import type { IngestErrorCode } from "../types.js";
 import type { SafeUiError, SafeUiErrorCategory } from "./types.js";
 
+/** @experimental */
 export function toSafeUiError(error: unknown): SafeUiError {
   const code = readCode(error);
   const category = categorize(code);

@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useVerifiedIngestState } from "../../react.js";
 
+/** @experimental */
 export function VerifiedIngestStatus(): ReactElement {
   const state = useVerifiedIngestState();
   const bundle = "bundle" in state ? state.bundle : undefined;

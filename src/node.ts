@@ -5,6 +5,7 @@ export {
 } from "./node-metadata.js";
 export {
   calculateNodeFileChecksum,
+  createNodeChecksumExecutor,
   verifyNodeFileManifest
 } from "./node-verification.js";
 export type {

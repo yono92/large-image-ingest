@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { useInspectionUploadUi } from "./context.js";
 
+/** @experimental */
 export function InspectionVerificationStatus(): ReactElement {
   const { actions, labels, state } = useInspectionUploadUi();
   const verification = state.verification;

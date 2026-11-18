@@ -67,6 +67,7 @@ export {
 } from "./workflow-types.js";
 export type * from "./workflow-types.js";
 
+/** @experimental */
 export function createVerifiedIngestWorkflow(
   file: IngestFileLike,
   options: CreateVerifiedIngestWorkflowOptions

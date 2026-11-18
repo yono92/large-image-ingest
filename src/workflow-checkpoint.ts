@@ -29,6 +29,7 @@ const STAGES = new Set<WorkflowStage>([
   "preservation", "evidence_finalization"
 ]);
 
+/** @experimental */
 export function parseWorkflowCheckpoint(value: unknown): WorkflowCheckpointV1 {
   if (!isRecord(value) || Object.keys(value).some((key) => !ALL_KEYS.has(key)) ||
       REQUIRED_KEYS.some((key) => !(key in value)) ||
@@ -51,6 +52,7 @@ export function parseWorkflowCheckpoint(value: unknown): WorkflowCheckpointV1 {
   return deepFreeze(structuredClone(value as unknown as WorkflowCheckpointV1));
 }
 
+/** @experimental */
 export function workflowCheckpointMatchesSource(
   checkpoint: WorkflowCheckpointV1,
   input: { sizeBytes: number; checksum: string }
@@ -59,6 +61,7 @@ export function workflowCheckpointMatchesSource(
     checkpoint.sourceIdentity.value === input.checksum;
 }
 
+/** @experimental */
 export function restoreWorkflowOperationIds(
   checkpoint: WorkflowCheckpointV1
 ): ReadonlyMap<WorkflowStage, string> {
