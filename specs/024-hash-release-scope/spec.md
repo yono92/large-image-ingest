@@ -2,7 +2,7 @@
 
 **Feature Branch**: `roadmap/v1.9-v1.11`
 **Created**: 2026-11-18
-**Status**: Implemented (unreleased); deferred items listed below
+**Status**: Implemented and verified for 1.9.0; deferred items listed below
 **Input**: Execute the "large-image-ingest 개선 플랜" roadmap: provenance releases and size guard, faster hashing, stability tiers and a shorter README, and an internal split of `session.ts` with no behavior change.
 
 ## User Scenarios & Testing

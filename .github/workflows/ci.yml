@@ -53,7 +53,7 @@ jobs:
         run: node --import tsx scripts/verify-onboarding-package.cts
 
       - name: Audit
-        run: npm audit --audit-level=moderate
+        run: npm audit --omit=dev --audit-level=moderate
 
       - name: Pack qualified distribution
         run: |

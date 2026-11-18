@@ -109,7 +109,7 @@ describe("package exports", () => {
       version: string;
     };
 
-    expect(packageJson.version).toBe("1.8.2");
+    expect(packageJson.version).toBe("1.9.0");
     expect(packageJson.exports).toHaveProperty(".");
     expect(packageJson.exports).toHaveProperty("./core");
     expect(packageJson.exports).toHaveProperty("./provenance");

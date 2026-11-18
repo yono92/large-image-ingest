@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.9.0 - 2026-11-18
 
 - Roughly triple built-in SHA-256 throughput (122 → about 340 MiB/s on Node.js, 256 MiB in memory) with identical digests; parallel chunk evidence uses the same implementation.
 - Add `createNodeChecksumExecutor()` to `large-image-ingest/node` (`node:crypto`, 1,881 MiB/s on a 1 GiB file).
@@ -12,6 +12,7 @@
 - Shorten the README; move detailed feature sections unchanged to `docs/guide.md`; add `docs/glossary.md`.
 - Move internal session helpers into separate modules with no public type or behavior change.
 - Update development-only dependencies to resolve audit findings; SDK runtime dependencies remain empty.
+- Gate CI and release on `npm audit --omit=dev`: the SDK ships no runtime dependencies, and a development-only `picomatch` advisory has no fixed version yet.
 
 ## 1.8.2 - 2026-10-12
 

@@ -24,7 +24,7 @@ The terminal prints safe status and the local artifact root. Inspect `targets/` 
 
 ## Using A Packed Or Installed Package
 
-Version 1.8.2 provides commands that resolve through each package manager, including Yarn PnP:
+Version 1.9.0 provides commands that resolve through each package manager, including Yarn PnP:
 
 | Manager | Minimal upload | Verified fixture workflow |
 | --- | --- | --- |

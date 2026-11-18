@@ -2,7 +2,7 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
-## Next (unreleased) - Hash Performance, Release Integrity And Scope
+## 1.9.0 Included - Hash Performance, Release Integrity And Scope
 
 New features are frozen through 1.10; work until then only makes existing behavior faster, verifiable and easier to adopt.
 

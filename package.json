@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",
@@ -139,7 +139,7 @@
     "example:inspection-ui": "node --import tsx scripts/run-inspection-ui-example.cts",
     "example:inspection-ui:fixture": "node --import tsx examples/reference-local/create-fixture.cts",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && node --import tsx scripts/verify-onboarding-package.cts && npm run test:conformance && npm run test:browser-checksum && npm run test:reference && npm run test:adoption-evidence && npm audit --audit-level=moderate",
+    "prepublishOnly": "npm run typecheck && npm run typecheck:examples && npm run typecheck:uppy-example && npm run typecheck:inspection-ui-example && npm test && npm run test:ui && npm run build && node --import tsx scripts/verify-onboarding-package.cts && npm run test:conformance && npm run test:browser-checksum && npm run test:reference && npm run test:adoption-evidence && npm audit --omit=dev --audit-level=moderate",
     "qualify:transport": "npm run build && node --import tsx scripts/run-conformance.cts --real-target",
     "smoke:exports": "node --import tsx scripts/verify-package-consumption.cts",
     "test:integration": "node --import tsx scripts/run-integration-tests.cts",
