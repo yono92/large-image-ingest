@@ -44,17 +44,17 @@ Raw results: [1 GiB](../benchmarks/results/2026-09-workflow-browser-checksum-1g.
 
 ## November 2026 Checksum Executors
 
-Measured on 2026-11-18 with Node.js 22.14.0 and Playwright Chromium on Apple Silicon macOS, hashing a 256 MiB in-memory `Blob` with the default 4 MiB chunk. Every executor matched the `node:crypto` digest.
+Measured on 2026-11-18 with Node.js 22.14.0 and Playwright Chromium on Apple Silicon macOS with the default 4 MiB checksum chunk. Every executor matched the `node:crypto` digest.
 
-| Executor | Runtime | Throughput |
-| --- | --- | ---: |
-| Built-in JavaScript, 1.8.2 | Node.js | 122 MiB/s |
-| Built-in JavaScript, current | Node.js | 235 MiB/s |
-| `createNodeChecksumExecutor` | Node.js | 2,478 MiB/s |
-| `createBrowserWorkerChecksumExecutor` (built-in JavaScript) | Chromium | 283 MiB/s |
-| `createBrowserWasmChecksumExecutor` (`hash-wasm` 4.12.0) | Chromium | 393 MiB/s |
+| Executor | Runtime | Source | Throughput |
+| --- | --- | --- | ---: |
+| Built-in JavaScript, 1.8.2 | Node.js | 256 MiB in memory | 122 MiB/s |
+| Built-in JavaScript, current | Node.js | 256 MiB in memory | about 340 MiB/s |
+| Built-in JavaScript, current | Node.js | 1 GiB file (`fs.openAsBlob`) | 399 MiB/s |
+| `createNodeChecksumExecutor` | Node.js | 1 GiB file (`fs.openAsBlob`) | 1,881 MiB/s |
+| `createBrowserWorkerChecksumExecutor` | Chromium | 256 MiB in memory | 347 MiB/s |
 
-The WASM executor runs on the main thread one chunk at a time; a 16 MiB chunk raised it to 433 MiB/s. In-memory sources exclude disk and `File` read cost, so real files hash slower.
+A `hash-wasm` executor measured 323–364 MiB/s in the same Chromium run, no faster than the built-in Worker, so it was not added. Reading the next slice while hashing did not change the Node executor's 1 GiB file result (1,858 vs 1,881 MiB/s).
 
 ## Recorded Runs
 

@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { createBrowserWasmChecksumExecutor } from "../src/browser-wasm";
 import { calculateBlobSha256, calculateChecksum } from "../src/checksum";
 import { ChecksumCanceledError } from "../src/errors";
 import { createNodeChecksumExecutor } from "../src/node";
@@ -49,31 +48,6 @@ describe("Node checksum executor", () => {
     const pending = calculateChecksum(new Blob([fixture(4 * CHUNK)]), {
       chunkSize: CHUNK,
       executor: createNodeChecksumExecutor(),
-      signal: controller.signal,
-      onProgress: () => controller.abort()
-    });
-    await expect(pending).rejects.toBeInstanceOf(ChecksumCanceledError);
-  });
-});
-
-describe("browser WASM checksum executor", () => {
-  it.each(SIZES)("matches the built-in digest for %i bytes", async (size) => {
-    const bytes = fixture(size);
-    const progress: number[] = [];
-    const result = await calculateChecksum(new Blob([bytes]), {
-      chunkSize: CHUNK,
-      executor: createBrowserWasmChecksumExecutor(),
-      onProgress: (value) => progress.push(value.loadedBytes)
-    });
-    expect(result.value).toBe(expected(bytes));
-    expect(progress.at(-1)).toBe(size);
-  });
-
-  it("stops with a typed cancellation when aborted", async () => {
-    const controller = new AbortController();
-    const pending = calculateChecksum(new Blob([fixture(4 * CHUNK)]), {
-      chunkSize: CHUNK,
-      executor: createBrowserWasmChecksumExecutor(),
       signal: controller.signal,
       onProgress: () => controller.abort()
     });

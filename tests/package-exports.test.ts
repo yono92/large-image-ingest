@@ -121,7 +121,6 @@ describe("package exports", () => {
     expect(packageJson.exports).toHaveProperty("./react-ui");
     expect(packageJson.exports).toHaveProperty("./react-ui/styles.css");
     expect(packageJson.exports).toHaveProperty("./tiff");
-    expect(packageJson.exports).toHaveProperty("./browser-wasm");
     expect(packageJson.dependencies ?? {}).toEqual({});
   });
 });

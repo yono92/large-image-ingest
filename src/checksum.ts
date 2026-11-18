@@ -218,6 +218,7 @@ function isAbort(error: unknown, signal: AbortSignal | undefined): boolean {
 
 class Sha256 {
   private readonly buffer = new Uint8Array(64);
+  private readonly bufferView = new DataView(this.buffer.buffer);
   private bufferLength = 0;
   private bytesHashed = 0;
   private readonly state = new Uint32Array(SHA256_INITIAL_STATE);
@@ -235,13 +236,14 @@ class Sha256 {
       position += available;
 
       if (this.bufferLength === 64) {
-        this.transform(this.buffer, 0);
+        this.transform(this.bufferView, 0);
         this.bufferLength = 0;
       }
     }
 
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     while (position + 64 <= data.byteLength) {
-      this.transform(data, position);
+      this.transform(view, position);
       position += 64;
     }
 
@@ -258,7 +260,7 @@ class Sha256 {
 
     if (this.bufferLength > 56) {
       this.buffer.fill(0, this.bufferLength, 64);
-      this.transform(this.buffer, 0);
+      this.transform(this.bufferView, 0);
       this.bufferLength = 0;
     }
 
@@ -268,7 +270,7 @@ class Sha256 {
     const bitLengthLow = (bytesHashed << 3) >>> 0;
     writeUint32(this.buffer, 56, bitLengthHigh);
     writeUint32(this.buffer, 60, bitLengthLow);
-    this.transform(this.buffer, 0);
+    this.transform(this.bufferView, 0);
 
     const digest = new Uint8Array(32);
     for (let index = 0; index < this.state.length; index += 1) {
@@ -277,24 +279,13 @@ class Sha256 {
     return digest;
   }
 
-  private transform(chunk: Uint8Array, offset: number): void {
+  private transform(view: DataView, offset: number): void {
     // Hot loop: typed-array reads are always in bounds here, so the
     // non-null assertions avoid per-access fallbacks that slow V8 down.
+    // A DataView reads big-endian words directly; the message schedule is
+    // expanded inside the round loop.
     const words = this.words;
     const state = this.state;
-
-    for (let index = 0, position = offset; index < 16; index += 1, position += 4) {
-      words[index] = (chunk[position]! << 24) | (chunk[position + 1]! << 16) |
-        (chunk[position + 2]! << 8) | chunk[position + 3]!;
-    }
-
-    for (let index = 16; index < 64; index += 1) {
-      const word2 = words[index - 2]!;
-      const word15 = words[index - 15]!;
-      const smallSigma1 = ((word2 >>> 17) | (word2 << 15)) ^ ((word2 >>> 19) | (word2 << 13)) ^ (word2 >>> 10);
-      const smallSigma0 = ((word15 >>> 7) | (word15 << 25)) ^ ((word15 >>> 18) | (word15 << 14)) ^ (word15 >>> 3);
-      words[index] = (words[index - 16]! + smallSigma0 + words[index - 7]! + smallSigma1) | 0;
-    }
 
     let a = state[0]! | 0;
     let b = state[1]! | 0;
@@ -306,12 +297,24 @@ class Sha256 {
     let h = state[7]! | 0;
 
     for (let index = 0; index < 64; index += 1) {
-      const bigSigma1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
-      const choice = (e & f) ^ (~e & g);
-      const temp1 = (h + bigSigma1 + choice + SHA256_K[index]! + words[index]!) | 0;
-      const bigSigma0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
-      const majority = (a & b) ^ (a & c) ^ (b & c);
-      const temp2 = (bigSigma0 + majority) | 0;
+      let word: number;
+      if (index < 16) {
+        word = view.getInt32(offset + index * 4);
+      } else {
+        const word2 = words[index - 2]!;
+        const word15 = words[index - 15]!;
+        word = (words[index - 16]! +
+          (((word15 >>> 7) | (word15 << 25)) ^ ((word15 >>> 18) | (word15 << 14)) ^ (word15 >>> 3)) +
+          words[index - 7]! +
+          (((word2 >>> 17) | (word2 << 15)) ^ ((word2 >>> 19) | (word2 << 13)) ^ (word2 >>> 10))) | 0;
+      }
+      words[index] = word;
+
+      const temp1 = (h +
+        (((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7))) +
+        ((e & f) ^ (~e & g)) + SHA256_K[index]! + word) | 0;
+      const temp2 = ((((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10))) +
+        ((a & b) ^ (a & c) ^ (b & c))) | 0;
 
       h = g;
       g = f;

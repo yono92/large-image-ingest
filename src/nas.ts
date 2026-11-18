@@ -4,6 +4,7 @@ import {
   mkdir,
   readFile,
   readdir,
+  realpath,
   rename,
   rm,
   stat,
@@ -346,6 +347,7 @@ export function createNasGateway(options: NasGatewayOptions): NasGateway {
         const targetPath = resolveTargetPath(targetRoot, snapshot.targetRelativePath);
         const tempTargetPath = `${targetPath}.tmp-${safeSessionId}`;
 
+        await assertNoSymlinkEscape(targetRoot, dirname(targetPath));
         await mkdir(dirname(targetPath), { recursive: true });
 
         if (!options.overwrite && await exists(targetPath)) {
@@ -780,13 +782,36 @@ function resolveWithinRoot(root: string, relativePath: string): string {
   const resolvedPath = resolve(resolvedRoot, normalized);
   const rootRelativePath = relative(resolvedRoot, resolvedPath);
 
-  if (rootRelativePath.startsWith("..") || isAbsolute(rootRelativePath)) {
+  if (escapesRoot(rootRelativePath)) {
     throw createNasError("nas.unsafe_path", "Resolved path escapes the configured root.", {
       relativePath
     });
   }
 
   return resolvedPath;
+}
+
+function escapesRoot(rootRelativePath: string): boolean {
+  return rootRelativePath === ".." || rootRelativePath.startsWith(`..${sep}`) || isAbsolute(rootRelativePath);
+}
+
+/**
+ * Lexical checks cannot see symlinks. Before creating or writing under
+ * `directory`, resolve its deepest existing ancestor and require it to stay
+ * inside the real root.
+ */
+async function assertNoSymlinkEscape(root: string, directory: string): Promise<void> {
+  await mkdir(root, { recursive: true });
+  const realRoot = await realpath(root);
+  let existing = directory;
+  while (!(await exists(existing))) {
+    const parent = dirname(existing);
+    if (parent === existing) break;
+    existing = parent;
+  }
+  if (escapesRoot(relative(realRoot, await realpath(existing)))) {
+    throw createNasError("nas.unsafe_path", "Resolved path escapes the configured root.");
+  }
 }
 
 function normalizeExpiresAt(

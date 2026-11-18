@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { createNodeChecksumExecutor } from "../src/node.js";
+import type { ChecksumExecutor } from "../src/types.js";
 import { createVerifiedIngestWorkflow } from "../src/workflow.js";
 import {
   MemoryResumeStore,
@@ -101,5 +103,53 @@ describe("workflow process restart", () => {
       .toEqual(fixedCounts);
     if (completed.status !== "evidence_persisted") throw new Error("unexpected result");
     expect(completed.bundle.stages.find(({ stage }) => stage === "evidence_persistence")?.attempts).toBe(2);
+  });
+});
+
+describe("workflow restart checksum executor", () => {
+  it("re-hashes the source on restart with the configured executor", async () => {
+    const calls = { create: 0, upload: 0, complete: 0, verify: 0 };
+    const checkpointStore = new MemoryWorkflowCheckpointStore();
+    const evidenceSink = new MemoryWorkflowEvidenceSink();
+    const resumeStore = new MemoryResumeStore();
+    const native = createNodeChecksumExecutor();
+    let executorCalls = 0;
+    const executor: ChecksumExecutor = {
+      calculate(file, options) {
+        executorCalls += 1;
+        return native.calculate(file, options);
+      }
+    };
+    const withExecutor = async (status: "failed" | "verified") => {
+      const base = await workflowOptions(calls, evidenceSink, checkpointStore);
+      return {
+        ...base,
+        session: {
+          ...base.session,
+          checksum: { executor },
+          resume: { store: resumeStore, cleanup: "delete-on-complete" as const }
+        },
+        verifier: {
+          category: "stored-original",
+          async verify() {
+            return status === "failed"
+              ? { status, checkedAt: "2026-09-07T00:00:00.000Z", issueCodes: ["verification.checksum_mismatch" as const], retryable: true }
+              : {
+                  status,
+                  checkedAt: "2026-09-07T00:00:00.000Z",
+                  expectedEvidenceCategories: ["whole-file-sha256"],
+                  observedEvidenceCategories: ["whole-file-sha256"]
+                };
+          }
+        }
+      };
+    };
+    const failed = await createVerifiedIngestWorkflow(workflowFile(), await withExecutor("failed")).start();
+    const afterStart = executorCalls;
+    expect(afterStart).toBeGreaterThan(0);
+    const completed = await createVerifiedIngestWorkflow(workflowFile(), await withExecutor("verified"))
+      .resume(failed.workflowId);
+    expect(completed.status).toBe("evidence_persisted");
+    expect(executorCalls).toBeGreaterThan(afterStart);
   });
 });

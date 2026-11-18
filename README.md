@@ -76,17 +76,16 @@ Hashing happens before upload, so its speed is the wait users see. Pick an execu
 import { createNodeChecksumExecutor } from "large-image-ingest/node";
 createIngestSession(file, { transport, checksum: { executor: createNodeChecksumExecutor() } });
 
-// Browser: optional `hash-wasm` peer (npm install hash-wasm)
-import { createBrowserWasmChecksumExecutor } from "large-image-ingest/browser-wasm";
-createIngestSession(file, { transport, checksum: { executor: createBrowserWasmChecksumExecutor() } });
+// Browser: built-in SHA-256 in a Worker, keeping the page responsive
+import { createBrowserWorkerChecksumExecutor } from "large-image-ingest/browser";
+createIngestSession(file, { transport, checksum: { executor: createBrowserWorkerChecksumExecutor() } });
 ```
 
-| Executor | Measured (256 MiB, Apple Silicon) |
+| Executor | Measured (Apple Silicon) |
 | --- | ---: |
-| Built-in JavaScript (default, Node.js) | 235 MiB/s |
-| `createNodeChecksumExecutor` | 2,478 MiB/s |
-| Built-in JavaScript in a Worker (`large-image-ingest/browser`, Chromium) | 283 MiB/s |
-| `createBrowserWasmChecksumExecutor` (Chromium) | 393 MiB/s |
+| Built-in JavaScript (default), 1 GiB file, Node.js | 399 MiB/s |
+| `createNodeChecksumExecutor`, 1 GiB file | 1,881 MiB/s |
+| `createBrowserWorkerChecksumExecutor`, 256 MiB, Chromium | 347 MiB/s |
 
 All executors produce identical digests and the same progress and cancellation contract. See [benchmarks](docs/benchmarks.md).
 
@@ -95,7 +94,7 @@ All executors produce identical digests and the same progress and cancellation c
 | Tier | Import paths | Promise |
 | --- | --- | --- |
 | Stable | `core`, `browser`, `transport-tus`, `transport-s3`, `node`, `react`, `tiff` | Semver: breaking changes only in a major release |
-| Experimental | `provenance`, `preservation`, `profiles`, `workflow`, `conformance`, `react-ui`, `browser-wasm` | May change in a minor release; changes are listed in the [changelog](CHANGELOG.md). Exports carry an `@experimental` TSDoc tag |
+| Experimental | `provenance`, `preservation`, `profiles`, `workflow`, `conformance`, `react-ui` | May change in a minor release; changes are listed in the [changelog](CHANGELOG.md). Exports carry an `@experimental` TSDoc tag |
 | Compatibility | root `large-image-ingest` | Re-exports `core` plus the tus and S3 transports |
 
 All paths are prefixed with `large-image-ingest/`.

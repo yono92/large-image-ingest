@@ -442,9 +442,11 @@ function readRequiredOffset(response: Response): number {
     throw createTusError("transport.offset_mismatch", "tus response did not include Upload-Offset.", false);
   }
 
-  const offset = Number(rawOffset);
+  // tus defines Upload-Offset as a non-negative decimal integer; Number()
+  // alone would also accept "0x10" and "1e3".
+  const offset = /^\d+$/.test(rawOffset) ? Number(rawOffset) : Number.NaN;
 
-  if (!Number.isSafeInteger(offset) || offset < 0) {
+  if (!Number.isSafeInteger(offset)) {
     throw createTusError("transport.offset_mismatch", "tus response included an invalid Upload-Offset.", false, {
       offset: rawOffset
     });

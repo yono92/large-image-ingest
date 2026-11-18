@@ -427,6 +427,25 @@ describe("createTusTransport", () => {
     });
   });
 
+  it.each(["0x40000", "2.62144e5"])("rejects a non-decimal Upload-Offset %j", async (offsetHeader) => {
+    const server = createFakeTusServer();
+    const fetch: typeof server.fetch = async (input, init) => {
+      const response = await server.fetch(input, init);
+      if (init?.method !== "PATCH" || !response.headers.has("Upload-Offset")) return response;
+      const headers = new Headers(response.headers);
+      headers.set("Upload-Offset", offsetHeader);
+      return new Response(null, { status: response.status, headers });
+    };
+    const file = new File([new Uint8Array(chunkSize)], "wafer.tif", { type: "image/tiff" });
+
+    await expect(
+      createIngestSession(file, {
+        chunking: { chunkSize },
+        transport: createTusTransport({ endpoint, fetch })
+      }).start()
+    ).rejects.toMatchObject({ code: "transport.offset_mismatch", retryable: false });
+  });
+
   it("terminates the tus upload when the session is canceled", async () => {
     const file = new File([new Uint8Array(600 * 1024)], "wafer.tif", {
       type: "image/tiff"

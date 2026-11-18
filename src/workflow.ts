@@ -275,7 +275,11 @@ class DefaultVerifiedIngestWorkflow implements VerifiedIngestWorkflow {
       if (!checkpoint.resumeRecordId || !checkpoint.sourceIdentity) {
         return this.fail("upload_failed", ["workflow.checkpoint_invalid"], "terminal");
       }
-      const checksum = await calculateChecksum(this.file, { algorithm: "sha256", required: true });
+      const checksum = await calculateChecksum(this.file, {
+        ...this.options.session.checksum,
+        algorithm: "sha256",
+        required: true
+      });
       if (!workflowCheckpointMatchesSource(checkpoint, {
         sizeBytes: this.file.size,
         checksum: checksum.value

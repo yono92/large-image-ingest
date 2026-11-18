@@ -11,7 +11,7 @@ Spec Kit artifacts:
 - [Hash performance, release integrity and scope clarity](../specs/024-hash-release-scope/spec.md)
 
 - [x] Publish releases from GitHub Actions with npm provenance; fail CI when the `core` bundle grows more than 10%.
-- [x] Double built-in SHA-256 throughput; add `node:crypto` and optional `hash-wasm` executors.
+- [x] Triple built-in SHA-256 throughput and add a `node:crypto` executor.
 - [x] Declare Stable, Experimental and Compatibility import-path tiers; tag Experimental exports.
 - [x] Shorten the README to install, first upload, executors and tiers; move details to the feature guide.
 - [x] Extract session retry, receipt and snapshot helpers without behavior change.

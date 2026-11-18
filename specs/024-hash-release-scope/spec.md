@@ -14,7 +14,7 @@ An application ingesting multi-GiB originals spends less time hashing before tra
 **Acceptance Scenarios**:
 1. The built-in JavaScript SHA-256 returns identical digests and is measurably faster than 1.8.2.
 2. `createNodeChecksumExecutor()` (`large-image-ingest/node`) returns the same `FileChecksum` evidence using `node:crypto`, honours `AbortSignal` with `ChecksumCanceledError`, and reports monotonic progress ending at the file size.
-3. `createBrowserWasmChecksumExecutor()` (`large-image-ingest/browser-wasm`) does the same with the optional `hash-wasm` peer; applications that do not import the subpath need no peer.
+3. Parallel chunk evidence keeps using the built-in implementation, so it gets the same speed-up without per-chunk executor calls.
 
 ### User Story 2 - Verifiable releases (Priority: P2)
 
@@ -42,7 +42,7 @@ Maintainers can change retry, receipt or snapshot helpers without editing the 2,
 
 - **FR-001**: Executors MUST return `FileChecksum` values accepted by `calculateChecksum` validation (algorithm, scope `whole-file`, matching `chunkSizeBytes`, 64-hex value).
 - **FR-002**: Executors MUST read at most one `chunkSize` slice at a time.
-- **FR-003**: Runtime dependencies MUST stay empty; `hash-wasm` is an optional peer.
+- **FR-003**: Runtime dependencies MUST stay empty; no new peer dependencies.
 - **FR-004**: No public type or behavior of existing exports changes.
 - **FR-005**: Release publication MUST run in CI with OIDC (`id-token: write`) and provenance.
 
@@ -50,15 +50,15 @@ Maintainers can change retry, receipt or snapshot helpers without editing the 2,
 
 | Path | 1.8.2 | Now | Target |
 | --- | ---: | ---: | ---: |
-| Built-in JavaScript, Node.js | 122 MiB/s | 235 MiB/s | faster |
-| Node executor | — | 2,478 MiB/s | ≥ 1 GiB/s (met) |
-| Browser WASM executor | — | 393 MiB/s | ≥ 500 MiB/s (not met) |
-| Built-in JavaScript Worker, Chromium | — | 283 MiB/s | faster |
+| Built-in JavaScript, Node.js | 122 MiB/s | about 340 MiB/s | faster (met, about 3×) |
+| Node executor, 1 GiB file | — | 1,881 MiB/s | ≥ 1 GiB/s (met) |
+| Built-in JavaScript Worker, Chromium | — | 347 MiB/s | ≥ 500 MiB/s (not met) |
 
 ## Deferred (with reason)
 
 - **Single read for parallel upload** and **hash/upload overlap**: both change when chunk evidence is bound relative to transfer and need a spec amendment to 020 before code.
-- **Main-thread-free WASM**: a Worker cannot resolve the bare `hash-wasm` import without a bundler; the executor runs on the main thread one chunk at a time.
+- **Browser WASM executor**: implemented and removed before release. With the faster built-in loop, `hash-wasm` (323–364 MiB/s, main thread only because a Worker cannot resolve the bare import without a bundler) was no faster than the built-in Worker (347 MiB/s).
+- **Executor for parallel chunk evidence**: tried and removed. Chunk hashing runs outside the transfer retry, so a transient executor failure aborted the whole upload, and the Worker executor started one Worker per chunk.
 - **changesets**: its version command does not update `src/package-version.ts` (checked by `prebuild`) and would replace the curated changelog format.
 - **TypeDoc site**: `typedoc@0.28.20` pulls a `minimatch` version with an open moderate advisory, which fails the release audit gate.
 - **v0.1/v0.2 resume deprecation**: `createResumeRecord` (public) and the in-memory snapshot resume path still write v0.2 records, so a deprecation warning would fire for current users. Decide the v0.2 replacement before announcing removal.

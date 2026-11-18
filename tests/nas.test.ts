@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -463,6 +463,39 @@ describe("createNasGateway", () => {
     await expect(stat(join(stagingRoot, "session-traversal"))).rejects.toMatchObject({
       code: "ENOENT"
     });
+  });
+
+  it("refuses to finalize through a symlink that leaves the target root", async () => {
+    const { gateway, root, targetRoot } = await createTempGateway();
+    const outside = join(root, "outside");
+    await mkdir(outside, { recursive: true });
+    await mkdir(targetRoot, { recursive: true });
+    await symlink(outside, join(targetRoot, "linked"));
+    const session = await gateway.createSession({
+      sessionId: "session-symlink",
+      targetRelativePath: "linked/escape.bin",
+      totalBytes: 1,
+      expectedChunks: 1
+    });
+    await gateway.stageChunk({ sessionId: session.sessionId, index: 0, body: new Uint8Array([1]) });
+
+    await expect(gateway.finalizeSession({ sessionId: session.sessionId })).rejects.toMatchObject({
+      code: "nas.unsafe_path"
+    });
+    expect(await readdir(outside)).toEqual([]);
+  });
+
+  it("accepts in-root names that start with two dots", async () => {
+    const { gateway, targetRoot } = await createTempGateway();
+    const session = await gateway.createSession({
+      sessionId: "session-dots",
+      targetRelativePath: "..staging/a.bin",
+      totalBytes: 1,
+      expectedChunks: 1
+    });
+    await gateway.stageChunk({ sessionId: session.sessionId, index: 0, body: new Uint8Array([7]) });
+    await gateway.finalizeSession({ sessionId: session.sessionId });
+    expect([...await readFile(join(targetRoot, "..staging", "a.bin"))]).toEqual([7]);
   });
 
   it("rejects duplicate session IDs without replacing staged state", async () => {

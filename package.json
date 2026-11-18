@@ -48,11 +48,6 @@
       "import": "./dist/esm/browser.js",
       "default": "./dist/esm/browser.js"
     },
-    "./browser-wasm": {
-      "types": "./dist/esm/browser-wasm.d.ts",
-      "import": "./dist/esm/browser-wasm.js",
-      "default": "./dist/esm/browser-wasm.js"
-    },
     "./conformance": {
       "types": "./dist/esm/conformance.d.ts",
       "import": "./dist/esm/conformance.js",
@@ -176,14 +171,10 @@
   },
   "peerDependencies": {
     "geotiff": "^3.0.5",
-    "hash-wasm": "^4.12.0",
     "react": ">=18 <20"
   },
   "peerDependenciesMeta": {
     "geotiff": {
-      "optional": true
-    },
-    "hash-wasm": {
       "optional": true
     },
     "react": {
@@ -203,7 +194,6 @@
     "@uppy/react": "^5.2.0",
     "axe-core": "^4.13.0",
     "geotiff": "^3.0.5",
-    "hash-wasm": "4.12.0",
     "jsdom": "^29.1.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
