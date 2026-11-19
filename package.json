@@ -1,6 +1,6 @@
 {
   "name": "large-image-ingest",
-  "version": "1.9.2",
+  "version": "1.10.0",
   "description": "TypeScript SDK for verifiable, resumable ingestion of very large inspection images without decoding or transforming originals.",
   "type": "module",
   "license": "MIT",

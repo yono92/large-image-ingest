@@ -68,6 +68,8 @@ Measured on 2026-11-19 with Node.js 22.14.0 on Apple Silicon macOS, hashing a 1 
 
 Reading costs about a tenth of built-in hashing, so reading each byte once for both the whole-file and chunk hashes was not pursued. `calculateBlobSha256` uses WebCrypto for blobs up to 64 MiB instead.
 
+A faster browser whole-file hash was not pursued further: SHA-256 is sequential, so one file's digest cannot be split across Workers, WebCrypto cannot hash a stream, and `hash-wasm` was no faster than the built-in Worker. `overlapChecksum` (1.10.0) overlaps the hash with the upload instead.
+
 ## Recorded Runs
 
 Feature 013 completion verification on August 31, 2026 used the 1.5.0 dirty working tree, Node.js 22.14.0, macOS 26.6.2 arm64, 10 logical CPUs, and 32 GiB system memory:

@@ -27,15 +27,21 @@ import {
   CHUNK_INTEGRITY_POLICY_ID
 } from "./session-state.js";
 import type { SessionRuntime } from "./session-runtime.js";
+import type { TransferEngine } from "./session-transfer.js";
 import {
   checkpointChunk,
   uploadChunkWithRetry,
   storeReceipt,
   sortedReceipts
 } from "./session-transfer.js";
-import { emitResumeConflict } from "./session-resume.js";
+import { emitResumeConflict } from "./session-resume-store.js";
 
-export async function uploadRemainingChunksParallel(
+export const parallelEngine: TransferEngine = {
+  name: "parallel",
+  uploadRemaining: uploadRemainingChunksParallel
+};
+
+async function uploadRemainingChunksParallel(
   rt: SessionRuntime,
   manifest: IngestManifest,
   session: TransportSession,

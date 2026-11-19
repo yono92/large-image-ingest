@@ -31,10 +31,34 @@ import {
   PARALLEL_RESUME_SCHEMA_VERSION
 } from "./session-state.js";
 import type { SessionRuntime } from "./session-runtime.js";
-import { uploadRemainingChunksParallel, parallelState, validateChunkIntegrity } from "./session-parallel.js";
-import { completeResumeRecord, putResumeRecord } from "./session-resume.js";
+import { promoteOverlapRecord } from "./session-overlap.js";
+import { parallelEngine, parallelState, validateChunkIntegrity } from "./session-parallel.js";
+import { completeResumeRecord } from "./session-resume.js";
+import { putResumeRecord } from "./session-resume-store.js";
 
-export async function uploadRemainingChunks(
+/** Uploads every chunk without a receipt and returns the latest resume record. */
+export interface TransferEngine {
+  readonly name: "sequential" | "parallel";
+  uploadRemaining(
+    rt: SessionRuntime,
+    manifest: IngestManifest,
+    session: TransportSession,
+    chunkPlan: ChunkPlan,
+    record: ResumeRecord | undefined,
+    snapshotCreatedAt: string
+  ): Promise<ResumeRecord | undefined>;
+}
+
+export const sequentialEngine: TransferEngine = {
+  name: "sequential",
+  uploadRemaining: uploadRemainingChunksSequential
+};
+
+export function selectTransferEngine(rt: SessionRuntime): TransferEngine {
+  return rt.options.parallel ? parallelEngine : sequentialEngine;
+}
+
+async function uploadRemainingChunksSequential(
   rt: SessionRuntime,
   manifest: IngestManifest,
   session: TransportSession,
@@ -42,9 +66,6 @@ export async function uploadRemainingChunks(
   record: ResumeRecord | undefined,
   snapshotCreatedAt: string
 ): Promise<ResumeRecord | undefined> {
-  if (rt.options.parallel) {
-    return uploadRemainingChunksParallel(rt, manifest, session, chunkPlan, record, snapshotCreatedAt);
-  }
   let activeRecord = record;
 
   for (const chunk of chunkPlan.chunks) {
@@ -59,6 +80,11 @@ export async function uploadRemainingChunks(
 
     if (activeRecord) {
       activeRecord = await checkpointChunk(rt, activeRecord, chunk, chunkPlan, result.transportResult);
+    } else if (rt.pendingChecksum?.result && rt.options.resume?.store) {
+      activeRecord = await promoteOverlapRecord(rt, manifest, session, chunkPlan, rt.pendingChecksum);
+    }
+    if (rt.pendingChecksum?.failed) {
+      await rt.pendingChecksum.promise;
     }
 
     const uploadedBytes = calculateUploadedBytes(sortedReceipts(rt));

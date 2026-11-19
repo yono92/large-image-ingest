@@ -105,9 +105,29 @@ const session = createIngestSession(file, {
 
 Fallback is explicit: omit `fallback` to receive `checksum.execution_failed` when Worker execution cannot start or returns invalid evidence, or choose `"inline"` to retain bounded reads and cancellation on the caller's execution path. Abort signals stop acceptance of canceled results. Progress is monotonic and bounded, and callback failures are isolated through `onObserverError`.
 
-The reader continues to validate v0.1 and v0.2 records. Legacy records with trustworthy manifest whole-file SHA-256 evidence can resume or promote at the next authoritative checkpoint. Weak zero-progress records are restart-only; weak progressed records and progressed v0.1 S3 records are incompatible. They remain stored until explicit cleanup. Never log full records or content identities; use `redactResumeRecord()` and safe UI summaries.
+The reader continues to validate v0.1 and v0.2 records. From 1.10.0, resuming one emits `resume:legacy-record` (`removedIn: "2.0.0"`); 2.0.0 will stop reading these schemas, so finish or discard such uploads before upgrading. Legacy records with trustworthy manifest whole-file SHA-256 evidence can resume or promote at the next authoritative checkpoint. Weak zero-progress records are restart-only; weak progressed records and progressed v0.1 S3 records are incompatible. They remain stored until explicit cleanup. Never log full records or content identities; use `redactResumeRecord()` and safe UI summaries.
 
 Transport recovery support is conservative. `resumable`, `supportsSnapshotResume`, and `supportsPersistentResume` describe different behaviors. Missing detailed capability flags do not block ordinary upload, but they are not treated as proof that snapshot or durable recovery is safe. Manifest schema remains `large-image-ingest.manifest.v1`; `manifest.library.version` identifies the actual producing package release independently.
+
+## Hashing While Uploading
+
+`overlapChecksum: true` (1.10.0) starts transferring chunks without waiting for the whole-file checksum:
+
+```ts
+const session = createIngestSession(file, {
+  checksum: { executor: createBrowserWorkerChecksumExecutor() },
+  overlapChecksum: true,
+  resume: { store: resumeStore },
+  transport
+});
+```
+
+- Sequential uploads only. Combining it with `parallel`, `checksum: false`, a supplied `manifest` or `resumeFrom` fails with `session.invalid_state` before any transport call.
+- `validated` and `started` events carry a manifest without `original.checksum`; the checksum is added before `completeSession` runs, and `completed` carries it.
+- With a resume store, the persistent record is written once the checksum is known, including every chunk already uploaded. If the upload stops before that, nothing is recoverable and it starts over.
+- A `checksum.expected` mismatch fails with `validation.failed` before completion. A checksum failure stops the upload after the current chunk.
+
+One file's SHA-256 cannot be split across Workers, so this is how browser uploads avoid the hash wait rather than hashing faster.
 
 ## Parallel Upload And Chunk Integrity
 

@@ -370,10 +370,14 @@ describe("createS3MultipartTransport", () => {
     const store = new MemoryResumeStore();
     await store.put(legacy);
     const completed: S3CompletedPart[][] = [];
+    const legacyEvents: unknown[] = [];
 
     await createIngestSession(file, {
       chunking: { chunkSize },
       resume: { store },
+      onEvent(event) {
+        if (event.type === "resume:legacy-record") legacyEvents.push(event);
+      },
       transport: createS3MultipartTransport({
         broker: createFakeBroker({
           onCreate() {
@@ -388,6 +392,12 @@ describe("createS3MultipartTransport", () => {
     }).resume(legacy.id);
 
     expect(completed[0]?.map((part) => part.partNumber)).toEqual([1]);
+    expect(legacyEvents).toEqual([{
+      type: "resume:legacy-record",
+      recordId: legacy.id,
+      schemaVersion: "large-image-ingest.resume.v0.1",
+      removedIn: "2.0.0"
+    }]);
   });
 
   it("aborts multipart upload through the broker when canceled", async () => {

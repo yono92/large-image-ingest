@@ -2,13 +2,16 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
-## 1.9.0 Included - Hash Performance, Release Integrity And Scope
+## 1.9.0–1.10.0 Included - Hash Performance, Release Integrity And Scope
 
-New features are frozen through 1.10; work until then only makes existing behavior faster, verifiable and easier to adopt.
+Work through 1.10 only makes existing behavior faster, verifiable and easier to adopt; 1.10.0's one new option, `overlapChecksum`, removes the wait for hashing.
 
 Spec Kit artifacts:
 
 - [Hash performance, release integrity and scope clarity](../specs/024-hash-release-scope/spec.md)
+- [WebCrypto chunk hashing](../specs/025-webcrypto-chunk-hash/spec.md)
+- [Session module split](../specs/026-session-module-split/spec.md)
+- [Checksum/upload overlap and legacy resume notice](../specs/027-overlap-and-legacy-notice/spec.md)
 
 - [x] Add a provenance release workflow; fail CI when the `core` bundle grows more than 10%.
 - [x] Publish with provenance through npm Trusted Publishing (from 1.9.1; 1.9.0 was published locally).
@@ -17,10 +20,12 @@ Spec Kit artifacts:
 - [x] Shorten the README to install, first upload, executors and tiers; move details to the feature guide.
 - [x] Extract session retry, receipt and snapshot helpers without behavior change.
 - [x] Hash parallel chunks with WebCrypto (about 4x faster); a single shared read was measured and not pursued (spec 025).
-- [ ] Hash/upload overlap for parallel upload (needs a 020 spec amendment).
-- [ ] Decide the replacement for v0.2 resume records before announcing v0.1/v0.2 removal in 2.0.
+- [x] Opt-in hash/upload overlap for sequential upload (spec 027); parallel upload still waits for source identity.
+- [x] Announce removal of v0.1/v0.2 resume reading in 2.0.0 with a `resume:legacy-record` event.
+- [x] Decide v0.1/v0.2 resume records: v0.3 and v0.4 replace them; reading them is removed in 2.0.0.
+- [x] Check faster browser whole-file hashing: one SHA-256 cannot be split across Workers and WASM was no faster, so browsers use `overlapChecksum` to hide the wait instead.
 - [x] Split the session class into lifecycle, sequential, parallel and resume modules (spec 026).
-- [ ] Give both transfer engines one internal interface; warn in CI when a source file passes 500 lines.
+- [x] Give both transfer engines one internal interface; warn in CI when a source file passes 500 lines.
 - [ ] Collect a real-environment adoption case.
 
 Consider separate `@large-image-ingest/*` packages only after 2.0 and only once Experimental paths have users.

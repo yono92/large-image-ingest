@@ -20,5 +20,5 @@
 
 ## Not In Scope
 
-- One shared internal interface for both transfer engines, and a CI line-count warning (roadmap items, left for later).
-- The 500-line target: `session-runtime.ts` and `session-resume.ts` are about 600 lines.
+- One shared internal interface for both transfer engines, and a CI line-count warning (done in 1.10.0).
+- The 500-line target: `session-runtime.ts` and `session-resume.ts` were about 600 lines; 1.10.0 moved start/resume flows to `session-flow.ts` and record storage to `session-resume-store.ts`, bringing every session module under 500 (spec 027 release).

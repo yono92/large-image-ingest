@@ -202,6 +202,12 @@ export function createSafeEventSummary(event: IngestEvent): SafeEventSummary {
         status: "expired"
       };
 
+    case "resume:legacy-record":
+      return {
+        type: event.type,
+        recordId: event.recordId
+      };
+
     case "upload:paused":
       return {
         type: event.type,

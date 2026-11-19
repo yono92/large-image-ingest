@@ -89,6 +89,8 @@ createIngestSession(file, { transport, checksum: { executor: createBrowserWorker
 
 All executors produce identical digests and the same progress and cancellation contract. See [benchmarks](docs/benchmarks.md).
 
+To stop waiting for the hash at all, set `overlapChecksum: true` on a sequential upload. Chunks start uploading while the checksum runs, and completion waits for it. The trade-off: a persistent resume record exists only once the checksum is known, so an upload interrupted before then starts over. See the [feature guide](docs/guide.md#hashing-while-uploading).
+
 ## Stability
 
 | Tier | Import paths | Promise |

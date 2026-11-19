@@ -820,6 +820,8 @@ export type IngestEvent =
   | { type: "resume:conflict"; recordId?: string; code: ResumeConflictCode; error: unknown }
   | { type: "resume:cleanup-failed"; recordId: string; code: "resume.store_failed"; operation: ResumeCleanupOperation; error: unknown }
   | { type: "resume:expired"; recordId: string }
+  /** A stored v0.1 or v0.2 resume record was read; 2.0.0 will stop reading these schemas. */
+  | { type: "resume:legacy-record"; recordId: string; schemaVersion: "large-image-ingest.resume.v0.1" | "large-image-ingest.resume.v0.2"; removedIn: "2.0.0" }
   | { type: "upload:paused"; recordId?: string }
   | { type: "upload:canceled"; recordId?: string }
   | { type: "paused"; snapshot: UploadSessionSnapshot }
@@ -909,6 +911,13 @@ export interface CreateIngestSessionOptions {
   manifest?: IngestManifest;
   manifestIdentity?: ManifestIdentityOverride;
   metadata?: Record<string, unknown>;
+  /**
+   * Start uploading while the whole-file checksum is still being calculated.
+   * Sequential new uploads only. The persistent resume record is created once the
+   * checksum is known; an upload interrupted before then cannot resume and starts over.
+   * `validated` and `started` events carry a manifest without `original.checksum`.
+   */
+  overlapChecksum?: boolean;
   parallel?: ParallelUploadOptions;
   onEvent?: (event: IngestEvent) => void;
   onObserverError?: (failure: IngestObserverFailure) => void;

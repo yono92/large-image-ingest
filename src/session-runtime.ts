@@ -1,12 +1,5 @@
-import { planChunks } from "./chunks.js";
-import { createManifest } from "./manifest.js";
 import { validateDomainProfileSessionBinding } from "./profiles.js";
-import {
-  ResumeConflictError,
-  UploadCanceledError,
-  UploadPausedError,
-  mergeTransportState
-} from "./resume.js";
+import { ResumeConflictError, UploadCanceledError, UploadPausedError } from "./resume.js";
 import type {
   ChunkDescriptor,
   ChunkPlan,
@@ -24,7 +17,7 @@ import type {
   UploadSessionSnapshot,
   UploadSessionStatus
 } from "./types.js";
-import { normalizeTransportSession, validateChunkPlanForTransport, calculateUploadedBytes } from "./session-receipts.js";
+import { normalizeTransportSession, calculateUploadedBytes } from "./session-receipts.js";
 import {
   cloneSnapshot,
   redactSnapshot,
@@ -35,34 +28,12 @@ import {
   toErrorMessage,
   nowIso
 } from "./session-state.js";
-import {
-  validateParallelAdmission,
-  parallelState,
-  validateParallelResume,
-  reconcileParallelResume,
-  validateParallelSnapshot
-} from "./session-parallel.js";
-import { uploadRemainingChunks, completeUpload, sortedReceipts } from "./session-transfer.js";
-import {
-  prepareContentSourceIdentity,
-  withSessionChecksumAuthority,
-  createInitialResumeRecord,
-  createRecordFromSnapshot,
-  validateResumeRecord,
-  hydrateResumeSnapshot,
-  hydrateResumeRecord,
-  getResumeRecord,
-  putResumeRecord,
-  markRecordPaused,
-  markRecordCanceled,
-  markCurrentRecordFailed,
-  withStatus,
-  withTransport,
-  createTransportState,
-  validateRequestedResumeCapability,
-  requireResumeStore,
-  emitResumeConflict
-} from "./session-resume.js";
+import { parallelState } from "./session-parallel.js";
+import { sortedReceipts } from "./session-transfer.js";
+import type { PendingChecksum } from "./session-overlap.js";
+import { withSessionChecksumAuthority, createRecordFromSnapshot } from "./session-resume.js";
+import { markRecordPaused, markRecordCanceled, markCurrentRecordFailed } from "./session-resume-store.js";
+import { resumeUpload, startUpload } from "./session-flow.js";
 
 /** Internal session state and lifecycle; the public facade is `LargeImageIngestSession`. */
 export class SessionRuntime {
@@ -79,6 +50,7 @@ export class SessionRuntime {
   readonly retryableChunks = new Set<number>();
   readonly failedChunks = new Set<number>();
   readonly ambiguousChunks = new Set<number>();
+  pendingChecksum: PendingChecksum | undefined;
 
   constructor(
     readonly file: IngestFileLike,
@@ -112,181 +84,12 @@ export class SessionRuntime {
     return this.currentSnapshot ? cloneSnapshot(this.currentSnapshot) : undefined;
   }
 
-  async start(): Promise<IngestManifest> {
-    let manifest: IngestManifest | undefined;
-    let chunkPlan: ChunkPlan | undefined;
-    let contentIdentity: ContentSourceIdentityV1 | undefined;
-    const snapshotCreatedAt = this.options.resumeFrom?.createdAt ?? nowIso();
-
-    try {
-      this.throwIfStopped();
-      manifest = this.options.manifest ?? await createManifest(this.file, this.createManifestOptions());
-      this.validateDomainProfileBinding(manifest);
-      this.emit({ type: "validated", manifest });
-
-      if (!manifest.validation.ok) {
-        throw createIngestError(
-          "validation.failed",
-          "Cannot start upload because validation failed.",
-          false
-        );
-      }
-
-      chunkPlan = planChunks(this.file.size, this.options.chunking);
-      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
-      validateParallelAdmission(this);
-      validateRequestedResumeCapability(this);
-      if (this.options.resume && !this.options.resumeFrom) {
-        contentIdentity = await prepareContentSourceIdentity(this, manifest);
-      }
-      if (this.options.parallel) {
-        contentIdentity ??= await prepareContentSourceIdentity(this, manifest);
-        this.parallelSourceIdentity = contentIdentity;
-      }
-      await validateParallelSnapshot(this, manifest, chunkPlan);
-      hydrateResumeSnapshot(this, manifest, chunkPlan);
-
-      const session = await this.createOrResumeSnapshotSession(manifest, chunkPlan);
-      this.currentTransportSession = session;
-      manifest.upload.transport = { name: session.transportName };
-
-      this.emit({ type: "started", manifest, uploadId: session.uploadId });
-      this.updateSnapshot({
-        manifest,
-        chunkPlan,
-        session,
-        status: this.options.resumeFrom ? "resuming" : "uploading",
-        createdAt: snapshotCreatedAt
-      });
-
-      let record = this.options.resumeFrom
-        ? undefined
-        : await createInitialResumeRecord(this, manifest, session, contentIdentity);
-
-      if (this.options.resumeFrom) {
-        this.updateSnapshot({
-          manifest,
-          chunkPlan,
-          session,
-          status: "uploading",
-          createdAt: snapshotCreatedAt
-        });
-      }
-
-      record = await uploadRemainingChunks(this, manifest, session, chunkPlan, record, snapshotCreatedAt);
-      await completeUpload(this, manifest, session, record, chunkPlan, snapshotCreatedAt);
-
-      return manifest;
-    } catch (error) {
-      await this.handleSessionError(error, manifest, chunkPlan, snapshotCreatedAt);
-      throw this.normalizeStopError(error);
-    }
+  start(): Promise<IngestManifest> {
+    return startUpload(this);
   }
 
-  async resume(recordId: string): Promise<IngestManifest> {
-    const store = requireResumeStore(this);
-    let manifest: IngestManifest | undefined;
-    let chunkPlan: ChunkPlan | undefined;
-    const snapshotCreatedAt = nowIso();
-
-    try {
-      const record = await getResumeRecord(this, store, recordId);
-      manifest = record.manifest;
-      this.emit({ type: "validated", manifest });
-      this.throwIfStopped();
-
-      if (!this.options.transport.resumeSession) {
-        throw emitResumeConflict(
-          this,
-          "resume.transport_unsupported",
-          "The configured upload transport does not support persistent resume.",
-          record.id
-        );
-      }
-
-      chunkPlan = planChunks(this.file.size, this.options.chunking);
-      validateChunkPlanForTransport(chunkPlan, this.options.transport.capabilities);
-      validateParallelAdmission(this);
-      validateParallelResume(this, record, chunkPlan);
-      this.resumeSourceIdentity = await validateResumeRecord(this, record, store);
-      this.parallelSourceIdentity = this.resumeSourceIdentity;
-
-      let session: TransportSession;
-      try {
-        session = normalizeTransportSession(
-          await this.options.transport.resumeSession({
-            manifest,
-            file: this.file,
-            signal: this.abortController.signal,
-            record
-          }),
-          this.transportName(record.transport.name),
-          record.transport
-        );
-      } catch (error) {
-        if (
-          isIngestError(error) &&
-          (error.code === "resume.receipt_missing" || error.code === "resume.receipt_invalid")
-        ) {
-          throw emitResumeConflict(this, error.code, error.message, record.id, error);
-        }
-
-        throw emitResumeConflict(
-          this,
-          "resume.transport_mismatch",
-          "The transport could not validate the remote resume session.",
-          record.id,
-          error
-        );
-      }
-
-      if (session.uploadId !== record.transport.uploadId) {
-        throw emitResumeConflict(
-          this,
-          "resume.transport_mismatch",
-          "The transport returned a different remote upload session.",
-          record.id
-        );
-      }
-
-      this.currentTransportSession = session;
-      hydrateResumeRecord(this, record, chunkPlan, session);
-      const reconciledRecord = await reconcileParallelResume(this, record, manifest, session, chunkPlan);
-      manifest.upload.transport = { name: session.transportName };
-      const activeRecord = await putResumeRecord(
-        this,
-        withTransport(
-          this,
-          withStatus(this, reconciledRecord, "active"),
-          mergeTransportState(reconciledRecord.transport, createTransportState(this, session))
-        )
-      );
-
-      this.emit({ type: "resume:started", recordId: activeRecord.id, manifestId: manifest.id });
-
-      this.updateSnapshot({
-        manifest,
-        chunkPlan,
-        session,
-        status: "resuming",
-        createdAt: snapshotCreatedAt
-      });
-
-      const nextRecord = await uploadRemainingChunks(
-        this,
-        manifest,
-        session,
-        chunkPlan,
-        activeRecord,
-        snapshotCreatedAt
-      );
-      await completeUpload(this, manifest, session, nextRecord, chunkPlan, snapshotCreatedAt);
-
-      return manifest;
-    } catch (error) {
-      await this.handleSessionError(error, manifest, chunkPlan, snapshotCreatedAt);
-      throw this.normalizeStopError(error);
-    }
+  resume(recordId: string): Promise<IngestManifest> {
+    return resumeUpload(this, recordId);
   }
 
   async createOrResumeSnapshotSession(

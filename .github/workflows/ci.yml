@@ -43,6 +43,9 @@ jobs:
       - name: Bundle size
         run: npm run size
 
+      - name: Source file length
+        run: node --import tsx scripts/check-source-lines.cts
+
       - name: Reference integration
         run: npm run test:reference
 

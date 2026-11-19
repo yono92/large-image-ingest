@@ -1,7 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.10.0 - 2026-11-19
 
+- Add `overlapChecksum` to start sequential uploads while the whole-file checksum runs; the resume record is written once the checksum is known, and completion waits for it.
+- Emit `resume:legacy-record` when a stored v0.1 or v0.2 resume record is resumed; 2.0.0 will stop reading these schemas.
+- Run sequential and parallel transfer behind one internal engine interface, and split session start/resume flows and resume-record storage into their own modules.
+- Report source files above 500 lines as CI warnings.
 - Split the internal upload session into lifecycle, sequential transfer, parallel transfer and resume modules. Public API and behavior are unchanged.
 
 ## 1.9.2 - 2026-11-19
