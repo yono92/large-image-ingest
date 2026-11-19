@@ -11,7 +11,7 @@ Spec Kit artifacts:
 - [Hash performance, release integrity and scope clarity](../specs/024-hash-release-scope/spec.md)
 
 - [x] Add a provenance release workflow; fail CI when the `core` bundle grows more than 10%.
-- [ ] Publish with provenance once npm Trusted Publishing accepts the workflow (1.9.0 was published locally).
+- [x] Publish with provenance through npm Trusted Publishing (from 1.9.1; 1.9.0 was published locally).
 - [x] Triple built-in SHA-256 throughput and add a `node:crypto` executor.
 - [x] Declare Stable, Experimental and Compatibility import-path tiers; tag Experimental exports.
 - [x] Shorten the README to install, first upload, executors and tiers; move details to the feature guide.

@@ -101,7 +101,7 @@ All paths are prefixed with `large-image-ingest/`.
 
 ## Verify the package you install
 
-The repository includes a GitHub Actions release workflow that publishes with npm provenance. Version 1.9.0 was published from a maintainer machine without provenance while npm Trusted Publishing is being set up; later releases are intended to carry it. Check registry signatures, and attestations where present, with:
+Releases are published from GitHub Actions through npm Trusted Publishing with npm provenance, starting with 1.9.1. Version 1.9.0 and earlier were published from a maintainer machine without provenance. Check registry signatures and provenance attestations with:
 
 ```bash
 npm audit signatures

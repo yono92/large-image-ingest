@@ -44,7 +44,7 @@ Maintainers can change retry, receipt or snapshot helpers without editing the 2,
 - **FR-002**: Executors MUST read at most one `chunkSize` slice at a time.
 - **FR-003**: Runtime dependencies MUST stay empty; no new peer dependencies.
 - **FR-004**: No public type or behavior of existing exports changes.
-- **FR-005**: Release publication MUST run in CI with OIDC (`id-token: write`) and provenance. Not met for 1.9.0: the npm OIDC exchange answered "package not found" on four runs, so 1.9.0 was published locally without provenance.
+- **FR-005**: Release publication MUST run in CI with OIDC (`id-token: write`) and provenance. Not met for 1.9.0: the npm OIDC exchange answered "package not found" on four runs, so 1.9.0 was published locally without provenance. Met from 1.9.1: no trusted publisher had been saved on npm; once it was, the CI release published 1.9.1 with provenance.
 
 ## Success Criteria (measured 2026-11-18, Apple Silicon, Node.js 22.14.0, Chromium via Playwright, 256 MiB)
 
