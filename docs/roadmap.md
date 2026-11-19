@@ -12,6 +12,7 @@ Spec Kit artifacts:
 - [WebCrypto chunk hashing](../specs/025-webcrypto-chunk-hash/spec.md)
 - [Session module split](../specs/026-session-module-split/spec.md)
 - [Checksum/upload overlap and legacy resume notice](../specs/027-overlap-and-legacy-notice/spec.md)
+- [API reference and module size](../specs/028-api-reference-and-module-size/spec.md)
 
 - [x] Add a provenance release workflow; fail CI when the `core` bundle grows more than 10%.
 - [x] Publish with provenance through npm Trusted Publishing (from 1.9.1; 1.9.0 was published locally).
@@ -26,6 +27,9 @@ Spec Kit artifacts:
 - [x] Check faster browser whole-file hashing: one SHA-256 cannot be split across Workers and WASM was no faster, so browsers use `overlapChecksum` to hide the wait instead.
 - [x] Split the session class into lifecycle, sequential, parallel and resume modules (spec 026).
 - [x] Give both transfer engines one internal interface; warn in CI when a source file passes 500 lines.
+- [x] Publish an API reference site (TypeDoc on GitHub Pages).
+- [x] Keep every source module under 500 lines without changing public exports (spec 028).
+- [x] Measure WebCrypto chunk hashing in a browser.
 - [ ] Collect a real-environment adoption case.
 
 Consider separate `@large-image-ingest/*` packages only after 2.0 and only once Experimental paths have users.

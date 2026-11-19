@@ -111,6 +111,7 @@ npm audit signatures
 
 ## Documentation
 
+- [API reference](https://yono92.github.io/large-image-ingest/): every export of every import path, generated from the source
 - [Feature guide](docs/guide.md): checksums, parallel upload, provenance, preservation, profiles, React, TIFF, derivatives, transports, verification commands
 - [Quickstart and API examples](docs/quickstart.md)
 - [Verified ingest workflow](docs/verified-ingest-workflow.md)

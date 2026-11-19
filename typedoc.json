@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "large-image-ingest",
+  "entryPoints": [
+    "src/index.ts",
+    "src/core.ts",
+    "src/browser.ts",
+    "src/node.ts",
+    "src/s3.ts",
+    "src/tus.ts",
+    "src/react.ts",
+    "src/react-ui.ts",
+    "src/tiff.ts",
+    "src/workflow.ts",
+    "src/provenance.ts",
+    "src/preservation.ts",
+    "src/profiles.ts",
+    "src/conformance.ts"
+  ],
+  "tsconfig": "tsconfig.json",
+  "out": "api-docs",
+  "readme": "README.md",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "sourceLinkTemplate": "https://github.com/yono92/large-image-ingest/blob/{gitRevision}/{path}#L{line}",
+  "validation": { "notExported": false, "invalidLink": true, "notDocumented": false }
+}

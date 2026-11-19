@@ -66,6 +66,8 @@ Measured on 2026-11-19 with Node.js 22.14.0 on Apple Silicon macOS, hashing a 1 
 | Built-in JavaScript SHA-256 | about 420 MiB/s |
 | WebCrypto SHA-256 (`crypto.subtle.digest`) | about 1,830 MiB/s |
 
+The same comparison in headless Chromium 151 (256 MiB in memory, 8 MiB chunks, best of two runs, identical digests): WebCrypto about 1,580 MiB/s, built-in JavaScript about 390 MiB/s.
+
 Reading costs about a tenth of built-in hashing, so reading each byte once for both the whole-file and chunk hashes was not pursued. `calculateBlobSha256` uses WebCrypto for blobs up to 64 MiB instead.
 
 A faster browser whole-file hash was not pursued further: SHA-256 is sequential, so one file's digest cannot be split across Workers, WebCrypto cannot hash a stream, and `hash-wasm` was no faster than the built-in Worker. `overlapChecksum` (1.10.0) overlaps the hash with the upload instead.

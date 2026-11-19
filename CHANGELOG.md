@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Publish a TypeDoc API reference to GitHub Pages from `main` (`npm run docs:api` builds it locally).
+- Split the 14 source modules above 500 lines, including the verified-workflow state machine, into smaller internal modules; every source file is now under 500 lines. Public exports and types are unchanged.
+- Record browser chunk-hashing measurements: WebCrypto about 4x faster than the built-in hasher in Chromium.
+
 ## 1.10.0 - 2026-11-19
 
 - Add `overlapChecksum` to start sequential uploads while the whole-file checksum runs; the resume record is written once the checksum is known, and completion waits for it.

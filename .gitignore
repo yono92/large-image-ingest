@@ -29,3 +29,6 @@ playwright-report/
 *.cjs
 *.mjs
 *.sh
+
+# Generated API reference (npm run docs:api)
+api-docs/
