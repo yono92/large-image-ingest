@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.9.1 - 2026-11-19
+
+- Run the release workflow on Node.js 24, as npm Trusted Publishing requires Node.js 22.14.0 or newer. No SDK code changes from 1.9.0.
+
 ## 1.9.0 - 2026-11-18
 
 - Roughly triple built-in SHA-256 throughput (122 → about 340 MiB/s on Node.js, 256 MiB in memory) with identical digests; parallel chunk evidence uses the same implementation.
