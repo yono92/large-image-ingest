@@ -24,7 +24,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # npm Trusted Publishing (OIDC) needs Node.js 22.14.0 or newer.
+          node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
 
