@@ -1,2 +1,2 @@
 export const PACKAGE_NAME = "large-image-ingest" as const;
-export const PACKAGE_VERSION = "1.9.1" as const;
+export const PACKAGE_VERSION = "1.9.2" as const;
