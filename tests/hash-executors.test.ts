@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { calculateBlobSha256, calculateChecksum } from "../src/checksum";
 import { ChecksumCanceledError } from "../src/errors";
 import { createNodeChecksumExecutor } from "../src/node";
@@ -25,6 +25,42 @@ describe("built-in SHA-256", () => {
     expect(result.value).toBe(expected(bytes));
     const chunk = await calculateBlobSha256(new Blob([bytes]), { chunkSize: CHUNK });
     expect(chunk.value).toBe(expected(bytes));
+  });
+});
+
+describe("chunk SHA-256 (calculateBlobSha256)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("uses WebCrypto for blobs up to 64 MiB", async () => {
+    const digest = vi.spyOn(globalThis.crypto.subtle, "digest");
+    const bytes = fixture(3 * CHUNK + 17);
+    const result = await calculateBlobSha256(new Blob([bytes]), { encoding: "base64" });
+    expect(digest).toHaveBeenCalledTimes(1);
+    expect(Buffer.from(result.value, "base64").toString("hex")).toBe(expected(bytes));
+  });
+
+  it.each(SIZES)("falls back to the built-in hasher without WebCrypto for %i bytes", async (size) => {
+    vi.stubGlobal("crypto", undefined);
+    const bytes = fixture(size);
+    const result = await calculateBlobSha256(new Blob([bytes]), { chunkSize: CHUNK });
+    expect(result.value).toBe(expected(bytes));
+  });
+
+  it("streams blobs larger than 64 MiB through the built-in hasher", async () => {
+    const digest = vi.spyOn(globalThis.crypto.subtle, "digest");
+    const bytes = new Uint8Array(64 * 1024 * 1024 + 1).fill(7);
+    const result = await calculateBlobSha256(new Blob([bytes]));
+    expect(digest).not.toHaveBeenCalled();
+    expect(result.value).toBe(expected(bytes));
+  });
+
+  it("stops with an abort error before reading when already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    await expect(calculateBlobSha256(new Blob([fixture(CHUNK)]), { signal: controller.signal })).rejects.toThrow();
   });
 });
 

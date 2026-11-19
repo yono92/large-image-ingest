@@ -10,6 +10,8 @@ import type {
 
 const DEFAULT_CHECKSUM_CHUNK_SIZE = 4 * 1024 * 1024;
 const MIN_CHECKSUM_CHUNK_SIZE = 64 * 1024;
+// WebCrypto digests a whole buffer at once, so larger blobs use the streaming hasher.
+const WEB_CRYPTO_MAX_BLOB_BYTES = 64 * 1024 * 1024;
 
 const SHA256_INITIAL_STATE = [
   0x6a09e667,
@@ -77,14 +79,23 @@ export async function calculateBlobSha256(
   if (!Number.isSafeInteger(chunkSize) || chunkSize < MIN_CHECKSUM_CHUNK_SIZE) {
     throw new RangeError(`checksum chunkSize must be at least ${MIN_CHECKSUM_CHUNK_SIZE} bytes.`);
   }
-  const hasher = new Sha256();
-  for (let start = 0; start < blob.size; start += chunkSize) {
+  let bytes: Uint8Array;
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle && blob.size <= WEB_CRYPTO_MAX_BLOB_BYTES) {
     throwIfAborted(options.signal);
-    const end = Math.min(start + chunkSize, blob.size);
-    hasher.update(new Uint8Array(await blob.slice(start, end).arrayBuffer()));
+    const data = await blob.arrayBuffer();
+    throwIfAborted(options.signal);
+    bytes = new Uint8Array(await subtle.digest("SHA-256", data));
+  } else {
+    const hasher = new Sha256();
+    for (let start = 0; start < blob.size; start += chunkSize) {
+      throwIfAborted(options.signal);
+      const end = Math.min(start + chunkSize, blob.size);
+      hasher.update(new Uint8Array(await blob.slice(start, end).arrayBuffer()));
+    }
+    bytes = hasher.digest();
   }
   throwIfAborted(options.signal);
-  const bytes = hasher.digest();
   const encoding = options.encoding ?? "hex";
   return {
     algorithm: "sha256",

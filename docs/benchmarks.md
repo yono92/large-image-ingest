@@ -56,6 +56,18 @@ Measured on 2026-11-18 with Node.js 22.14.0 and Playwright Chromium on Apple Sil
 
 A `hash-wasm` executor measured 323–364 MiB/s in the same Chromium run, no faster than the built-in Worker, so it was not added. Reading the next slice while hashing did not change the Node executor's 1 GiB file result (1,858 vs 1,881 MiB/s).
 
+## November 2026 Parallel Chunk Hashing
+
+Measured on 2026-11-19 with Node.js 22.14.0 on Apple Silicon macOS, hashing a 1 GiB file (`fs.openAsBlob`) in 8 MiB upload chunks, best of two runs:
+
+| Work per chunk | Throughput |
+| --- | ---: |
+| Read only | about 4,700 MiB/s |
+| Built-in JavaScript SHA-256 | about 420 MiB/s |
+| WebCrypto SHA-256 (`crypto.subtle.digest`) | about 1,830 MiB/s |
+
+Reading costs about a tenth of built-in hashing, so reading each byte once for both the whole-file and chunk hashes was not pursued. `calculateBlobSha256` uses WebCrypto for blobs up to 64 MiB instead.
+
 ## Recorded Runs
 
 Feature 013 completion verification on August 31, 2026 used the 1.5.0 dirty working tree, Node.js 22.14.0, macOS 26.6.2 arm64, 10 logical CPUs, and 32 GiB system memory:

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Hash parallel upload chunks and parallel resume checks with WebCrypto when available (about 4x faster; blobs over 64 MiB and runtimes without WebCrypto keep the built-in hasher). Digests and evidence are unchanged.
+
 ## 1.9.1 - 2026-11-19
 
 - Run the release workflow on Node.js 24, as npm Trusted Publishing requires Node.js 22.14.0 or newer. No SDK code changes from 1.9.0. First release published from CI with npm provenance.

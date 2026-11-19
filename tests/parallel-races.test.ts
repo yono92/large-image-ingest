@@ -63,6 +63,8 @@ describe("parallel lifecycle settlement", () => {
   it("fails fast, interrupts siblings, and never finalizes after a permanent integrity failure", async () => {
     let completionCalls = 0;
     let observedAbort = false;
+    let markSiblingInFlight!: () => void;
+    const siblingInFlight = new Promise<void>((resolve) => { markSiblingInFlight = resolve; });
     const transport: UploadTransport = {
       capabilities: {
         name: "parallel-failure-fake",
@@ -80,6 +82,7 @@ describe("parallel lifecycle settlement", () => {
       async createSession() { return { uploadId: "failure-upload" }; },
       async uploadChunk({ chunk, signal }) {
         if (chunk.index === 0) {
+          await siblingInFlight;
           return {
             chunkIndex: 0,
             sizeBytes: chunk.size,
@@ -88,7 +91,9 @@ describe("parallel lifecycle settlement", () => {
             transport: { name: "parallel-failure-fake" }
           };
         }
-        await new Promise<void>((resolve) => signal.addEventListener("abort", () => { observedAbort = true; resolve(); }, { once: true }));
+        const aborted = new Promise<void>((resolve) => signal.addEventListener("abort", () => { observedAbort = true; resolve(); }, { once: true }));
+        markSiblingInFlight();
+        await aborted;
         throw signal.reason;
       },
       async completeSession() { completionCalls += 1; }

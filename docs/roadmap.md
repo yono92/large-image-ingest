@@ -16,7 +16,8 @@ Spec Kit artifacts:
 - [x] Declare Stable, Experimental and Compatibility import-path tiers; tag Experimental exports.
 - [x] Shorten the README to install, first upload, executors and tiers; move details to the feature guide.
 - [x] Extract session retry, receipt and snapshot helpers without behavior change.
-- [ ] Single read and hash/upload overlap for parallel upload (needs a 020 spec amendment).
+- [x] Hash parallel chunks with WebCrypto (about 4x faster); a single shared read was measured and not pursued (spec 025).
+- [ ] Hash/upload overlap for parallel upload (needs a 020 spec amendment).
 - [ ] Decide the replacement for v0.2 resume records before announcing v0.1/v0.2 removal in 2.0.
 - [ ] Split the session class into lifecycle, sequential, parallel and resume modules.
 - [ ] Collect a real-environment adoption case.
