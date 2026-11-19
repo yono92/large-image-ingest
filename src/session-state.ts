@@ -224,3 +224,8 @@ export function toErrorMessage(error: unknown, fallback: string): string {
 export function nowIso(): string {
   return new Date().toISOString();
 }
+
+export const CURRENT_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.3";
+export const PARALLEL_RESUME_SCHEMA_VERSION = "large-image-ingest.resume.v0.4";
+export const PARALLEL_POLICY_ID = "parallel-worker-pool-v1";
+export const CHUNK_INTEGRITY_POLICY_ID = "chunk-sha256-base64-v1";

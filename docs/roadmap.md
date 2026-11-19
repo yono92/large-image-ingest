@@ -19,7 +19,8 @@ Spec Kit artifacts:
 - [x] Hash parallel chunks with WebCrypto (about 4x faster); a single shared read was measured and not pursued (spec 025).
 - [ ] Hash/upload overlap for parallel upload (needs a 020 spec amendment).
 - [ ] Decide the replacement for v0.2 resume records before announcing v0.1/v0.2 removal in 2.0.
-- [ ] Split the session class into lifecycle, sequential, parallel and resume modules.
+- [x] Split the session class into lifecycle, sequential, parallel and resume modules (spec 026).
+- [ ] Give both transfer engines one internal interface; warn in CI when a source file passes 500 lines.
 - [ ] Collect a real-environment adoption case.
 
 Consider separate `@large-image-ingest/*` packages only after 2.0 and only once Experimental paths have users.

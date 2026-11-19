@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Split the internal upload session into lifecycle, sequential transfer, parallel transfer and resume modules. Public API and behavior are unchanged.
+
 ## 1.9.2 - 2026-11-19
 
 - Hash parallel upload chunks and parallel resume checks with WebCrypto when available (about 4x faster; blobs over 64 MiB and runtimes without WebCrypto keep the built-in hasher). Digests and evidence are unchanged.
