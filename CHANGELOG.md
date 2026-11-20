@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.10.1 - 2026-11-20
 
 - Publish a TypeDoc API reference to GitHub Pages from `main` (`npm run docs:api` builds it locally).
 - Split the 14 source modules above 500 lines, including the verified-workflow state machine, into smaller internal modules; every source file is now under 500 lines. Public exports and types are unchanged.

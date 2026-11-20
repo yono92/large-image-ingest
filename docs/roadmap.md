@@ -2,7 +2,7 @@
 
 This roadmap captures minor-release work after 1.0.0. Items here are not committed implementation scope until they have their own Spec Kit artifacts.
 
-## 1.9.0–1.10.0 Included - Hash Performance, Release Integrity And Scope
+## 1.9.0–1.10.1 Included - Hash Performance, Release Integrity And Scope
 
 Work through 1.10 only makes existing behavior faster, verifiable and easier to adopt; 1.10.0's one new option, `overlapChecksum`, removes the wait for hashing.
 
