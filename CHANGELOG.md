@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Create the GitHub Release from the version's CHANGELOG section after a tagged npm publish; the release workflow now fails before publishing when that section is missing. Releases for 1.9.0–1.10.1 were added by hand.
+
 ## 1.10.1 - 2026-11-20
 
 - Publish a TypeDoc API reference to GitHub Pages from `main` (`npm run docs:api` builds it locally).

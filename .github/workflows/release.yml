@@ -40,6 +40,11 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match package.json version $version." >&2
             exit 1
           fi
+          # The GitHub Release job takes its notes from this section.
+          if ! grep -q "^## $version - " CHANGELOG.md; then
+            echo "CHANGELOG.md has no '## $version - ' section." >&2
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm ci
@@ -53,3 +58,36 @@ jobs:
       # prepublishOnly runs the full release verification before upload.
       - name: Publish
         run: npm publish --provenance --access public --loglevel verbose
+
+  github-release:
+    name: Create GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create release from CHANGELOG
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          {
+            echo "## Changes"
+            echo
+            awk -v v="$version" '$0 ~ "^## "v" - " {f=1; next} /^## / {if (f) exit} f && NF' CHANGELOG.md
+            echo
+            echo "## Distribution"
+            echo
+            echo "Version $version is published on [npm](https://www.npmjs.com/package/large-image-ingest/v/$version) from GitHub Actions through npm Trusted Publishing with npm provenance."
+            echo
+            echo '```bash'
+            echo "npm install large-image-ingest@$version"
+            echo '```'
+            echo
+            echo "See [CHANGELOG.md](https://github.com/$GITHUB_REPOSITORY/blob/$GITHUB_REF_NAME/CHANGELOG.md)."
+          } > release-notes.md
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "large-image-ingest $GITHUB_REF_NAME" --notes-file release-notes.md
